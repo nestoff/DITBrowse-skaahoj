@@ -9,7 +9,24 @@ export type WorkspaceAction =
   | { type: "openNewTile"; url: string }
   | { type: "replaceActiveListFromCsv"; rows: CameraCsvRow[] }
   | { type: "setSelectedTileZoom"; zoom: number }
-  | { type: "setSelectedTileViewport"; width: number; height: number };
+  | { type: "setSelectedTileViewport"; width: number; height: number }
+  | { type: "createJobWithList"; jobName: string; listName: string; defaultPrefix: string }
+  | { type: "selectCameraList"; cameraListId: string };
+
+function createTilesForList(
+  state: WorkspaceState,
+  list: WorkspaceState["cameraLists"][number]
+): WorkspaceState["tiles"] {
+  return list.cameras.map((camera) => ({
+    id: `tile-${camera.id}`,
+    cameraId: camera.id,
+    url: camera.url,
+    title: camera.name,
+    partition: `persist:ditbrowse-${list.jobId}-${list.id}`,
+    viewport: camera.viewportOverride ?? state.defaultViewport,
+    zoom: camera.zoomOverride ?? state.defaultZoom
+  }));
+}
 
 export function workspaceReducer(
   state: WorkspaceState,
@@ -123,6 +140,43 @@ export function workspaceReducer(
             : tile
         )
       };
+    case "createJobWithList": {
+      const jobId = `job-${crypto.randomUUID()}`;
+      const listId = `list-${crypto.randomUUID()}`;
+      return {
+        ...state,
+        jobs: [...state.jobs, { id: jobId, name: action.jobName, listIds: [listId] }],
+        cameraLists: [
+          ...state.cameraLists,
+          {
+            id: listId,
+            jobId,
+            name: action.listName,
+            defaultPrefix: action.defaultPrefix,
+            cameras: []
+          }
+        ],
+        activeJobId: jobId,
+        activeCameraListId: listId,
+        tiles: [],
+        selectedTileId: null
+      };
+    }
+    case "selectCameraList": {
+      const list = state.cameraLists.find((candidate) => candidate.id === action.cameraListId);
+      if (!list) {
+        return state;
+      }
+
+      const tiles = createTilesForList(state, list);
+      return {
+        ...state,
+        activeJobId: list.jobId,
+        activeCameraListId: list.id,
+        tiles,
+        selectedTileId: tiles[0]?.id ?? null
+      };
+    }
     default:
       return state;
   }

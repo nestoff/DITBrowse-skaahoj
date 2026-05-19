@@ -97,4 +97,44 @@ describe("workspaceReducer", () => {
       height: 1080
     });
   });
+
+  it("creates a new job with an empty camera list", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "createJobWithList",
+      jobName: "New Job",
+      listName: "Camera List",
+      defaultPrefix: "http://10.0.0."
+    });
+
+    expect(state.jobs.at(-1)?.name).toBe("New Job");
+    expect(state.cameraLists.at(-1)).toMatchObject({
+      name: "Camera List",
+      defaultPrefix: "http://10.0.0.",
+      cameras: []
+    });
+    expect(state.tiles).toEqual([]);
+    expect(state.selectedTileId).toBeNull();
+    expect(state.activeJobId).toBe(state.jobs.at(-1)?.id);
+    expect(state.activeCameraListId).toBe(state.cameraLists.at(-1)?.id);
+  });
+
+  it("selects an existing camera list and loads its cameras into tiles", () => {
+    const unloaded = {
+      ...sampleWorkspace,
+      tiles: [],
+      selectedTileId: null,
+      activeCameraListId: null
+    };
+    const state = workspaceReducer(unloaded, {
+      type: "selectCameraList",
+      cameraListId: "list-sample"
+    });
+
+    expect(state.tiles).toHaveLength(12);
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.41",
+      partition: "persist:ditbrowse-job-sample-list-sample"
+    });
+  });
 });

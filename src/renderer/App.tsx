@@ -7,6 +7,7 @@ import { AddressBar } from "./components/AddressBar";
 import { CameraListEditor } from "./components/CameraListEditor";
 import { CookieCommands } from "./components/CookieCommands";
 import { GridControls } from "./components/GridControls";
+import { JobListSelector } from "./components/JobListSelector";
 import { TabStrip } from "./components/TabStrip";
 import { TileGrid } from "./components/TileGrid";
 import {
@@ -98,6 +99,17 @@ export function App(): ReactElement {
               width: viewport.width,
               height: viewport.height
             })
+          }
+        />
+        <JobListSelector
+          jobs={workspace.jobs}
+          cameraLists={workspace.cameraLists}
+          activeCameraListId={workspace.activeCameraListId}
+          onSelectCameraList={(cameraListId) =>
+            dispatch({ type: "selectCameraList", cameraListId })
+          }
+          onCreateJob={(jobName, listName, defaultPrefix) =>
+            dispatch({ type: "createJobWithList", jobName, listName, defaultPrefix })
           }
         />
         <button type="button" onClick={() => setEditorOpen(true)}>
