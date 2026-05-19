@@ -28,7 +28,7 @@ textarea {
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -44,8 +44,90 @@ textarea {
   background: #151a22;
 }
 
-.empty-start {
-  display: grid;
-  place-items: center;
+.address-bar {
+  display: flex;
+  flex: 1;
+  min-width: 240px;
+  gap: 6px;
+}
+
+.address-bar input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #323a47;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #0f1217;
+  color: #eef2f6;
+}
+
+.top-bar button,
+.tab,
+.icon-button,
+.grid-control select,
+.address-bar button {
+  border: 1px solid #323a47;
+  border-radius: 6px;
+  background: #202632;
+  color: #eef2f6;
+  padding: 7px 10px;
+}
+
+.grid-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #a7b1c2;
+}
+
+.tab-strip {
+  display: flex;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid #252b36;
+  background: #10141b;
+}
+
+.tab {
+  flex: 0 0 auto;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab.active {
+  border-color: #5aa7ff;
+  background: #17395f;
+}
+
+.tile-grid {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.tile-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #323a47;
+  border-radius: 8px;
+  background: #151a22;
+  color: #eef2f6;
+  overflow: hidden;
+}
+
+.tile-slot.selected {
+  outline: 2px solid #5aa7ff;
+  outline-offset: -2px;
+}
+
+.tile-slot.empty {
+  border-style: dashed;
+  background: #10141b;
 }

@@ -1,12 +1,83 @@
 import type { ReactElement } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
+import { sampleWorkspace } from "../shared/sampleData";
+import { resolveCameraAddress } from "../shared/url";
+import { AddressBar } from "./components/AddressBar";
+import { GridControls } from "./components/GridControls";
+import { TabStrip } from "./components/TabStrip";
+import { TileGrid } from "./components/TileGrid";
+import { loadWorkspace, saveWorkspace } from "./state/workspaceStorage";
+import { workspaceReducer } from "./state/workspaceReducer";
 
 export function App(): ReactElement {
+  const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    loadWorkspace().then((loadedWorkspace) => {
+      if (active) {
+        dispatch({ type: "hydrateWorkspace", workspace: loadedWorkspace });
+        setLoaded(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loaded) {
+      void saveWorkspace(workspace);
+    }
+  }, [loaded, workspace]);
+
+  const selectedTile = useMemo(
+    () => workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ?? null,
+    [workspace.selectedTileId, workspace.tiles]
+  );
+
+  const activeList = workspace.cameraLists.find(
+    (list) => list.id === workspace.activeCameraListId
+  );
+
+  function navigate(input: string, target: "selected" | "new"): void {
+    const url = resolveCameraAddress(activeList?.defaultPrefix ?? "", input);
+    dispatch(
+      target === "selected" ? { type: "navigateSelectedTile", url } : { type: "openNewTile", url }
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <strong>DITBrowse</strong>
+        <button type="button" aria-label="Back">
+          Back
+        </button>
+        <button type="button" aria-label="Forward">
+          Forward
+        </button>
+        <button type="button" aria-label="Reload">
+          Reload
+        </button>
+        <AddressBar value={selectedTile?.url ?? ""} onNavigate={navigate} />
+        <GridControls
+          columns={workspace.gridColumns}
+          onColumnsChange={(columns) => dispatch({ type: "setGridColumns", columns })}
+        />
       </header>
-      <section className="empty-start">Tiled camera browser workspace</section>
+      <TabStrip
+        tiles={workspace.tiles}
+        selectedTileId={workspace.selectedTileId}
+        onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
+        onAddTile={() => dispatch({ type: "openNewTile", url: "about:blank" })}
+      />
+      <TileGrid
+        tiles={workspace.tiles}
+        columns={workspace.gridColumns}
+        selectedTileId={workspace.selectedTileId}
+        onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
+      />
     </main>
   );
 }
