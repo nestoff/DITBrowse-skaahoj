@@ -11,7 +11,9 @@ interface WebviewTileProps {
 
 export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const [bounds, setBounds] = useState({ width: 1, height: 1 });
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -26,6 +28,22 @@ export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): Rea
 
     observer.observe(element);
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview) {
+      return;
+    }
+
+    const clearFailure = (): void => setFailed(false);
+    const markFailure = (): void => setFailed(true);
+    webview.addEventListener("did-start-loading", clearFailure);
+    webview.addEventListener("did-fail-load", markFailure);
+    return () => {
+      webview.removeEventListener("did-start-loading", clearFailure);
+      webview.removeEventListener("did-fail-load", markFailure);
+    };
   }, []);
 
   const scale = computeFitScale({
@@ -44,6 +62,8 @@ export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): Rea
     >
       <div className="tile-label">{tile.title || tile.url || "Blank"}</div>
       <webview
+        ref={webviewRef}
+        data-tile-id={tile.id}
         className="camera-webview"
         src={tile.url || "about:blank"}
         partition={tile.partition}
@@ -53,6 +73,19 @@ export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): Rea
           transform: `scale(${scale})`
         }}
       />
+      {failed && (
+        <div className="tile-error">
+          <strong>Failed to load</strong>
+          <span>{tile.url}</span>
+          <button
+            type="button"
+            aria-label={`Retry loading ${tile.title || tile.url || "tile"}`}
+            onClick={() => webviewRef.current?.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      )}
     </div>
   );
 }

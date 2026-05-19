@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
+import { runSelectedTileCommand } from "./browserControls";
 import { AddressBar } from "./components/AddressBar";
 import { CameraListEditor } from "./components/CameraListEditor";
 import { CookieCommands } from "./components/CookieCommands";
@@ -63,13 +64,25 @@ export function App(): ReactElement {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <button type="button" aria-label="Back">
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={() => runSelectedTileCommand(workspace.selectedTileId, "back")}
+        >
           Back
         </button>
-        <button type="button" aria-label="Forward">
+        <button
+          type="button"
+          aria-label="Forward"
+          onClick={() => runSelectedTileCommand(workspace.selectedTileId, "forward")}
+        >
           Forward
         </button>
-        <button type="button" aria-label="Reload">
+        <button
+          type="button"
+          aria-label="Reload"
+          onClick={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}
+        >
           Reload
         </button>
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={navigate} />

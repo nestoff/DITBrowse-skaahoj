@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
@@ -28,5 +28,17 @@ describe("WebviewTile", () => {
     const webview = document.querySelector("webview");
     expect(webview).toHaveAttribute("src", "http://192.168.1.42");
     expect(webview).toHaveAttribute("partition", "persist:ditbrowse-job-list");
+  });
+
+  it("shows a retry action after a load failure", () => {
+    render(<WebviewTile tile={tile} selected={true} onSelect={vi.fn()} />);
+
+    const webview = document.querySelector("webview") as HTMLElement & { reload: () => void };
+    webview.reload = vi.fn();
+    fireEvent(webview, new Event("did-fail-load"));
+
+    expect(screen.getByText("Failed to load")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry loading Camera 42" }));
+    expect(webview.reload).toHaveBeenCalledTimes(1);
   });
 });
