@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { ViewportSize } from "../../shared/types";
 
 interface GridControlsProps {
@@ -8,6 +8,7 @@ interface GridControlsProps {
   onColumnsChange: (columns: number) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
+  icon?: ReactNode;
 }
 
 export function GridControls({
@@ -16,12 +17,14 @@ export function GridControls({
   selectedViewport,
   onColumnsChange,
   onZoomChange,
-  onViewportChange
+  onViewportChange,
+  icon
 }: GridControlsProps): ReactElement {
   return (
     <div className="grid-controls">
+      {icon && <span className="grid-controls-icon">{icon}</span>}
       <label className="grid-control">
-        Columns
+        <span>Cols</span>
         <select
           value={columns}
           onChange={(event) => onColumnsChange(Number(event.target.value))}
@@ -35,7 +38,7 @@ export function GridControls({
         </select>
       </label>
       <label className="grid-control">
-        Zoom
+        <span>Scale</span>
         <select
           value={selectedZoom}
           onChange={(event) => onZoomChange(Number(event.target.value))}
@@ -49,7 +52,7 @@ export function GridControls({
         </select>
       </label>
       <label className="grid-control">
-        Viewport
+        <span>View</span>
         <select
           value={`${selectedViewport?.width ?? 1280}x${selectedViewport?.height ?? 720}`}
           onChange={(event) => {

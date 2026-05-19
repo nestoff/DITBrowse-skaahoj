@@ -1,5 +1,7 @@
 import type { ReactElement } from "react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { TileState } from "../../shared/types";
+import { IconButton } from "./ui/IconButton";
 
 interface TabStripProps {
   tiles: TileState[];
@@ -18,13 +20,11 @@ export function TabStrip({
 }: TabStripProps): ReactElement {
   return (
     <div className="tab-strip" aria-label="Camera tabs">
-      <button className="icon-button" type="button" onClick={onAddTile} aria-label="Add tile">
-        +
-      </button>
       {tiles.map((tile, index) => (
         <div key={tile.id} className={tile.id === selectedTileId ? "tab active" : "tab"}>
           <button type="button" className="tab-select" onClick={() => onSelectTile(tile.id)}>
-            {index + 1}. {tile.title || tile.url || "Blank"}
+            <span className="tab-index">{index + 1}</span>
+            <span className="tab-title">{tile.title || tile.url || "Blank"}</span>
           </button>
           <button
             type="button"
@@ -33,7 +33,7 @@ export function TabStrip({
             aria-label={`Move ${tile.title || tile.url || "tile"} left`}
             onClick={() => onMoveTile(tile.id, "left")}
           >
-            ‹
+            <ChevronLeft size={12} strokeWidth={2.4} />
           </button>
           <button
             type="button"
@@ -42,10 +42,16 @@ export function TabStrip({
             aria-label={`Move ${tile.title || tile.url || "tile"} right`}
             onClick={() => onMoveTile(tile.id, "right")}
           >
-            ›
+            <ChevronRight size={12} strokeWidth={2.4} />
           </button>
         </div>
       ))}
+      <IconButton
+        label="Add tile"
+        icon={<Plus size={16} strokeWidth={2.3} />}
+        className="add-tab-button"
+        onClick={onAddTile}
+      />
     </div>
   );
 }

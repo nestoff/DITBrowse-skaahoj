@@ -3,12 +3,8 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
-import { AddressBar } from "./components/AddressBar";
+import { BrowserChrome } from "./components/BrowserChrome";
 import { CameraListEditor } from "./components/CameraListEditor";
-import { CookieCommands } from "./components/CookieCommands";
-import { GridControls } from "./components/GridControls";
-import { JobListSelector } from "./components/JobListSelector";
-import { TabStrip } from "./components/TabStrip";
 import { TileGrid } from "./components/TileGrid";
 import {
   clearPartitionStorage,
@@ -64,79 +60,37 @@ export function App(): ReactElement {
 
   return (
     <main className="app-shell">
-      <header className="top-bar">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={() => runSelectedTileCommand(workspace.selectedTileId, "back")}
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          aria-label="Forward"
-          onClick={() => runSelectedTileCommand(workspace.selectedTileId, "forward")}
-        >
-          Forward
-        </button>
-        <button
-          type="button"
-          aria-label="Reload"
-          onClick={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}
-        >
-          Reload
-        </button>
-        <button type="button" aria-label="Reload all" onClick={() => runAllTileCommand("reload")}>
-          Reload All
-        </button>
-        <AddressBar value={selectedTile?.url ?? ""} onNavigate={navigate} />
-        <GridControls
-          columns={workspace.gridColumns}
-          selectedZoom={selectedTile?.zoom ?? workspace.defaultZoom}
-          selectedViewport={selectedTile?.viewport ?? workspace.defaultViewport}
-          onColumnsChange={(columns) => dispatch({ type: "setGridColumns", columns })}
-          onZoomChange={(zoom) => dispatch({ type: "setSelectedTileZoom", zoom })}
-          onViewportChange={(viewport) =>
-            dispatch({
-              type: "setSelectedTileViewport",
-              width: viewport.width,
-              height: viewport.height
-            })
-          }
-        />
-        <JobListSelector
-          jobs={workspace.jobs}
-          cameraLists={workspace.cameraLists}
-          activeCameraListId={workspace.activeCameraListId}
-          onSelectCameraList={(cameraListId) =>
-            dispatch({ type: "selectCameraList", cameraListId })
-          }
-          onCreateJob={(jobName, listName, defaultPrefix) =>
-            dispatch({ type: "createJobWithList", jobName, listName, defaultPrefix })
-          }
-        />
-        <button type="button" onClick={() => setEditorOpen(true)}>
-          Edit List
-        </button>
-        <button type="button" onClick={() => dispatch({ type: "resetSelectedTileScale" })}>
-          Reset Scale
-        </button>
-        <button type="button" onClick={() => dispatch({ type: "resetGridToListOrder" })}>
-          Reset Order
-        </button>
-        <CookieCommands
-          selectedTile={selectedTile}
-          activePartition={activePartition}
-          onClearSelected={(partition, url) => void clearSelectedTileStorage(partition, url)}
-          onClearList={(partition) => void clearPartitionStorage(partition)}
-        />
-      </header>
-      <TabStrip
-        tiles={workspace.tiles}
-        selectedTileId={workspace.selectedTileId}
+      <BrowserChrome
+        workspace={workspace}
+        selectedTile={selectedTile}
+        activeList={activeList ?? null}
+        activePartition={activePartition}
         onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
         onMoveTile={(tileId, direction) => dispatch({ type: "moveTile", tileId, direction })}
         onAddTile={() => dispatch({ type: "openNewTile", url: "about:blank" })}
+        onNavigate={navigate}
+        onBack={() => runSelectedTileCommand(workspace.selectedTileId, "back")}
+        onForward={() => runSelectedTileCommand(workspace.selectedTileId, "forward")}
+        onReload={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}
+        onReloadAll={() => runAllTileCommand("reload")}
+        onColumnsChange={(columns) => dispatch({ type: "setGridColumns", columns })}
+        onZoomChange={(zoom) => dispatch({ type: "setSelectedTileZoom", zoom })}
+        onViewportChange={(viewport) =>
+          dispatch({
+            type: "setSelectedTileViewport",
+            width: viewport.width,
+            height: viewport.height
+          })
+        }
+        onSelectCameraList={(cameraListId) => dispatch({ type: "selectCameraList", cameraListId })}
+        onCreateJob={(jobName, listName, defaultPrefix) =>
+          dispatch({ type: "createJobWithList", jobName, listName, defaultPrefix })
+        }
+        onEditList={() => setEditorOpen(true)}
+        onResetSelectedScale={() => dispatch({ type: "resetSelectedTileScale" })}
+        onResetGridOrder={() => dispatch({ type: "resetGridToListOrder" })}
+        onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}
+        onClearListCookies={(partition) => void clearPartitionStorage(partition)}
       />
       <TileGrid
         tiles={workspace.tiles}
