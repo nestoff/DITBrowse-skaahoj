@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { buildGridSlots } from "../../shared/grid";
 import type { TileState } from "../../shared/types";
+import { WebviewTile } from "./WebviewTile";
 
 interface TileGridProps {
   tiles: TileState[];
@@ -33,14 +34,12 @@ export function TileGrid({
         }
 
         return (
-          <button
+          <WebviewTile
             key={tile.id}
-            type="button"
-            className={tile.id === selectedTileId ? "tile-slot selected" : "tile-slot"}
-            onClick={() => onSelectTile(tile.id)}
-          >
-            <span>{tile.title || tile.url || "Blank tile"}</span>
-          </button>
+            tile={tile}
+            selected={tile.id === selectedTileId}
+            onSelect={() => onSelectTile(tile.id)}
+          />
         );
       })}
     </section>
