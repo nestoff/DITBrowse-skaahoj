@@ -160,6 +160,7 @@ textarea {
 
 .tile-grid {
   display: grid;
+  grid-auto-rows: minmax(0, 1fr);
   gap: 6px;
   min-height: 0;
   padding: 8px;
