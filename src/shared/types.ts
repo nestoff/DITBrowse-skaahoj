@@ -1,0 +1,63 @@
+export interface ViewportSize {
+  width: number;
+  height: number;
+}
+
+export interface CameraEntry {
+  id: string;
+  name: string;
+  url: string;
+  suffix: string;
+  prefixOverride: string;
+  username: string;
+  password: string;
+  notes: string;
+  viewportOverride: ViewportSize | null;
+  zoomOverride: number | null;
+}
+
+export interface CameraList {
+  id: string;
+  jobId: string;
+  name: string;
+  defaultPrefix: string;
+  cameras: CameraEntry[];
+}
+
+export interface Job {
+  id: string;
+  name: string;
+  listIds: string[];
+}
+
+export interface TileState {
+  id: string;
+  cameraId: string | null;
+  url: string;
+  title: string;
+  partition: string;
+  viewport: ViewportSize;
+  zoom: number;
+}
+
+export interface PasswordRecord {
+  id: string;
+  jobId: string;
+  cameraListId: string;
+  url: string;
+  username: string;
+  password: string;
+}
+
+export interface WorkspaceState {
+  jobs: Job[];
+  cameraLists: CameraList[];
+  passwordRecords: PasswordRecord[];
+  tiles: TileState[];
+  selectedTileId: string | null;
+  activeJobId: string | null;
+  activeCameraListId: string | null;
+  gridColumns: number;
+  defaultViewport: ViewportSize;
+  defaultZoom: number;
+}
