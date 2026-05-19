@@ -137,4 +137,104 @@ describe("workspaceReducer", () => {
       partition: "persist:ditbrowse-job-sample-list-sample"
     });
   });
+
+  it("updates an active camera row, its tile, and its saved password", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        name: "A Cam",
+        url: "http://10.0.0.41",
+        username: "operator",
+        password: "secret",
+        viewportOverride: { width: 1920, height: 1080 },
+        zoomOverride: 1.25
+      }
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      name: "A Cam",
+      url: "http://10.0.0.41",
+      username: "operator",
+      password: "secret",
+      viewportOverride: { width: 1920, height: 1080 },
+      zoomOverride: 1.25
+    });
+    expect(state.tiles[0]).toMatchObject({
+      title: "A Cam",
+      url: "http://10.0.0.41",
+      viewport: { width: 1920, height: 1080 },
+      zoom: 1.25
+    });
+    expect(state.passwordRecords[0]).toMatchObject({
+      cameraListId: "list-sample",
+      url: "http://10.0.0.41",
+      username: "operator",
+      password: "secret"
+    });
+  });
+
+  it("adds a camera row to the active list and grid", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "addCameraEntry"
+    });
+
+    expect(state.cameraLists[0].cameras.at(-1)).toMatchObject({
+      id: "camera-new-tile",
+      name: "New Camera",
+      url: "http://192.168.1.",
+      suffix: ""
+    });
+    expect(state.tiles.at(-1)).toMatchObject({
+      cameraId: "camera-new-tile",
+      title: "New Camera",
+      url: "http://192.168.1."
+    });
+  });
+
+  it("moves tiles without changing the saved camera-list order", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "moveTile",
+      tileId: "tile-42",
+      direction: "left"
+    });
+
+    expect(state.tiles.slice(0, 2).map((tile) => tile.id)).toEqual(["tile-42", "tile-41"]);
+    expect(state.cameraLists[0].cameras.slice(0, 2).map((camera) => camera.id)).toEqual([
+      "camera-41",
+      "camera-42"
+    ]);
+  });
+
+  it("resets selected tile zoom and viewport to defaults", () => {
+    const zoomed = workspaceReducer(sampleWorkspace, {
+      type: "setSelectedTileZoom",
+      zoom: 1.5
+    });
+    const resized = workspaceReducer(zoomed, {
+      type: "setSelectedTileViewport",
+      width: 1920,
+      height: 1080
+    });
+    const reset = workspaceReducer(resized, { type: "resetSelectedTileScale" });
+
+    expect(reset.tiles[0]).toMatchObject({
+      zoom: 1,
+      viewport: { width: 1280, height: 720 }
+    });
+  });
+
+  it("resets the grid to active list order", () => {
+    const moved = workspaceReducer(sampleWorkspace, {
+      type: "moveTile",
+      tileId: "tile-42",
+      direction: "left"
+    });
+    const reset = workspaceReducer(moved, { type: "resetGridToListOrder" });
+
+    expect(reset.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.41"
+    });
+  });
 });

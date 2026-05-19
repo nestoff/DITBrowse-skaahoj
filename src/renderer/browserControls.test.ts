@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runSelectedTileCommand } from "./browserControls";
+import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
 
 function addWebview(tileId: string): Electron.WebviewTag {
   const webview = document.createElement("webview") as Electron.WebviewTag;
@@ -34,5 +34,15 @@ describe("runSelectedTileCommand", () => {
     runSelectedTileCommand("tile-1", "reload");
 
     expect(webview.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads all webviews", () => {
+    const first = addWebview("tile-1");
+    const second = addWebview("tile-2");
+
+    runAllTileCommand("reload");
+
+    expect(first.reload).toHaveBeenCalledTimes(1);
+    expect(second.reload).toHaveBeenCalledTimes(1);
   });
 });

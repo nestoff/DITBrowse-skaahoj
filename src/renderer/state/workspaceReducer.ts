@@ -1,5 +1,20 @@
 import type { CameraCsvRow } from "../../shared/csv";
-import type { WorkspaceState } from "../../shared/types";
+import type { CameraEntry, PasswordRecord, WorkspaceState } from "../../shared/types";
+
+export type CameraEntryPatch = Partial<
+  Pick<
+    CameraEntry,
+    | "name"
+    | "url"
+    | "suffix"
+    | "prefixOverride"
+    | "username"
+    | "password"
+    | "notes"
+    | "viewportOverride"
+    | "zoomOverride"
+  >
+>;
 
 export type WorkspaceAction =
   | { type: "hydrateWorkspace"; workspace: WorkspaceState }
@@ -11,7 +26,13 @@ export type WorkspaceAction =
   | { type: "setSelectedTileZoom"; zoom: number }
   | { type: "setSelectedTileViewport"; width: number; height: number }
   | { type: "createJobWithList"; jobName: string; listName: string; defaultPrefix: string }
-  | { type: "selectCameraList"; cameraListId: string };
+  | { type: "selectCameraList"; cameraListId: string }
+  | { type: "updateActiveListPrefix"; defaultPrefix: string }
+  | { type: "updateCameraEntry"; cameraId: string; patch: CameraEntryPatch }
+  | { type: "addCameraEntry" }
+  | { type: "moveTile"; tileId: string; direction: "left" | "right" }
+  | { type: "resetSelectedTileScale" }
+  | { type: "resetGridToListOrder" };
 
 function createTilesForList(
   state: WorkspaceState,
@@ -26,6 +47,47 @@ function createTilesForList(
     viewport: camera.viewportOverride ?? state.defaultViewport,
     zoom: camera.zoomOverride ?? state.defaultZoom
   }));
+}
+
+function passwordRecordForCamera(
+  list: WorkspaceState["cameraLists"][number],
+  camera: CameraEntry
+): PasswordRecord | null {
+  if (!camera.username && !camera.password) {
+    return null;
+  }
+
+  return {
+    id: `password-${camera.id}`,
+    jobId: list.jobId,
+    cameraListId: list.id,
+    url: camera.url,
+    username: camera.username,
+    password: camera.password
+  };
+}
+
+function syncListPasswordRecords(
+  state: WorkspaceState,
+  list: WorkspaceState["cameraLists"][number]
+): PasswordRecord[] {
+  return [
+    ...state.passwordRecords.filter((record) => record.cameraListId !== list.id),
+    ...list.cameras
+      .map((camera) => passwordRecordForCamera(list, camera))
+      .filter((record): record is PasswordRecord => record !== null)
+  ];
+}
+
+function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) {
+    return items;
+  }
+
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
 }
 
 export function workspaceReducer(
@@ -93,15 +155,8 @@ export function workspaceReducer(
       const passwordRecords = [
         ...state.passwordRecords.filter((record) => record.cameraListId !== activeList.id),
         ...cameras
-          .filter((camera) => camera.username || camera.password)
-          .map((camera) => ({
-            id: `password-${crypto.randomUUID()}`,
-            jobId: activeList.jobId,
-            cameraListId: activeList.id,
-            url: camera.url,
-            username: camera.username,
-            password: camera.password
-          }))
+          .map((camera) => passwordRecordForCamera(activeList, camera))
+          .filter((record): record is PasswordRecord => record !== null)
       ];
 
       const tiles = cameras.map((camera) => ({
@@ -173,6 +228,113 @@ export function workspaceReducer(
         ...state,
         activeJobId: list.jobId,
         activeCameraListId: list.id,
+        tiles,
+        selectedTileId: tiles[0]?.id ?? null
+      };
+    }
+    case "updateActiveListPrefix":
+      return {
+        ...state,
+        cameraLists: state.cameraLists.map((list) =>
+          list.id === state.activeCameraListId
+            ? { ...list, defaultPrefix: action.defaultPrefix }
+            : list
+        )
+      };
+    case "updateCameraEntry": {
+      let updatedList: WorkspaceState["cameraLists"][number] | null = null;
+      const cameraLists = state.cameraLists.map((list) => {
+        if (list.id !== state.activeCameraListId) {
+          return list;
+        }
+
+        const cameras = list.cameras.map((camera) =>
+          camera.id === action.cameraId ? { ...camera, ...action.patch } : camera
+        );
+        updatedList = { ...list, cameras };
+        return updatedList;
+      });
+
+      if (!updatedList) {
+        return state;
+      }
+
+      return {
+        ...state,
+        cameraLists,
+        passwordRecords: syncListPasswordRecords(state, updatedList),
+        tiles: state.tiles.map((tile) => {
+          const camera = updatedList?.cameras.find((candidate) => candidate.id === tile.cameraId);
+          if (!camera) {
+            return tile;
+          }
+
+          return {
+            ...tile,
+            title: camera.name,
+            url: camera.url,
+            viewport: camera.viewportOverride ?? state.defaultViewport,
+            zoom: camera.zoomOverride ?? state.defaultZoom
+          };
+        })
+      };
+    }
+    case "addCameraEntry": {
+      const activeList = state.cameraLists.find((list) => list.id === state.activeCameraListId);
+      if (!activeList) {
+        return state;
+      }
+
+      const camera: CameraEntry = {
+        id: `camera-${crypto.randomUUID()}`,
+        name: "New Camera",
+        url: activeList.defaultPrefix,
+        suffix: "",
+        prefixOverride: "",
+        username: "",
+        password: "",
+        notes: "",
+        viewportOverride: null,
+        zoomOverride: null
+      };
+      const updatedList = { ...activeList, cameras: [...activeList.cameras, camera] };
+      const tile = createTilesForList(state, { ...updatedList, cameras: [camera] })[0];
+
+      return {
+        ...state,
+        cameraLists: state.cameraLists.map((list) =>
+          list.id === activeList.id ? updatedList : list
+        ),
+        tiles: [...state.tiles, tile],
+        selectedTileId: tile.id
+      };
+    }
+    case "moveTile": {
+      const fromIndex = state.tiles.findIndex((tile) => tile.id === action.tileId);
+      const toIndex = action.direction === "left" ? fromIndex - 1 : fromIndex + 1;
+      return {
+        ...state,
+        tiles: moveItem(state.tiles, fromIndex, toIndex)
+      };
+    }
+    case "resetSelectedTileScale":
+      return {
+        ...state,
+        tiles: state.tiles.map((tile) =>
+          tile.id === state.selectedTileId
+            ? { ...tile, viewport: state.defaultViewport, zoom: state.defaultZoom }
+            : tile
+        )
+      };
+    case "resetGridToListOrder": {
+      const list = state.cameraLists.find((candidate) => candidate.id === state.activeCameraListId);
+      if (!list) {
+        return state;
+      }
+
+      const tiles = createTilesForList(state, list);
+      return {
+        ...state,
         tiles,
         selectedTileId: tiles[0]?.id ?? null
       };

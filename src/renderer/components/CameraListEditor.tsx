@@ -2,23 +2,36 @@ import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { parseCameraCsv } from "../../shared/csv";
 import type { CameraCsvRow } from "../../shared/csv";
-import type { CameraList } from "../../shared/types";
+import type { CameraEntry, CameraList } from "../../shared/types";
+import type { CameraEntryPatch } from "../state/workspaceReducer";
 
 interface CameraListEditorProps {
   activeList: CameraList | null;
   onImportRows: (rows: CameraCsvRow[]) => void;
+  onUpdatePrefix: (defaultPrefix: string) => void;
+  onUpdateCamera: (cameraId: string, patch: CameraEntryPatch) => void;
+  onAddCamera: () => void;
   onClose: () => void;
 }
 
 export function CameraListEditor({
   activeList,
   onImportRows,
+  onUpdatePrefix,
+  onUpdateCamera,
+  onAddCamera,
   onClose
 }: CameraListEditorProps): ReactElement {
   const [csvText, setCsvText] = useState(
     "name,url,suffix,username,password,notes\nCamera 42,,42,admin,,"
   );
   const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
+
+  function updateViewport(camera: CameraEntry, width: number, height: number): void {
+    onUpdateCamera(camera.id, {
+      viewportOverride: width > 0 && height > 0 ? { width, height } : null
+    });
+  }
 
   return (
     <div className="panel-backdrop">
@@ -29,6 +42,147 @@ export function CameraListEditor({
             Close
           </button>
         </header>
+        {activeList && (
+          <>
+            <label className="editor-field">
+              List Prefix
+              <input
+                value={activeList.defaultPrefix}
+                onChange={(event) => onUpdatePrefix(event.target.value)}
+              />
+            </label>
+            <div className="camera-table-wrap">
+              <table className="camera-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Full URL</th>
+                    <th>Suffix</th>
+                    <th>Prefix Override</th>
+                    <th>Username</th>
+                    <th>Password</th>
+                    <th>Notes</th>
+                    <th>Viewport</th>
+                    <th>Zoom</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeList.cameras.map((camera) => (
+                    <tr key={camera.id}>
+                      <td>
+                        <input
+                          value={camera.name}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { name: event.target.value })
+                          }
+                          aria-label={`${camera.name} name`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={camera.url}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { url: event.target.value })
+                          }
+                          aria-label={`${camera.name} URL`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={camera.suffix}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { suffix: event.target.value })
+                          }
+                          aria-label={`${camera.name} suffix`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={camera.prefixOverride}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { prefixOverride: event.target.value })
+                          }
+                          aria-label={`${camera.name} prefix override`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={camera.username}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { username: event.target.value })
+                          }
+                          aria-label={`${camera.name} username`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="password"
+                          value={camera.password}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { password: event.target.value })
+                          }
+                          aria-label={`${camera.name} password`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={camera.notes}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, { notes: event.target.value })
+                          }
+                          aria-label={`${camera.name} notes`}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          value={
+                            camera.viewportOverride
+                              ? `${camera.viewportOverride.width}x${camera.viewportOverride.height}`
+                              : ""
+                          }
+                          onChange={(event) => {
+                            if (!event.target.value) {
+                              onUpdateCamera(camera.id, { viewportOverride: null });
+                              return;
+                            }
+                            const [width, height] = event.target.value.split("x").map(Number);
+                            updateViewport(camera, width, height);
+                          }}
+                          aria-label={`${camera.name} viewport`}
+                        >
+                          <option value="">Default</option>
+                          <option value="1280x720">1280x720</option>
+                          <option value="1920x1080">1920x1080</option>
+                          <option value="1024x768">1024x768</option>
+                        </select>
+                      </td>
+                      <td>
+                        <select
+                          value={camera.zoomOverride ?? ""}
+                          onChange={(event) =>
+                            onUpdateCamera(camera.id, {
+                              zoomOverride: event.target.value ? Number(event.target.value) : null
+                            })
+                          }
+                          aria-label={`${camera.name} zoom`}
+                        >
+                          <option value="">Default</option>
+                          <option value="0.75">0.75x</option>
+                          <option value="1">1x</option>
+                          <option value="1.25">1.25x</option>
+                          <option value="1.5">1.5x</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button type="button" onClick={onAddCamera}>
+              Add Camera Row
+            </button>
+          </>
+        )}
         <p className="panel-note">
           CSV columns: name, url, suffix, username, password, notes. A full URL wins over suffix.
         </p>

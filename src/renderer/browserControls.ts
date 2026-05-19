@@ -32,3 +32,14 @@ export function runSelectedTileCommand(
     webview.reload();
   }
 }
+
+export function runAllTileCommand(command: Extract<SelectedTileCommand, "reload">): void {
+  if (command !== "reload") {
+    return;
+  }
+
+  const webviews = Array.from(document.querySelectorAll("webview")) as Electron.WebviewTag[];
+  for (const webview of webviews) {
+    webview.reload();
+  }
+}

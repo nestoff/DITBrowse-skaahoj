@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
-import { runSelectedTileCommand } from "./browserControls";
+import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
 import { AddressBar } from "./components/AddressBar";
 import { CameraListEditor } from "./components/CameraListEditor";
 import { CookieCommands } from "./components/CookieCommands";
@@ -86,6 +86,9 @@ export function App(): ReactElement {
         >
           Reload
         </button>
+        <button type="button" aria-label="Reload all" onClick={() => runAllTileCommand("reload")}>
+          Reload All
+        </button>
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={navigate} />
         <GridControls
           columns={workspace.gridColumns}
@@ -115,6 +118,12 @@ export function App(): ReactElement {
         <button type="button" onClick={() => setEditorOpen(true)}>
           Edit List
         </button>
+        <button type="button" onClick={() => dispatch({ type: "resetSelectedTileScale" })}>
+          Reset Scale
+        </button>
+        <button type="button" onClick={() => dispatch({ type: "resetGridToListOrder" })}>
+          Reset Order
+        </button>
         <CookieCommands
           selectedTile={selectedTile}
           activePartition={activePartition}
@@ -126,6 +135,7 @@ export function App(): ReactElement {
         tiles={workspace.tiles}
         selectedTileId={workspace.selectedTileId}
         onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
+        onMoveTile={(tileId, direction) => dispatch({ type: "moveTile", tileId, direction })}
         onAddTile={() => dispatch({ type: "openNewTile", url: "about:blank" })}
       />
       <TileGrid
@@ -138,6 +148,13 @@ export function App(): ReactElement {
         <CameraListEditor
           activeList={activeList ?? null}
           onClose={() => setEditorOpen(false)}
+          onUpdatePrefix={(defaultPrefix) =>
+            dispatch({ type: "updateActiveListPrefix", defaultPrefix })
+          }
+          onUpdateCamera={(cameraId, patch) =>
+            dispatch({ type: "updateCameraEntry", cameraId, patch })
+          }
+          onAddCamera={() => dispatch({ type: "addCameraEntry" })}
           onImportRows={(rows) => {
             dispatch({ type: "replaceActiveListFromCsv", rows });
             setEditorOpen(false);
