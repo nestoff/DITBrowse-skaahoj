@@ -7,7 +7,9 @@ export type WorkspaceAction =
   | { type: "setGridColumns"; columns: number }
   | { type: "navigateSelectedTile"; url: string }
   | { type: "openNewTile"; url: string }
-  | { type: "replaceActiveListFromCsv"; rows: CameraCsvRow[] };
+  | { type: "replaceActiveListFromCsv"; rows: CameraCsvRow[] }
+  | { type: "setSelectedTileZoom"; zoom: number }
+  | { type: "setSelectedTileViewport"; width: number; height: number };
 
 export function workspaceReducer(
   state: WorkspaceState,
@@ -105,6 +107,22 @@ export function workspaceReducer(
         selectedTileId: tiles[0]?.id ?? null
       };
     }
+    case "setSelectedTileZoom":
+      return {
+        ...state,
+        tiles: state.tiles.map((tile) =>
+          tile.id === state.selectedTileId ? { ...tile, zoom: action.zoom } : tile
+        )
+      };
+    case "setSelectedTileViewport":
+      return {
+        ...state,
+        tiles: state.tiles.map((tile) =>
+          tile.id === state.selectedTileId
+            ? { ...tile, viewport: { width: action.width, height: action.height } }
+            : tile
+        )
+      };
     default:
       return state;
   }

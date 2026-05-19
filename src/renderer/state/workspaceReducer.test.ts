@@ -77,4 +77,24 @@ describe("workspaceReducer", () => {
       password: "pw"
     });
   });
+
+  it("updates selected tile zoom", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "setSelectedTileZoom",
+      zoom: 1.25
+    });
+    expect(state.tiles.find((tile) => tile.id === state.selectedTileId)?.zoom).toBe(1.25);
+  });
+
+  it("updates selected tile viewport", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "setSelectedTileViewport",
+      width: 1920,
+      height: 1080
+    });
+    expect(state.tiles.find((tile) => tile.id === state.selectedTileId)?.viewport).toEqual({
+      width: 1920,
+      height: 1080
+    });
+  });
 });

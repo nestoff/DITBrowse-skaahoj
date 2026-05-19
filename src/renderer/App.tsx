@@ -75,7 +75,17 @@ export function App(): ReactElement {
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={navigate} />
         <GridControls
           columns={workspace.gridColumns}
+          selectedZoom={selectedTile?.zoom ?? workspace.defaultZoom}
+          selectedViewport={selectedTile?.viewport ?? workspace.defaultViewport}
           onColumnsChange={(columns) => dispatch({ type: "setGridColumns", columns })}
+          onZoomChange={(zoom) => dispatch({ type: "setSelectedTileZoom", zoom })}
+          onViewportChange={(viewport) =>
+            dispatch({
+              type: "setSelectedTileViewport",
+              width: viewport.width,
+              height: viewport.height
+            })
+          }
         />
         <button type="button" onClick={() => setEditorOpen(true)}>
           Edit List
