@@ -51,4 +51,30 @@ describe("workspaceReducer", () => {
     expect(state.tiles.at(-1)?.url).toBe("http://192.168.1.99");
     expect(state.selectedTileId).toBe(state.tiles.at(-1)?.id);
   });
+
+  it("replaces the active list and creates tiles from imported rows", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "replaceActiveListFromCsv",
+      rows: [
+        {
+          rowNumber: 2,
+          name: "Imported A",
+          url: "",
+          suffix: "90",
+          username: "admin",
+          password: "pw",
+          notes: "imported"
+        }
+      ]
+    });
+
+    expect(state.cameraLists[0].cameras[0].url).toBe("http://192.168.1.90");
+    expect(state.tiles).toHaveLength(1);
+    expect(state.passwordRecords[0]).toMatchObject({
+      cameraListId: "list-sample",
+      url: "http://192.168.1.90",
+      username: "admin",
+      password: "pw"
+    });
+  });
 });

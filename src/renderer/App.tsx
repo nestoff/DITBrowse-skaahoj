@@ -3,6 +3,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
 import { AddressBar } from "./components/AddressBar";
+import { CameraListEditor } from "./components/CameraListEditor";
 import { GridControls } from "./components/GridControls";
 import { TabStrip } from "./components/TabStrip";
 import { TileGrid } from "./components/TileGrid";
@@ -12,6 +13,7 @@ import { workspaceReducer } from "./state/workspaceReducer";
 export function App(): ReactElement {
   const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
   const [loaded, setLoaded] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -65,6 +67,9 @@ export function App(): ReactElement {
           columns={workspace.gridColumns}
           onColumnsChange={(columns) => dispatch({ type: "setGridColumns", columns })}
         />
+        <button type="button" onClick={() => setEditorOpen(true)}>
+          Edit List
+        </button>
       </header>
       <TabStrip
         tiles={workspace.tiles}
@@ -78,6 +83,16 @@ export function App(): ReactElement {
         selectedTileId={workspace.selectedTileId}
         onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
       />
+      {editorOpen && (
+        <CameraListEditor
+          activeList={activeList ?? null}
+          onClose={() => setEditorOpen(false)}
+          onImportRows={(rows) => {
+            dispatch({ type: "replaceActiveListFromCsv", rows });
+            setEditorOpen(false);
+          }}
+        />
+      )}
     </main>
   );
 }
