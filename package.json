@@ -11,6 +11,8 @@
     "build": "npm run typecheck && vite build && tsc -p tsconfig.node.json",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
     "lint": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
@@ -21,6 +23,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.13.0",
