@@ -80,6 +80,11 @@ textarea {
   color: #a7b1c2;
 }
 
+.cookie-commands {
+  display: flex;
+  gap: 6px;
+}
+
 .tab-strip {
   display: flex;
   gap: 6px;

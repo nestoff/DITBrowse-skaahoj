@@ -4,10 +4,16 @@ import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
 import { AddressBar } from "./components/AddressBar";
 import { CameraListEditor } from "./components/CameraListEditor";
+import { CookieCommands } from "./components/CookieCommands";
 import { GridControls } from "./components/GridControls";
 import { TabStrip } from "./components/TabStrip";
 import { TileGrid } from "./components/TileGrid";
-import { loadWorkspace, saveWorkspace } from "./state/workspaceStorage";
+import {
+  clearPartitionStorage,
+  clearSelectedTileStorage,
+  loadWorkspace,
+  saveWorkspace
+} from "./state/workspaceStorage";
 import { workspaceReducer } from "./state/workspaceReducer";
 
 export function App(): ReactElement {
@@ -42,6 +48,10 @@ export function App(): ReactElement {
   const activeList = workspace.cameraLists.find(
     (list) => list.id === workspace.activeCameraListId
   );
+  const activePartition =
+    workspace.activeJobId && workspace.activeCameraListId
+      ? `persist:ditbrowse-${workspace.activeJobId}-${workspace.activeCameraListId}`
+      : null;
 
   function navigate(input: string, target: "selected" | "new"): void {
     const url = resolveCameraAddress(activeList?.defaultPrefix ?? "", input);
@@ -70,6 +80,12 @@ export function App(): ReactElement {
         <button type="button" onClick={() => setEditorOpen(true)}>
           Edit List
         </button>
+        <CookieCommands
+          selectedTile={selectedTile}
+          activePartition={activePartition}
+          onClearSelected={(partition, url) => void clearSelectedTileStorage(partition, url)}
+          onClearList={(partition) => void clearPartitionStorage(partition)}
+        />
       </header>
       <TabStrip
         tiles={workspace.tiles}
