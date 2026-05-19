@@ -1,2 +1,8 @@
 .superpowers/
 .worktrees/
+node_modules/
+dist-renderer/
+dist-electron/
+coverage/
+playwright-report/
+test-results/
