@@ -1,4 +1,4 @@
-import type { PasswordRecord } from "./types";
+import type { PasswordRecord } from "./types.js";
 
 export interface PasswordLookup {
   jobId: string;

@@ -7,8 +7,9 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "outDir": "dist-electron",
-    "rootDir": "src/electron",
+    "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src/electron/**/*.ts"]
+  "include": ["src/electron/**/*.ts", "src/shared/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

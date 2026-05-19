@@ -1,5 +1,5 @@
-import type { WorkspaceState } from "./types";
-import { resolveCameraAddress } from "./url";
+import type { WorkspaceState } from "./types.js";
+import { resolveCameraAddress } from "./url.js";
 
 const prefix = "http://192.168.1.";
 
