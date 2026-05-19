@@ -79,6 +79,36 @@ function syncListPasswordRecords(
   ];
 }
 
+function urlHostEndsWithSuffix(url: string, suffix: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === suffix || parsed.hostname.endsWith(`.${suffix}`);
+  } catch {
+    return false;
+  }
+}
+
+function updateDerivedCameraUrlForPrefix(
+  camera: CameraEntry,
+  previousPrefix: string,
+  nextPrefix: string
+): CameraEntry {
+  if (!camera.suffix || camera.prefixOverride) {
+    return camera;
+  }
+
+  const previousDerivedUrl = `${previousPrefix}${camera.suffix}`;
+  if (
+    camera.url &&
+    camera.url !== previousDerivedUrl &&
+    !urlHostEndsWithSuffix(camera.url, camera.suffix)
+  ) {
+    return camera;
+  }
+
+  return { ...camera, url: `${nextPrefix}${camera.suffix}` };
+}
+
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) {
     return items;
@@ -232,15 +262,34 @@ export function workspaceReducer(
         selectedTileId: tiles[0]?.id ?? null
       };
     }
-    case "updateActiveListPrefix":
+    case "updateActiveListPrefix": {
+      let updatedList: WorkspaceState["cameraLists"][number] | null = null;
+      const cameraLists = state.cameraLists.map((list) => {
+        if (list.id !== state.activeCameraListId) {
+          return list;
+        }
+
+        const cameras = list.cameras.map((camera) =>
+          updateDerivedCameraUrlForPrefix(camera, list.defaultPrefix, action.defaultPrefix)
+        );
+        updatedList = { ...list, defaultPrefix: action.defaultPrefix, cameras };
+        return updatedList;
+      });
+
+      if (!updatedList) {
+        return state;
+      }
+
       return {
         ...state,
-        cameraLists: state.cameraLists.map((list) =>
-          list.id === state.activeCameraListId
-            ? { ...list, defaultPrefix: action.defaultPrefix }
-            : list
-        )
+        cameraLists,
+        passwordRecords: syncListPasswordRecords(state, updatedList),
+        tiles: state.tiles.map((tile) => {
+          const camera = updatedList?.cameras.find((candidate) => candidate.id === tile.cameraId);
+          return camera ? { ...tile, url: camera.url, title: camera.name } : tile;
+        })
       };
+    }
     case "updateCameraEntry": {
       let updatedList: WorkspaceState["cameraLists"][number] | null = null;
       const cameraLists = state.cameraLists.map((list) => {

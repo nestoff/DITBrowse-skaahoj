@@ -138,6 +138,83 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("updates derived camera, tile, and password URLs when the active list prefix changes", () => {
+    const withPassword = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        username: "admin",
+        password: "secret"
+      }
+    });
+
+    const state = workspaceReducer(withPassword, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://10.10.20."
+    });
+
+    expect(state.cameraLists[0].defaultPrefix).toBe("http://10.10.20.");
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://10.10.20.41"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.10.20.41"
+    });
+    expect(state.passwordRecords[0]).toMatchObject({
+      cameraListId: "list-sample",
+      url: "http://10.10.20.41"
+    });
+  });
+
+  it("keeps explicit camera URLs when the active list prefix changes", () => {
+    const explicit = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        url: "http://camera-control.local"
+      }
+    });
+
+    const state = workspaceReducer(explicit, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://10.10.20."
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://camera-control.local"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://camera-control.local"
+    });
+  });
+
+  it("repairs stale derived LAN URLs after a previous prefix edit did not update cameras", () => {
+    const staleState = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample" ? { ...list, defaultPrefix: "http://10.10.20." } : list
+      )
+    };
+
+    const state = workspaceReducer(staleState, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://172.20.30."
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://172.20.30.41"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://172.20.30.41"
+    });
+  });
+
   it("updates an active camera row, its tile, and its saved password", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "updateCameraEntry",
