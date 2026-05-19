@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
@@ -13,6 +13,7 @@ import {
   saveWorkspace
 } from "./state/workspaceStorage";
 import { workspaceReducer } from "./state/workspaceReducer";
+import { useDebouncedWorkspaceSave } from "./state/useDebouncedWorkspaceSave";
 
 export function App(): ReactElement {
   const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
@@ -32,11 +33,7 @@ export function App(): ReactElement {
     };
   }, []);
 
-  useEffect(() => {
-    if (loaded) {
-      void saveWorkspace(workspace);
-    }
-  }, [loaded, workspace]);
+  useDebouncedWorkspaceSave({ loaded, workspace, saveWorkspace });
 
   const selectedTile = useMemo(
     () => workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ?? null,
@@ -51,12 +48,64 @@ export function App(): ReactElement {
       ? `persist:ditbrowse-${workspace.activeJobId}-${workspace.activeCameraListId}`
       : null;
 
-  function navigate(input: string, target: "selected" | "new"): void {
-    const url = resolveCameraAddress(activeList?.defaultPrefix ?? "", input);
-    dispatch(
-      target === "selected" ? { type: "navigateSelectedTile", url } : { type: "openNewTile", url }
-    );
-  }
+  const navigate = useCallback(
+    (input: string, target: "selected" | "new"): void => {
+      const url = resolveCameraAddress(activeList?.defaultPrefix ?? "", input);
+      dispatch(
+        target === "selected"
+          ? { type: "navigateSelectedTile", url }
+          : { type: "openNewTile", url }
+      );
+    },
+    [activeList?.defaultPrefix]
+  );
+
+  const selectTile = useCallback((tileId: string): void => {
+    dispatch({ type: "selectTile", tileId });
+  }, []);
+
+  const moveTile = useCallback((tileId: string, direction: "left" | "right"): void => {
+    dispatch({ type: "moveTile", tileId, direction });
+  }, []);
+
+  const addBlankTile = useCallback((): void => {
+    dispatch({ type: "openNewTile", url: "about:blank" });
+  }, []);
+
+  const setColumns = useCallback((columns: number): void => {
+    dispatch({ type: "setGridColumns", columns });
+  }, []);
+
+  const setSelectedZoom = useCallback((zoom: number): void => {
+    dispatch({ type: "setSelectedTileZoom", zoom });
+  }, []);
+
+  const setSelectedViewport = useCallback((viewport: { width: number; height: number }): void => {
+    dispatch({
+      type: "setSelectedTileViewport",
+      width: viewport.width,
+      height: viewport.height
+    });
+  }, []);
+
+  const selectCameraList = useCallback((cameraListId: string): void => {
+    dispatch({ type: "selectCameraList", cameraListId });
+  }, []);
+
+  const createJob = useCallback(
+    (jobName: string, listName: string, defaultPrefix: string): void => {
+      dispatch({ type: "createJobWithList", jobName, listName, defaultPrefix });
+    },
+    []
+  );
+
+  const resetSelectedScale = useCallback((): void => {
+    dispatch({ type: "resetSelectedTileScale" });
+  }, []);
+
+  const resetGridOrder = useCallback((): void => {
+    dispatch({ type: "resetGridToListOrder" });
+  }, []);
 
   return (
     <main className="app-shell">
@@ -65,30 +114,22 @@ export function App(): ReactElement {
         selectedTile={selectedTile}
         activeList={activeList ?? null}
         activePartition={activePartition}
-        onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
-        onMoveTile={(tileId, direction) => dispatch({ type: "moveTile", tileId, direction })}
-        onAddTile={() => dispatch({ type: "openNewTile", url: "about:blank" })}
+        onSelectTile={selectTile}
+        onMoveTile={moveTile}
+        onAddTile={addBlankTile}
         onNavigate={navigate}
         onBack={() => runSelectedTileCommand(workspace.selectedTileId, "back")}
         onForward={() => runSelectedTileCommand(workspace.selectedTileId, "forward")}
         onReload={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}
         onReloadAll={() => runAllTileCommand("reload")}
-        onColumnsChange={(columns) => dispatch({ type: "setGridColumns", columns })}
-        onZoomChange={(zoom) => dispatch({ type: "setSelectedTileZoom", zoom })}
-        onViewportChange={(viewport) =>
-          dispatch({
-            type: "setSelectedTileViewport",
-            width: viewport.width,
-            height: viewport.height
-          })
-        }
-        onSelectCameraList={(cameraListId) => dispatch({ type: "selectCameraList", cameraListId })}
-        onCreateJob={(jobName, listName, defaultPrefix) =>
-          dispatch({ type: "createJobWithList", jobName, listName, defaultPrefix })
-        }
+        onColumnsChange={setColumns}
+        onZoomChange={setSelectedZoom}
+        onViewportChange={setSelectedViewport}
+        onSelectCameraList={selectCameraList}
+        onCreateJob={createJob}
         onEditList={() => setEditorOpen(true)}
-        onResetSelectedScale={() => dispatch({ type: "resetSelectedTileScale" })}
-        onResetGridOrder={() => dispatch({ type: "resetGridToListOrder" })}
+        onResetSelectedScale={resetSelectedScale}
+        onResetGridOrder={resetGridOrder}
         onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}
         onClearListCookies={(partition) => void clearPartitionStorage(partition)}
       />
@@ -96,7 +137,7 @@ export function App(): ReactElement {
         tiles={workspace.tiles}
         columns={workspace.gridColumns}
         selectedTileId={workspace.selectedTileId}
-        onSelectTile={(tileId) => dispatch({ type: "selectTile", tileId })}
+        onSelectTile={selectTile}
       />
       {editorOpen && (
         <CameraListEditor

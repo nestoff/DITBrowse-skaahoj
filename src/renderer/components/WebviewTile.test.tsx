@@ -22,7 +22,7 @@ const tile: TileState = {
 
 describe("WebviewTile", () => {
   it("renders a persistent webview for the camera URL", () => {
-    render(<WebviewTile tile={tile} selected={true} onSelect={vi.fn()} />);
+    render(<WebviewTile tile={tile} selected={true} onSelectTile={vi.fn()} />);
 
     expect(screen.getByText("Camera 42")).toBeInTheDocument();
     const webview = document.querySelector("webview");
@@ -31,7 +31,7 @@ describe("WebviewTile", () => {
   });
 
   it("shows a retry action after a load failure", () => {
-    render(<WebviewTile tile={tile} selected={true} onSelect={vi.fn()} />);
+    render(<WebviewTile tile={tile} selected={true} onSelectTile={vi.fn()} />);
 
     const webview = document.querySelector("webview") as HTMLElement & { reload: () => void };
     webview.reload = vi.fn();

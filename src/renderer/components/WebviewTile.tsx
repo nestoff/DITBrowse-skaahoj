@@ -1,15 +1,15 @@
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { computeFitScale } from "../../shared/scale";
 import type { TileState } from "../../shared/types";
 
 interface WebviewTileProps {
   tile: TileState;
   selected: boolean;
-  onSelect: () => void;
+  onSelectTile: (tileId: string) => void;
 }
 
-export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): ReactElement {
+function WebviewTileComponent({ tile, selected, onSelectTile }: WebviewTileProps): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const [bounds, setBounds] = useState({ width: 1, height: 1 });
@@ -58,7 +58,7 @@ export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): Rea
     <div
       ref={containerRef}
       className={selected ? "tile-slot selected" : "tile-slot"}
-      onMouseDown={onSelect}
+      onMouseDown={() => onSelectTile(tile.id)}
     >
       <div className="tile-label">{tile.title || tile.url || "Blank"}</div>
       <webview
@@ -89,3 +89,5 @@ export function WebviewTile({ tile, selected, onSelect }: WebviewTileProps): Rea
     </div>
   );
 }
+
+export const WebviewTile = memo(WebviewTileComponent);

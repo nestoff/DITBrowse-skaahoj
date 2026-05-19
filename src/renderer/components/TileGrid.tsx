@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { memo, useMemo } from "react";
 import { buildGridSlots } from "../../shared/grid";
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
@@ -10,17 +11,18 @@ interface TileGridProps {
   onSelectTile: (tileId: string) => void;
 }
 
-export function TileGrid({
+function TileGridComponent({
   tiles,
   columns,
   selectedTileId,
   onSelectTile
 }: TileGridProps): ReactElement {
-  const slots = buildGridSlots(
-    tiles.map((tile) => tile.id),
-    columns
+  const tileIds = useMemo(() => tiles.map((tile) => tile.id), [tiles]);
+  const slots = useMemo(() => buildGridSlots(tileIds, columns), [columns, tileIds]);
+  const tileById = useMemo(
+    () => new Map(tiles.map((tile) => [tile.id, tile])),
+    [tiles]
   );
-  const tileById = new Map(tiles.map((tile) => [tile.id, tile]));
 
   return (
     <section
@@ -38,10 +40,12 @@ export function TileGrid({
             key={tile.id}
             tile={tile}
             selected={tile.id === selectedTileId}
-            onSelect={() => onSelectTile(tile.id)}
+            onSelectTile={onSelectTile}
           />
         );
       })}
     </section>
   );
 }
+
+export const TileGrid = memo(TileGridComponent);
