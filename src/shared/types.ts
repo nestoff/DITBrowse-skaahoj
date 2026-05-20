@@ -9,8 +9,9 @@ export interface CameraEntry {
   url: string;
   suffix: string;
   prefixOverride: string;
-  username: string;
-  password: string;
+  cameraType: string;
+  lens: string;
+  displayNote: string;
   notes: string;
   viewportOverride: ViewportSize | null;
   zoomOverride: number | null;
@@ -44,6 +45,7 @@ export interface PasswordRecord {
   id: string;
   jobId: string;
   cameraListId: string;
+  cameraId: string | null;
   url: string;
   username: string;
   password: string;

@@ -23,7 +23,7 @@ export function CameraListEditor({
   onClose
 }: CameraListEditorProps): ReactElement {
   const [csvText, setCsvText] = useState(
-    "name,url,suffix,username,password,notes\nCamera 42,,42,admin,,"
+    "number,url,type,lens,display_note,notes\n42,,ALEXA 35,50mm,Handheld,"
   );
   const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
 
@@ -57,11 +57,10 @@ export function CameraListEditor({
                   <tr>
                     <th>Name</th>
                     <th>Full URL</th>
-                    <th>Suffix</th>
-                    <th>Prefix Override</th>
-                    <th>Username</th>
-                    <th>Password</th>
-                    <th>Notes</th>
+                    <th>Camera #</th>
+                    <th>Type</th>
+                    <th>Lens</th>
+                    <th>Display Note</th>
                     <th>Viewport</th>
                     <th>Zoom</th>
                   </tr>
@@ -98,39 +97,29 @@ export function CameraListEditor({
                       </td>
                       <td>
                         <input
-                          value={camera.prefixOverride}
+                          value={camera.cameraType}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { prefixOverride: event.target.value })
+                            onUpdateCamera(camera.id, { cameraType: event.target.value })
                           }
-                          aria-label={`${camera.name} prefix override`}
+                          aria-label={`${camera.name} type`}
                         />
                       </td>
                       <td>
                         <input
-                          value={camera.username}
+                          value={camera.lens}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { username: event.target.value })
+                            onUpdateCamera(camera.id, { lens: event.target.value })
                           }
-                          aria-label={`${camera.name} username`}
+                          aria-label={`${camera.name} lens`}
                         />
                       </td>
                       <td>
                         <input
-                          type="password"
-                          value={camera.password}
+                          value={camera.displayNote}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { password: event.target.value })
+                            onUpdateCamera(camera.id, { displayNote: event.target.value })
                           }
-                          aria-label={`${camera.name} password`}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={camera.notes}
-                          onChange={(event) =>
-                            onUpdateCamera(camera.id, { notes: event.target.value })
-                          }
-                          aria-label={`${camera.name} notes`}
+                          aria-label={`${camera.name} display note`}
                         />
                       </td>
                       <td>
@@ -184,7 +173,7 @@ export function CameraListEditor({
           </>
         )}
         <p className="panel-note">
-          CSV columns: name, url, suffix, username, password, notes. A full URL wins over suffix.
+          CSV columns: number, url, type, lens, display_note, notes. A full URL wins over camera #.
         </p>
         <textarea
           value={csvText}

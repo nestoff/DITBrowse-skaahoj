@@ -1,4 +1,5 @@
 import type { CameraCsvRow } from "../../shared/csv";
+import { formatCameraLabel } from "../../shared/cameraLabel";
 import type { CameraEntry, PasswordRecord, WorkspaceState } from "../../shared/types";
 
 export type CameraEntryPatch = Partial<
@@ -8,8 +9,9 @@ export type CameraEntryPatch = Partial<
     | "url"
     | "suffix"
     | "prefixOverride"
-    | "username"
-    | "password"
+    | "cameraType"
+    | "lens"
+    | "displayNote"
     | "notes"
     | "viewportOverride"
     | "zoomOverride"
@@ -42,41 +44,27 @@ function createTilesForList(
     id: `tile-${camera.id}`,
     cameraId: camera.id,
     url: camera.url,
-    title: camera.name,
+    title: formatCameraLabel(camera),
     partition: `persist:ditbrowse-${list.jobId}-${list.id}`,
     viewport: camera.viewportOverride ?? state.defaultViewport,
     zoom: camera.zoomOverride ?? state.defaultZoom
   }));
 }
 
-function passwordRecordForCamera(
-  list: WorkspaceState["cameraLists"][number],
-  camera: CameraEntry
-): PasswordRecord | null {
-  if (!camera.username && !camera.password) {
-    return null;
-  }
-
-  return {
-    id: `password-${camera.id}`,
-    jobId: list.jobId,
-    cameraListId: list.id,
-    url: camera.url,
-    username: camera.username,
-    password: camera.password
-  };
-}
-
 function syncListPasswordRecords(
   state: WorkspaceState,
   list: WorkspaceState["cameraLists"][number]
 ): PasswordRecord[] {
-  return [
-    ...state.passwordRecords.filter((record) => record.cameraListId !== list.id),
-    ...list.cameras
-      .map((camera) => passwordRecordForCamera(list, camera))
-      .filter((record): record is PasswordRecord => record !== null)
-  ];
+  return state.passwordRecords.map((record) => {
+    if (record.cameraListId !== list.id) {
+      return record;
+    }
+
+    const camera = list.cameras.find(
+      (candidate) => candidate.id === record.cameraId || candidate.url === record.url
+    );
+    return camera ? { ...record, cameraId: camera.id, url: camera.url } : record;
+  });
 }
 
 function urlHostEndsWithSuffix(url: string, suffix: string): boolean {
@@ -174,26 +162,24 @@ export function workspaceReducer(
           url,
           suffix: row.suffix,
           prefixOverride: "",
-          username: row.username,
-          password: row.password,
+          cameraType: row.cameraType,
+          lens: row.lens,
+          displayNote: row.displayNote,
           notes: row.notes,
           viewportOverride: null,
           zoomOverride: null
         };
       });
 
-      const passwordRecords = [
-        ...state.passwordRecords.filter((record) => record.cameraListId !== activeList.id),
-        ...cameras
-          .map((camera) => passwordRecordForCamera(activeList, camera))
-          .filter((record): record is PasswordRecord => record !== null)
-      ];
+      const passwordRecords = state.passwordRecords.filter(
+        (record) => record.cameraListId !== activeList.id
+      );
 
       const tiles = cameras.map((camera) => ({
         id: `tile-${crypto.randomUUID()}`,
         cameraId: camera.id,
         url: camera.url,
-        title: camera.name,
+        title: formatCameraLabel(camera),
         partition: `persist:ditbrowse-${activeList.jobId}-${activeList.id}`,
         viewport: camera.viewportOverride ?? state.defaultViewport,
         zoom: camera.zoomOverride ?? state.defaultZoom
@@ -286,7 +272,7 @@ export function workspaceReducer(
         passwordRecords: syncListPasswordRecords(state, updatedList),
         tiles: state.tiles.map((tile) => {
           const camera = updatedList?.cameras.find((candidate) => candidate.id === tile.cameraId);
-          return camera ? { ...tile, url: camera.url, title: camera.name } : tile;
+          return camera ? { ...tile, url: camera.url, title: formatCameraLabel(camera) } : tile;
         })
       };
     }
@@ -320,7 +306,7 @@ export function workspaceReducer(
 
           return {
             ...tile,
-            title: camera.name,
+            title: formatCameraLabel(camera),
             url: camera.url,
             viewport: camera.viewportOverride ?? state.defaultViewport,
             zoom: camera.zoomOverride ?? state.defaultZoom
@@ -340,8 +326,9 @@ export function workspaceReducer(
         url: activeList.defaultPrefix,
         suffix: "",
         prefixOverride: "",
-        username: "",
-        password: "",
+        cameraType: "",
+        lens: "",
+        displayNote: "",
         notes: "",
         viewportOverride: null,
         zoomOverride: null

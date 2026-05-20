@@ -4,17 +4,18 @@ import { parseCameraCsv } from "./csv";
 describe("parseCameraCsv", () => {
   it("parses camera rows and keeps full URL over suffix", () => {
     const result = parseCameraCsv(
-      "name,url,suffix,username,password,notes\nA,http://10.0.0.2,42,admin,pass,main"
+      "number,url,type,lens,display_note,notes\n42,http://10.0.0.2,ALEXA 35,50mm,Handheld,main"
     );
 
     expect(result.validRows).toEqual([
       {
         rowNumber: 2,
-        name: "A",
+        name: "42",
         url: "http://10.0.0.2",
         suffix: "42",
-        username: "admin",
-        password: "pass",
+        cameraType: "ALEXA 35",
+        lens: "50mm",
+        displayNote: "Handheld",
         notes: "main"
       }
     ]);
@@ -22,10 +23,20 @@ describe("parseCameraCsv", () => {
   });
 
   it("reports rows with neither URL nor suffix", () => {
-    const result = parseCameraCsv("name,url,suffix,username,password,notes\nA,,,,pass,main");
+    const result = parseCameraCsv("number,url,type,lens,display_note,notes\n,,,,,main");
     expect(result.validRows).toEqual([]);
     expect(result.errors).toEqual([
       { rowNumber: 2, message: "Row must include url or suffix" }
     ]);
+  });
+
+  it("still accepts old suffix and name headers without credential columns", () => {
+    const result = parseCameraCsv("name,url,suffix,notes\nCamera 8,,8,main");
+    expect(result.validRows[0]).toMatchObject({
+      name: "Camera 8",
+      suffix: "8",
+      notes: "main"
+    });
+    expect(result.errors).toEqual([]);
   });
 });

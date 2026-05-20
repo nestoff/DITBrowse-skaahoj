@@ -3,8 +3,9 @@ export interface CameraCsvRow {
   name: string;
   url: string;
   suffix: string;
-  username: string;
-  password: string;
+  cameraType: string;
+  lens: string;
+  displayNote: string;
   notes: string;
 }
 
@@ -17,8 +18,6 @@ export interface CameraCsvParseResult {
   validRows: CameraCsvRow[];
   errors: CameraCsvError[];
 }
-
-const REQUIRED_HEADERS = ["name", "url", "suffix", "username", "password", "notes"];
 
 function splitCsvLine(line: string): string[] {
   const values: string[] = [];
@@ -53,6 +52,15 @@ function splitCsvLine(line: string): string[] {
   return values;
 }
 
+function readField(row: Record<string, string>, names: string[]): string {
+  for (const name of names) {
+    if (row[name]) {
+      return row[name];
+    }
+  }
+  return "";
+}
+
 export function parseCameraCsv(csvText: string): CameraCsvParseResult {
   const lines = csvText
     .split(/\r?\n/)
@@ -64,11 +72,10 @@ export function parseCameraCsv(csvText: string): CameraCsvParseResult {
   }
 
   const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
-  const missingHeader = REQUIRED_HEADERS.find((header) => !headers.includes(header));
-  if (missingHeader) {
+  if (!headers.includes("url") && !headers.includes("suffix") && !headers.includes("number")) {
     return {
       validRows: [],
-      errors: [{ rowNumber: 1, message: `Missing required header: ${missingHeader}` }]
+      errors: [{ rowNumber: 1, message: "CSV must include url, suffix, or number header" }]
     };
   }
 
@@ -79,20 +86,23 @@ export function parseCameraCsv(csvText: string): CameraCsvParseResult {
     const rowNumber = lineIndex + 1;
     const values = splitCsvLine(lines[lineIndex]);
     const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+    const suffix = readField(row, ["number", "camera #", "camera_number", "suffix"]);
+    const url = readField(row, ["url", "full url", "full_url"]);
 
-    if (!row.url && !row.suffix) {
+    if (!url && !suffix) {
       errors.push({ rowNumber, message: "Row must include url or suffix" });
       continue;
     }
 
     validRows.push({
       rowNumber,
-      name: row.name || row.url || row.suffix,
-      url: row.url,
-      suffix: row.suffix,
-      username: row.username,
-      password: row.password,
-      notes: row.notes
+      name: row.name || suffix || url,
+      url,
+      suffix,
+      cameraType: readField(row, ["type", "camera type", "camera_type"]),
+      lens: readField(row, ["lens"]),
+      displayNote: readField(row, ["display note", "display_note", "note", "label"]),
+      notes: readField(row, ["notes"])
     });
   }
 

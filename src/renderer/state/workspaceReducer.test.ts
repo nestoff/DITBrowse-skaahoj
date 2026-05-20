@@ -61,21 +61,23 @@ describe("workspaceReducer", () => {
           name: "Imported A",
           url: "",
           suffix: "90",
-          username: "admin",
-          password: "pw",
+          cameraType: "ALEXA 35",
+          lens: "50mm",
+          displayNote: "Studio",
           notes: "imported"
         }
       ]
     });
 
     expect(state.cameraLists[0].cameras[0].url).toBe("http://192.168.1.90");
-    expect(state.tiles).toHaveLength(1);
-    expect(state.passwordRecords[0]).toMatchObject({
-      cameraListId: "list-sample",
-      url: "http://192.168.1.90",
-      username: "admin",
-      password: "pw"
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      cameraType: "ALEXA 35",
+      lens: "50mm",
+      displayNote: "Studio"
     });
+    expect(state.tiles).toHaveLength(1);
+    expect(state.tiles[0].title).toBe("90 • ALEXA 35 • 50mm • Studio");
+    expect(state.passwordRecords).toEqual([]);
   });
 
   it("updates selected tile zoom", () => {
@@ -139,14 +141,20 @@ describe("workspaceReducer", () => {
   });
 
   it("updates derived camera, tile, and password URLs when the active list prefix changes", () => {
-    const withPassword = workspaceReducer(sampleWorkspace, {
-      type: "updateCameraEntry",
-      cameraId: "camera-41",
-      patch: {
-        username: "admin",
-        password: "secret"
-      }
-    });
+    const withPassword = {
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-camera-41",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.41",
+          username: "admin",
+          password: "secret"
+        }
+      ]
+    };
 
     const state = workspaceReducer(withPassword, {
       type: "updateActiveListPrefix",
@@ -215,15 +223,13 @@ describe("workspaceReducer", () => {
     });
   });
 
-  it("updates an active camera row, its tile, and its saved password", () => {
+  it("updates an active camera row and its tile", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "updateCameraEntry",
       cameraId: "camera-41",
       patch: {
         name: "A Cam",
         url: "http://10.0.0.41",
-        username: "operator",
-        password: "secret",
         viewportOverride: { width: 1920, height: 1080 },
         zoomOverride: 1.25
       }
@@ -232,22 +238,38 @@ describe("workspaceReducer", () => {
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       name: "A Cam",
       url: "http://10.0.0.41",
-      username: "operator",
-      password: "secret",
       viewportOverride: { width: 1920, height: 1080 },
       zoomOverride: 1.25
     });
     expect(state.tiles[0]).toMatchObject({
-      title: "A Cam",
+      title: "41",
       url: "http://10.0.0.41",
       viewport: { width: 1920, height: 1080 },
       zoom: 1.25
     });
-    expect(state.passwordRecords[0]).toMatchObject({
-      cameraListId: "list-sample",
-      url: "http://10.0.0.41",
-      username: "operator",
-      password: "secret"
+  });
+
+  it("updates camera metadata and uses it for tile labels", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        suffix: "4",
+        cameraType: "ALEXA 35",
+        lens: "50mm",
+        displayNote: "Handheld"
+      }
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "4",
+      cameraType: "ALEXA 35",
+      lens: "50mm",
+      displayNote: "Handheld"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      title: "4 • ALEXA 35 • 50mm • Handheld"
     });
   });
 

@@ -1,4 +1,5 @@
 import type { WorkspaceState } from "./types.js";
+import { formatCameraLabel } from "./cameraLabel.js";
 import { resolveCameraAddress } from "./url.js";
 
 const prefix = "http://192.168.1.";
@@ -15,12 +16,13 @@ export const sampleWorkspace: WorkspaceState = {
         const suffix = String(41 + index);
         return {
           id: `camera-${suffix}`,
-          name: `Camera ${suffix}`,
+          name: suffix,
           url: resolveCameraAddress(prefix, suffix),
           suffix,
           prefixOverride: "",
-          username: "admin",
-          password: "",
+          cameraType: "",
+          lens: "",
+          displayNote: "",
           notes: "",
           viewportOverride: null,
           zoomOverride: null
@@ -31,11 +33,24 @@ export const sampleWorkspace: WorkspaceState = {
   passwordRecords: [],
   tiles: Array.from({ length: 12 }, (_, index) => {
     const suffix = String(41 + index);
+    const camera = {
+      id: `camera-${suffix}`,
+      name: suffix,
+      url: resolveCameraAddress(prefix, suffix),
+      suffix,
+      prefixOverride: "",
+      cameraType: "",
+      lens: "",
+      displayNote: "",
+      notes: "",
+      viewportOverride: null,
+      zoomOverride: null
+    };
     return {
       id: `tile-${suffix}`,
       cameraId: `camera-${suffix}`,
       url: resolveCameraAddress(prefix, suffix),
-      title: `Camera ${suffix}`,
+      title: formatCameraLabel(camera),
       partition: "persist:ditbrowse-job-sample-list-sample",
       viewport: { width: 1280, height: 720 },
       zoom: 1
