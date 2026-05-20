@@ -32,3 +32,25 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   const secondTileBox = await page.locator(".tile-slot").nth(1).boundingBox();
   expect(Math.abs((resizedTileBox?.height ?? 0) - (secondTileBox?.height ?? 0))).toBeLessThan(1);
 });
+
+test("selected camera address overrides can return to prefix and suffix style", async ({ page }) => {
+  await page.goto("/");
+
+  const address = page.getByRole("textbox", { name: "Address" });
+  await expect(address).toHaveValue("http://192.168.1.41");
+
+  await address.fill("http://camera-control.local");
+  await address.press("Enter");
+
+  await expect(address).toHaveValue("http://camera-control.local");
+
+  const returnToPrefix = page.getByRole("button", {
+    name: "Go back to prefix and suffix style"
+  });
+  await expect(returnToPrefix).toBeVisible();
+
+  await returnToPrefix.click();
+
+  await expect(address).toHaveValue("http://192.168.1.41");
+  await expect(returnToPrefix).toBeHidden();
+});

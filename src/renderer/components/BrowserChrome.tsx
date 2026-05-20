@@ -16,6 +16,7 @@ interface BrowserChromeProps {
   onMoveTile: (tileId: string, direction: "left" | "right") => void;
   onAddTile: () => void;
   onNavigate: (input: string, target: "selected" | "new") => void;
+  onReturnSelectedCameraToPrefix: () => void;
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
@@ -42,6 +43,7 @@ export function BrowserChrome({
   onMoveTile,
   onAddTile,
   onNavigate,
+  onReturnSelectedCameraToPrefix,
   onBack,
   onForward,
   onReload,
@@ -59,6 +61,10 @@ export function BrowserChrome({
   onClearListCookies
 }: BrowserChromeProps): ReactElement {
   const [toolsOpen, setToolsOpen] = useState(false);
+  const selectedCamera = selectedTile?.cameraId
+    ? activeList?.cameras.find((camera) => camera.id === selectedTile.cameraId) ?? null
+    : null;
+  const showReturnToPrefix = !!selectedCamera && selectedCamera.usesListPrefix === false;
 
   return (
     <div className="browser-shell">
@@ -84,6 +90,8 @@ export function BrowserChrome({
         defaultZoom={workspace.defaultZoom}
         defaultViewport={workspace.defaultViewport}
         onNavigate={onNavigate}
+        showReturnToPrefix={showReturnToPrefix}
+        onReturnSelectedCameraToPrefix={onReturnSelectedCameraToPrefix}
         onBack={onBack}
         onForward={onForward}
         onReload={onReload}

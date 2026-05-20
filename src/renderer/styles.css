@@ -188,6 +188,10 @@ button {
 }
 
 .browser-toolbar-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -444,7 +448,8 @@ button {
 .cookie-commands button,
 .panel-header button,
 .editor-panel > button,
-.save-prefix-button {
+.save-prefix-button,
+.return-prefix-button {
   border: 1px solid #373d41;
   border-radius: 7px;
   background: #222629;
@@ -459,7 +464,8 @@ button {
 .cookie-commands button:hover:not(:disabled),
 .panel-header button:hover,
 .editor-panel > button:hover:not(:disabled),
-.save-prefix-button:hover:not(:disabled) {
+.save-prefix-button:hover:not(:disabled),
+.return-prefix-button:hover:not(:disabled) {
   border-color: #485055;
   background: #2b3033;
 }
@@ -478,6 +484,23 @@ button {
   gap: 7px;
   min-width: 0;
   white-space: nowrap;
+}
+
+.return-prefix-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 260px;
+  height: 32px;
+  white-space: nowrap;
+}
+
+.return-prefix-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cookie-commands button {
@@ -733,6 +756,10 @@ button {
 
   .browser-toolbar-main {
     grid-area: address;
+  }
+
+  .return-prefix-button {
+    max-width: 190px;
   }
 
   .browser-layout-controls {

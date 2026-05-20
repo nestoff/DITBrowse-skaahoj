@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Link2,
   RotateCw,
   Rows3,
   RotateCcw,
@@ -18,6 +19,8 @@ interface BrowserToolbarProps {
   defaultZoom: number;
   defaultViewport: ViewportSize;
   onNavigate: (input: string, target: "selected" | "new") => void;
+  showReturnToPrefix: boolean;
+  onReturnSelectedCameraToPrefix: () => void;
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
@@ -34,6 +37,8 @@ export function BrowserToolbar({
   defaultZoom,
   defaultViewport,
   onNavigate,
+  showReturnToPrefix,
+  onReturnSelectedCameraToPrefix,
   onBack,
   onForward,
   onReload,
@@ -67,6 +72,17 @@ export function BrowserToolbar({
       </div>
       <div className="browser-toolbar-main">
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={onNavigate} />
+        {showReturnToPrefix && (
+          <button
+            type="button"
+            className="return-prefix-button"
+            title="Go back to prefix and suffix style"
+            onClick={onReturnSelectedCameraToPrefix}
+          >
+            <Link2 size={14} strokeWidth={2.2} />
+            <span>Go back to prefix and suffix style</span>
+          </button>
+        )}
       </div>
       <div className="toolbar-group browser-layout-controls" aria-label="Layout controls">
         <span className="selected-tile-status" title={selectedName}>

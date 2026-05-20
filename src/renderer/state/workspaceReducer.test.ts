@@ -70,14 +70,77 @@ describe("workspaceReducer", () => {
     expect(state.gridColumns).toBe(5);
   });
 
-  it("navigates selected tile", () => {
+  it("navigates an unlinked selected tile without changing the camera list", () => {
+    const unlinkedWorkspace = {
+      ...sampleWorkspace,
+      selectedTileId: "tile-unlinked",
+      tiles: [
+        ...sampleWorkspace.tiles,
+        {
+          id: "tile-unlinked",
+          cameraId: null,
+          url: "about:blank",
+          title: "about:blank",
+          partition: "persist:ditbrowse-job-sample-list-sample",
+          viewport: { width: 1280, height: 720 },
+          zoom: 1
+        }
+      ]
+    };
+
+    const state = workspaceReducer(unlinkedWorkspace, {
+      type: "navigateSelectedTile",
+      url: "http://192.168.1.80"
+    });
+
+    expect(state.tiles.find((tile) => tile.id === "tile-unlinked")).toMatchObject({
+      url: "http://192.168.1.80",
+      title: "http://192.168.1.80"
+    });
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      url: "http://192.168.1.41",
+      usesListPrefix: true
+    });
+  });
+
+  it("saves a typed address as a manual URL for the selected prefix-based camera", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "navigateSelectedTile",
       url: "http://192.168.1.80"
     });
-    expect(state.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId)?.url).toBe(
-      "http://192.168.1.80"
-    );
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://192.168.1.80",
+      usesListPrefix: false
+    });
+    expect(state.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId)).toMatchObject({
+      cameraId: "camera-41",
+      title: "41",
+      url: "http://192.168.1.80"
+    });
+  });
+
+  it("returns the selected manual camera to prefix and suffix URL style", () => {
+    const manual = workspaceReducer(sampleWorkspace, {
+      type: "navigateSelectedTile",
+      url: "http://camera-control.local"
+    });
+
+    const state = workspaceReducer(manual, {
+      type: "returnSelectedCameraToPrefix"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://192.168.1.41",
+      usesListPrefix: true
+    });
+    expect(state.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId)).toMatchObject({
+      cameraId: "camera-41",
+      title: "41",
+      url: "http://192.168.1.41"
+    });
   });
 
   it("opens a new tile", () => {

@@ -25,6 +25,7 @@ export type WorkspaceAction =
   | { type: "selectTile"; tileId: string }
   | { type: "setGridColumns"; columns: number }
   | { type: "navigateSelectedTile"; url: string }
+  | { type: "returnSelectedCameraToPrefix" }
   | { type: "openNewTile"; url: string }
   | { type: "replaceActiveListFromCsv"; rows: CameraCsvRow[] }
   | { type: "setGlobalZoom"; zoom: number }
@@ -250,13 +251,100 @@ export function workspaceReducer(
       return { ...state, selectedTileId: action.tileId };
     case "setGridColumns":
       return { ...state, gridColumns: Math.max(1, action.columns) };
-    case "navigateSelectedTile":
-      return {
-        ...state,
-        tiles: state.tiles.map((tile) =>
-          tile.id === state.selectedTileId ? { ...tile, url: action.url, title: action.url } : tile
+    case "navigateSelectedTile": {
+      const selectedTile = state.tiles.find((tile) => tile.id === state.selectedTileId);
+      if (!selectedTile?.cameraId) {
+        return {
+          ...state,
+          tiles: state.tiles.map((tile) =>
+            tile.id === state.selectedTileId
+              ? { ...tile, url: action.url, title: action.url }
+              : tile
+          )
+        };
+      }
+
+      const activeList = state.cameraLists.find((list) => list.id === state.activeCameraListId);
+      const camera = activeList?.cameras.find((candidate) => candidate.id === selectedTile.cameraId);
+      if (!activeList || !camera) {
+        return {
+          ...state,
+          tiles: state.tiles.map((tile) =>
+            tile.id === state.selectedTileId
+              ? { ...tile, url: action.url, title: action.url }
+              : tile
+          )
+        };
+      }
+
+      const updatedCamera = { ...camera, url: action.url, usesListPrefix: false };
+      const updatedList = {
+        ...activeList,
+        cameras: activeList.cameras.map((candidate) =>
+          candidate.id === updatedCamera.id ? updatedCamera : candidate
         )
       };
+      const cameraLists = state.cameraLists.map((list) =>
+        list.id === updatedList.id ? updatedList : list
+      );
+
+      return {
+        ...state,
+        cameraLists,
+        passwordRecords: syncListPasswordRecords(state, updatedList),
+        tiles: state.tiles.map((tile) =>
+          tile.id === selectedTile.id
+            ? {
+                ...tile,
+                url: updatedCamera.url,
+                title: formatCameraLabel(updatedCamera),
+                viewport: updatedCamera.viewportOverride ?? state.defaultViewport,
+                zoom: updatedCamera.zoomOverride ?? state.defaultZoom
+              }
+            : tile
+        )
+      };
+    }
+    case "returnSelectedCameraToPrefix": {
+      const selectedTile = state.tiles.find((tile) => tile.id === state.selectedTileId);
+      if (!selectedTile?.cameraId) {
+        return state;
+      }
+
+      const activeList = state.cameraLists.find((list) => list.id === state.activeCameraListId);
+      const camera = activeList?.cameras.find((candidate) => candidate.id === selectedTile.cameraId);
+      if (!activeList || !camera) {
+        return state;
+      }
+
+      const updatedCamera = applyListPrefixUrl(camera, activeList.defaultPrefix);
+      const updatedList = {
+        ...activeList,
+        cameras: activeList.cameras.map((candidate) =>
+          candidate.id === updatedCamera.id ? updatedCamera : candidate
+        )
+      };
+      const cameraLists = state.cameraLists.map((list) =>
+        list.id === updatedList.id ? updatedList : list
+      );
+
+      return {
+        ...state,
+        cameraLists,
+        passwordRecords: syncListPasswordRecords(state, updatedList),
+        tiles: state.tiles.map((tile) =>
+          tile.id === selectedTile.id
+            ? {
+                ...tile,
+                url: updatedCamera.url,
+                title: formatCameraLabel(updatedCamera),
+                viewport: updatedCamera.viewportOverride ?? state.defaultViewport,
+                zoom: updatedCamera.zoomOverride ?? state.defaultZoom
+              }
+            : tile
+        )
+      };
+    }
     case "openNewTile": {
       const id = `tile-${crypto.randomUUID()}`;
       const activeJobId = state.activeJobId ?? "default-job";

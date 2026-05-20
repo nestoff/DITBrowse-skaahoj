@@ -104,6 +104,10 @@ export function App(): ReactElement {
     dispatch({ type: "openNewTile", url: "about:blank" });
   }, []);
 
+  const returnSelectedCameraToPrefix = useCallback((): void => {
+    dispatch({ type: "returnSelectedCameraToPrefix" });
+  }, []);
+
   const setColumns = useCallback((columns: number): void => {
     dispatch({ type: "setGridColumns", columns });
   }, []);
@@ -167,6 +171,7 @@ export function App(): ReactElement {
         onMoveTile={moveTile}
         onAddTile={addBlankTile}
         onNavigate={navigate}
+        onReturnSelectedCameraToPrefix={returnSelectedCameraToPrefix}
         onBack={() => runSelectedTileCommand(workspace.selectedTileId, "back")}
         onForward={() => runSelectedTileCommand(workspace.selectedTileId, "forward")}
         onReload={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}

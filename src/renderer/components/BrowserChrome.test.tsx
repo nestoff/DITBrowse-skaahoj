@@ -18,6 +18,7 @@ const baseProps = {
   onMoveTile: vi.fn(),
   onAddTile: vi.fn(),
   onNavigate: vi.fn(),
+  onReturnSelectedCameraToPrefix: vi.fn(),
   onBack: vi.fn(),
   onForward: vi.fn(),
   onReload: vi.fn(),
@@ -80,5 +81,53 @@ describe("BrowserChrome", () => {
 
     expect(onGlobalZoomChange).toHaveBeenCalledWith(1.37);
     expect(onZoomChange).toHaveBeenCalledWith(0.82);
+  });
+
+  it("offers to return a manually overridden selected camera to prefix and suffix style", () => {
+    const onReturnSelectedCameraToPrefix = vi.fn();
+    const manualWorkspace = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample"
+          ? {
+              ...list,
+              cameras: list.cameras.map((camera) =>
+                camera.id === "camera-41"
+                  ? {
+                      ...camera,
+                      url: "http://camera-control.local",
+                      usesListPrefix: false
+                    }
+                  : camera
+              )
+            }
+          : list
+      ),
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.id === "tile-41" ? { ...tile, url: "http://camera-control.local" } : tile
+      )
+    };
+
+    render(
+      <BrowserChrome
+        {...baseProps}
+        workspace={manualWorkspace}
+        selectedTile={manualWorkspace.tiles[0]}
+        activeList={manualWorkspace.cameraLists[0]}
+        onReturnSelectedCameraToPrefix={onReturnSelectedCameraToPrefix}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Go back to prefix and suffix style" }));
+
+    expect(onReturnSelectedCameraToPrefix).toHaveBeenCalledOnce();
+  });
+
+  it("hides the prefix restore button while the selected camera is already prefix-based", () => {
+    render(<BrowserChrome {...baseProps} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Go back to prefix and suffix style" })
+    ).not.toBeInTheDocument();
   });
 });
