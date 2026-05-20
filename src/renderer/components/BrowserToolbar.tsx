@@ -23,6 +23,7 @@ interface BrowserToolbarProps {
   onReload: () => void;
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
+  onGlobalZoomChange: (zoom: number) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
 }
@@ -38,6 +39,7 @@ export function BrowserToolbar({
   onReload,
   onReloadAll,
   onColumnsChange,
+  onGlobalZoomChange,
   onZoomChange,
   onViewportChange
 }: BrowserToolbarProps): ReactElement {
@@ -73,9 +75,11 @@ export function BrowserToolbar({
         </span>
         <GridControls
           columns={columns}
+          globalZoom={defaultZoom}
           selectedZoom={selectedTile?.zoom ?? defaultZoom}
           selectedViewport={selectedTile?.viewport ?? defaultViewport}
           onColumnsChange={onColumnsChange}
+          onGlobalZoomChange={onGlobalZoomChange}
           onZoomChange={onZoomChange}
           onViewportChange={onViewportChange}
           icon={<Rows3 size={14} strokeWidth={2.2} />}

@@ -120,9 +120,30 @@ describe("workspaceReducer", () => {
   it("updates selected tile zoom", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "setSelectedTileZoom",
-      zoom: 1.25
+      zoom: 1.13
     });
-    expect(state.tiles.find((tile) => tile.id === state.selectedTileId)?.zoom).toBe(1.25);
+    expect(state.tiles.find((tile) => tile.id === state.selectedTileId)?.zoom).toBe(1.13);
+    expect(state.cameraLists[0].cameras[0].zoomOverride).toBe(1.13);
+  });
+
+  it("updates the global zoom for every tile and resets per-camera zoom overrides", () => {
+    const customTile = workspaceReducer(sampleWorkspace, {
+      type: "setSelectedTileZoom",
+      zoom: 1.42
+    });
+
+    const state = workspaceReducer(customTile, {
+      type: "setGlobalZoom",
+      zoom: 0.82
+    });
+
+    expect(state.defaultZoom).toBe(0.82);
+    expect(state.tiles.every((tile) => tile.zoom === 0.82)).toBe(true);
+    expect(
+      state.cameraLists.every((list) =>
+        list.cameras.every((camera) => camera.zoomOverride === null)
+      )
+    ).toBe(true);
   });
 
   it("updates selected tile viewport", () => {
@@ -259,6 +280,66 @@ describe("workspaceReducer", () => {
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
       url: "http://192.168.1.99"
+    });
+  });
+
+  it("keeps non-following camera URLs when the active list prefix changes", () => {
+    const notFollowing = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        usesListPrefix: false
+      }
+    });
+
+    const state = workspaceReducer(notFollowing, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://10.10.20."
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://192.168.1.41",
+      usesListPrefix: false
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.41"
+    });
+  });
+
+  it("recomputes a camera URL when follow prefix is re-enabled", () => {
+    const notFollowing = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        usesListPrefix: false
+      }
+    });
+    const renamed = workspaceReducer(notFollowing, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        suffix: "4"
+      }
+    });
+
+    const state = workspaceReducer(renamed, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        usesListPrefix: true
+      }
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "4",
+      url: "http://192.168.1.4",
+      usesListPrefix: true
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.4"
     });
   });
 

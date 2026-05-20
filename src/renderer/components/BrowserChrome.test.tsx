@@ -23,6 +23,7 @@ const baseProps = {
   onReload: vi.fn(),
   onReloadAll: vi.fn(),
   onColumnsChange: vi.fn(),
+  onGlobalZoomChange: vi.fn(),
   onZoomChange: vi.fn(),
   onViewportChange: vi.fn(),
   onSelectCameraList: vi.fn(),
@@ -55,5 +56,29 @@ describe("BrowserChrome", () => {
     expect(screen.getByLabelText("Camera workspace tools")).toBeVisible();
     expect(screen.getByLabelText("Job and camera list")).toBeVisible();
     expect(screen.getByRole("button", { name: "Edit List" })).toBeVisible();
+  });
+
+  it("opens variable zoom controls for global and selected tile zoom", () => {
+    const onGlobalZoomChange = vi.fn();
+    const onZoomChange = vi.fn();
+    render(
+      <BrowserChrome
+        {...baseProps}
+        onGlobalZoomChange={onGlobalZoomChange}
+        onZoomChange={onZoomChange}
+      />
+    );
+
+    expect(screen.queryByLabelText("Zoom controls panel")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Zoom controls"));
+
+    expect(screen.getByLabelText("Zoom controls panel")).toBeVisible();
+
+    fireEvent.change(screen.getByLabelText("Global zoom"), { target: { value: "1.37" } });
+    fireEvent.change(screen.getByLabelText("Selected tile zoom"), { target: { value: "0.82" } });
+
+    expect(onGlobalZoomChange).toHaveBeenCalledWith(1.37);
+    expect(onZoomChange).toHaveBeenCalledWith(0.82);
   });
 });

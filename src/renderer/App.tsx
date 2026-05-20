@@ -108,6 +108,10 @@ export function App(): ReactElement {
     dispatch({ type: "setGridColumns", columns });
   }, []);
 
+  const setGlobalZoom = useCallback((zoom: number): void => {
+    dispatch({ type: "setGlobalZoom", zoom });
+  }, []);
+
   const setSelectedZoom = useCallback((zoom: number): void => {
     dispatch({ type: "setSelectedTileZoom", zoom });
   }, []);
@@ -168,6 +172,7 @@ export function App(): ReactElement {
         onReload={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}
         onReloadAll={() => runAllTileCommand("reload")}
         onColumnsChange={setColumns}
+        onGlobalZoomChange={setGlobalZoom}
         onZoomChange={setSelectedZoom}
         onViewportChange={setSelectedViewport}
         onSelectCameraList={selectCameraList}

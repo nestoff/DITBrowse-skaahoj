@@ -1,11 +1,14 @@
 import type { ReactElement, ReactNode } from "react";
+import { useState } from "react";
 import type { ViewportSize } from "../../shared/types";
 
 interface GridControlsProps {
   columns: number;
+  globalZoom: number;
   selectedZoom: number;
   selectedViewport: ViewportSize | null;
   onColumnsChange: (columns: number) => void;
+  onGlobalZoomChange: (zoom: number) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
   icon?: ReactNode;
@@ -13,13 +16,19 @@ interface GridControlsProps {
 
 export function GridControls({
   columns,
+  globalZoom,
   selectedZoom,
   selectedViewport,
   onColumnsChange,
+  onGlobalZoomChange,
   onZoomChange,
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const selectedZoomPercent = Math.round(selectedZoom * 100);
+  const globalZoomPercent = Math.round(globalZoom * 100);
+
   return (
     <div className="grid-controls">
       {icon && <span className="grid-controls-icon">{icon}</span>}
@@ -37,20 +46,46 @@ export function GridControls({
           ))}
         </select>
       </label>
-      <label className="grid-control">
-        <span>Scale</span>
-        <select
-          value={selectedZoom}
-          onChange={(event) => onZoomChange(Number(event.target.value))}
-          aria-label="Selected tile zoom"
+      <div className="grid-control zoom-control">
+        <span>Zoom</span>
+        <button
+          type="button"
+          className="zoom-trigger"
+          aria-label="Zoom controls"
+          aria-expanded={zoomOpen}
+          onClick={() => setZoomOpen((open) => !open)}
         >
-          {[0.75, 1, 1.25, 1.5].map((value) => (
-            <option key={value} value={value}>
-              {value}x
-            </option>
-          ))}
-        </select>
-      </label>
+          {selectedZoomPercent}%
+        </button>
+        {zoomOpen && (
+          <div className="zoom-popover" aria-label="Zoom controls panel">
+            <label className="zoom-slider">
+              <span>Global {globalZoomPercent}%</span>
+              <input
+                type="range"
+                min="0.25"
+                max="3"
+                step="0.01"
+                value={globalZoom}
+                onChange={(event) => onGlobalZoomChange(Number(event.target.value))}
+                aria-label="Global zoom"
+              />
+            </label>
+            <label className="zoom-slider">
+              <span>Selected {selectedZoomPercent}%</span>
+              <input
+                type="range"
+                min="0.25"
+                max="3"
+                step="0.01"
+                value={selectedZoom}
+                onChange={(event) => onZoomChange(Number(event.target.value))}
+                aria-label="Selected tile zoom"
+              />
+            </label>
+          </div>
+        )}
+      </div>
       <label className="grid-control">
         <span>View</span>
         <select

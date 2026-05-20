@@ -311,6 +311,7 @@ button {
 }
 
 .grid-control {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -337,6 +338,55 @@ button {
   max-width: 92px;
   padding: 0 22px 0 7px;
   font-size: 12px;
+}
+
+.zoom-trigger {
+  min-width: 56px;
+  height: 26px;
+  border: 1px solid #343a3d;
+  border-radius: 6px;
+  background: #101213;
+  color: var(--text);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.zoom-trigger:hover {
+  border-color: #485055;
+  background: #202326;
+}
+
+.zoom-popover {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  z-index: 35;
+  display: grid;
+  gap: 10px;
+  width: 260px;
+  padding: 12px;
+  border: 1px solid #363c40;
+  border-radius: 8px;
+  background: rgba(24, 27, 29, 0.99);
+  box-shadow: var(--shadow);
+}
+
+.zoom-slider {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.zoom-slider span {
+  color: var(--text);
+}
+
+.zoom-slider input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
 }
 
 .browser-tools-popover {
@@ -393,7 +443,8 @@ button {
 .tool-command,
 .cookie-commands button,
 .panel-header button,
-.editor-panel > button {
+.editor-panel > button,
+.save-prefix-button {
   border: 1px solid #373d41;
   border-radius: 7px;
   background: #222629;
@@ -407,7 +458,8 @@ button {
 .tool-command:hover,
 .cookie-commands button:hover:not(:disabled),
 .panel-header button:hover,
-.editor-panel > button:hover:not(:disabled) {
+.editor-panel > button:hover:not(:disabled),
+.save-prefix-button:hover:not(:disabled) {
   border-color: #485055;
   background: #2b3033;
 }
@@ -433,7 +485,8 @@ button {
 }
 
 .cookie-commands button:disabled,
-.editor-panel > button:disabled {
+.editor-panel > button:disabled,
+.save-prefix-button:disabled {
   opacity: 0.42;
 }
 
@@ -581,11 +634,27 @@ button {
   font-weight: 650;
 }
 
+.editor-prefix-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.save-prefix-button {
+  height: 32px;
+}
+
 .editor-field input,
 .camera-table input,
 .camera-table select {
   width: 100%;
   padding: 6px 8px;
+}
+
+.camera-table input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--accent);
 }
 
 .camera-table-wrap {
@@ -595,7 +664,7 @@ button {
 }
 
 .camera-table {
-  width: 1180px;
+  width: 1290px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -615,6 +684,12 @@ button {
   color: #d4dadc;
   font-size: 11px;
   font-weight: 700;
+}
+
+.camera-table th:first-child,
+.camera-table td:first-child {
+  width: 96px;
+  text-align: center;
 }
 
 .editor-panel textarea {

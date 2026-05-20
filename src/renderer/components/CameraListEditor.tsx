@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { parseCameraCsv } from "../../shared/csv";
 import type { CameraCsvRow } from "../../shared/csv";
 import type { CameraEntry, CameraList } from "../../shared/types";
@@ -25,12 +25,54 @@ export function CameraListEditor({
   const [csvText, setCsvText] = useState(
     "number,url,type,lens,display_note,notes\n42,,ALEXA 35,50mm,Handheld,"
   );
+  const [draftPrefix, setDraftPrefix] = useState(activeList?.defaultPrefix ?? "");
+  const [lastFollowIndex, setLastFollowIndex] = useState<number | null>(null);
+  const allFollowCheckboxRef = useRef<HTMLInputElement | null>(null);
   const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
+  const allRowsFollowPrefix =
+    activeList?.cameras.every((camera) => camera.usesListPrefix !== false) ?? false;
+  const someRowsFollowPrefix =
+    activeList?.cameras.some((camera) => camera.usesListPrefix !== false) ?? false;
+
+  useEffect(() => {
+    setDraftPrefix(activeList?.defaultPrefix ?? "");
+    setLastFollowIndex(null);
+  }, [activeList?.id, activeList?.defaultPrefix]);
+
+  useEffect(() => {
+    if (allFollowCheckboxRef.current) {
+      allFollowCheckboxRef.current.indeterminate =
+        someRowsFollowPrefix && !allRowsFollowPrefix;
+    }
+  }, [allRowsFollowPrefix, someRowsFollowPrefix]);
 
   function updateViewport(camera: CameraEntry, width: number, height: number): void {
     onUpdateCamera(camera.id, {
       viewportOverride: width > 0 && height > 0 ? { width, height } : null
     });
+  }
+
+  function updateFollowPrefixRange(index: number, usesListPrefix: boolean, shiftKey: boolean): void {
+    if (!activeList) {
+      return;
+    }
+
+    const rangeStart =
+      shiftKey && lastFollowIndex !== null ? Math.min(lastFollowIndex, index) : index;
+    const rangeEnd =
+      shiftKey && lastFollowIndex !== null ? Math.max(lastFollowIndex, index) : index;
+
+    activeList.cameras.slice(rangeStart, rangeEnd + 1).forEach((camera) => {
+      onUpdateCamera(camera.id, { usesListPrefix });
+    });
+    setLastFollowIndex(index);
+  }
+
+  function updateAllFollowPrefix(usesListPrefix: boolean): void {
+    activeList?.cameras.forEach((camera) => {
+      onUpdateCamera(camera.id, { usesListPrefix });
+    });
+    setLastFollowIndex(null);
   }
 
   return (
@@ -44,17 +86,37 @@ export function CameraListEditor({
         </header>
         {activeList && (
           <>
-            <label className="editor-field">
-              List Prefix
-              <input
-                value={activeList.defaultPrefix}
-                onChange={(event) => onUpdatePrefix(event.target.value)}
-              />
-            </label>
+            <div className="editor-prefix-row">
+              <label className="editor-field">
+                List Prefix
+                <input
+                  value={draftPrefix}
+                  onChange={(event) => setDraftPrefix(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="save-prefix-button"
+                disabled={draftPrefix.trim() === activeList.defaultPrefix}
+                onClick={() => onUpdatePrefix(draftPrefix.trim())}
+              >
+                Save Prefix
+              </button>
+            </div>
             <div className="camera-table-wrap">
               <table className="camera-table">
                 <thead>
                   <tr>
+                    <th>
+                      <span>Follow Prefix</span>
+                      <input
+                        ref={allFollowCheckboxRef}
+                        type="checkbox"
+                        checked={allRowsFollowPrefix}
+                        aria-label="All follow prefix"
+                        onChange={(event) => updateAllFollowPrefix(event.target.checked)}
+                      />
+                    </th>
                     <th>Name</th>
                     <th>Full URL</th>
                     <th>Camera #</th>
@@ -68,6 +130,23 @@ export function CameraListEditor({
                 <tbody>
                   {activeList.cameras.map((camera) => (
                     <tr key={camera.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={camera.usesListPrefix !== false}
+                          onClick={(event) =>
+                            updateFollowPrefixRange(
+                              activeList.cameras.findIndex(
+                                (candidate) => candidate.id === camera.id
+                              ),
+                              event.currentTarget.checked,
+                              event.shiftKey
+                            )
+                          }
+                          onChange={() => undefined}
+                          aria-label={`${camera.name} follow prefix`}
+                        />
+                      </td>
                       <td>
                         <input
                           value={camera.name}
@@ -146,21 +225,20 @@ export function CameraListEditor({
                         </select>
                       </td>
                       <td>
-                        <select
+                        <input
+                          type="number"
+                          min="0.25"
+                          max="3"
+                          step="0.05"
                           value={camera.zoomOverride ?? ""}
+                          placeholder="Default"
                           onChange={(event) =>
                             onUpdateCamera(camera.id, {
                               zoomOverride: event.target.value ? Number(event.target.value) : null
                             })
                           }
                           aria-label={`${camera.name} zoom`}
-                        >
-                          <option value="">Default</option>
-                          <option value="0.75">0.75x</option>
-                          <option value="1">1x</option>
-                          <option value="1.25">1.25x</option>
-                          <option value="1.5">1.5x</option>
-                        </select>
+                        />
                       </td>
                     </tr>
                   ))}

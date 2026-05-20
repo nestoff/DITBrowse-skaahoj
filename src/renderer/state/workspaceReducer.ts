@@ -10,6 +10,7 @@ export type CameraEntryPatch = Partial<
     | "url"
     | "suffix"
     | "prefixOverride"
+    | "usesListPrefix"
     | "cameraType"
     | "lens"
     | "displayNote"
@@ -26,6 +27,7 @@ export type WorkspaceAction =
   | { type: "navigateSelectedTile"; url: string }
   | { type: "openNewTile"; url: string }
   | { type: "replaceActiveListFromCsv"; rows: CameraCsvRow[] }
+  | { type: "setGlobalZoom"; zoom: number }
   | { type: "setSelectedTileZoom"; zoom: number }
   | { type: "setSelectedTileViewport"; width: number; height: number }
   | { type: "createJobWithList"; jobName: string; listName: string; defaultPrefix: string }
@@ -73,6 +75,14 @@ function syncListPasswordRecords(
     );
     return camera ? { ...record, cameraId: camera.id, url: camera.url } : record;
   });
+}
+
+function normalizeZoom(zoom: number): number {
+  if (!Number.isFinite(zoom)) {
+    return 1;
+  }
+
+  return Number(Math.min(3, Math.max(0.25, zoom)).toFixed(2));
 }
 
 function urlHostEndsWithSuffix(url: string, suffix: string): boolean {
@@ -159,7 +169,11 @@ function applyCameraEntryPatch(
   const wasUsingListPrefix = cameraUsesListPrefix(camera, listPrefix);
   let next: CameraEntry = { ...camera, ...patch };
 
-  if ("suffix" in patch && wasUsingListPrefix) {
+  if ("usesListPrefix" in patch) {
+    next = patch.usesListPrefix
+      ? applyListPrefixUrl(next, listPrefix)
+      : { ...next, usesListPrefix: false };
+  } else if ("suffix" in patch && wasUsingListPrefix) {
     next = applyListPrefixUrl(next, listPrefix);
   }
 
@@ -169,6 +183,16 @@ function applyCameraEntryPatch(
     next = isDerivedUrl
       ? applyListPrefixUrl(next, listPrefix)
       : { ...next, usesListPrefix: false };
+  }
+
+  if ("zoomOverride" in patch) {
+    next = {
+      ...next,
+      zoomOverride:
+        patch.zoomOverride === null || patch.zoomOverride === undefined
+          ? null
+          : normalizeZoom(patch.zoomOverride)
+    };
   }
 
   return next;
@@ -303,13 +327,42 @@ export function workspaceReducer(
         selectedTileId: tiles[0]?.id ?? null
       };
     }
-    case "setSelectedTileZoom":
+    case "setGlobalZoom": {
+      const zoom = normalizeZoom(action.zoom);
       return {
         ...state,
+        defaultZoom: zoom,
+        cameraLists: state.cameraLists.map((list) => ({
+          ...list,
+          cameras: list.cameras.map((camera) => ({ ...camera, zoomOverride: null }))
+        })),
+        tiles: state.tiles.map((tile) => ({ ...tile, zoom }))
+      };
+    }
+    case "setSelectedTileZoom": {
+      const zoom = normalizeZoom(action.zoom);
+      const selectedTile = state.tiles.find((tile) => tile.id === state.selectedTileId);
+      return {
+        ...state,
+        cameraLists: selectedTile?.cameraId
+          ? state.cameraLists.map((list) =>
+              list.id === state.activeCameraListId
+                ? {
+                    ...list,
+                    cameras: list.cameras.map((camera) =>
+                      camera.id === selectedTile.cameraId
+                        ? { ...camera, zoomOverride: zoom }
+                        : camera
+                    )
+                  }
+                : list
+            )
+          : state.cameraLists,
         tiles: state.tiles.map((tile) =>
-          tile.id === state.selectedTileId ? { ...tile, zoom: action.zoom } : tile
+          tile.id === state.selectedTileId ? { ...tile, zoom } : tile
         )
       };
+    }
     case "setSelectedTileViewport":
       return {
         ...state,
