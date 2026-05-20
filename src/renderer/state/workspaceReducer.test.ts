@@ -17,6 +17,43 @@ describe("workspaceReducer", () => {
     expect(state.selectedTileId).toBe("tile-42");
   });
 
+  it("repairs stale prefix-based URLs when hydrating a saved workspace", () => {
+    const { usesListPrefix: _usesListPrefix, ...legacyCamera } = {
+      ...sampleWorkspace.cameraLists[0].cameras[0],
+      suffix: "4",
+      url: "http://192.168.1.41"
+    };
+    const savedWorkspace = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample"
+          ? {
+              ...list,
+              defaultPrefix: "http://10.10.20.",
+              cameras: [legacyCamera, ...list.cameras.slice(1)]
+            }
+          : list
+      ),
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.cameraId === "camera-41" ? { ...tile, url: "http://192.168.1.41" } : tile
+      )
+    };
+
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "hydrateWorkspace",
+      workspace: savedWorkspace
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "4",
+      url: "http://10.10.20.4"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.10.20.4"
+    });
+  });
+
   it("selects a tile", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "selectTile",
@@ -200,6 +237,31 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("keeps manually edited IP URLs when the active list prefix changes", () => {
+    const explicit = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        url: "http://192.168.1.99"
+      }
+    });
+
+    const state = workspaceReducer(explicit, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://10.10.20."
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://192.168.1.99",
+      usesListPrefix: false
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.99"
+    });
+  });
+
   it("repairs stale derived LAN URLs after a previous prefix edit did not update cameras", () => {
     const staleState = {
       ...sampleWorkspace,
@@ -220,6 +282,49 @@ describe("workspaceReducer", () => {
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
       url: "http://172.20.30.41"
+    });
+  });
+
+  it("updates a prefix-based camera URL when the camera number changes", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        suffix: "4"
+      }
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "4",
+      url: "http://192.168.1.4"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.4"
+    });
+  });
+
+  it("updates a stale prefix-based URL after the camera number changed earlier", () => {
+    const staleNumberState = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        suffix: "4"
+      }
+    });
+
+    const state = workspaceReducer(staleNumberState, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://10.10.20."
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "4",
+      url: "http://10.10.20.4"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.10.20.4"
     });
   });
 

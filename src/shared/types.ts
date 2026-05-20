@@ -9,6 +9,7 @@ export interface CameraEntry {
   url: string;
   suffix: string;
   prefixOverride: string;
+  usesListPrefix?: boolean;
   cameraType: string;
   lens: string;
   displayNote: string;

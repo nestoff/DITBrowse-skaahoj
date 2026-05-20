@@ -76,6 +76,10 @@ function syncListPasswordRecords(
 }
 
 function urlHostEndsWithSuffix(url: string, suffix: string): boolean {
+  if (!suffix) {
+    return false;
+  }
+
   try {
     const parsed = new URL(url);
     return parsed.hostname === suffix || parsed.hostname.endsWith(`.${suffix}`);
@@ -84,25 +88,120 @@ function urlHostEndsWithSuffix(url: string, suffix: string): boolean {
   }
 }
 
+function urlLooksLikePrivateIpv4Camera(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const octets = parsed.hostname.split(".").map(Number);
+    if (
+      octets.length !== 4 ||
+      octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)
+    ) {
+      return false;
+    }
+
+    return (
+      octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function cameraUsesListPrefix(camera: CameraEntry, listPrefix: string): boolean {
+  if (camera.prefixOverride) {
+    return false;
+  }
+
+  if (camera.usesListPrefix !== undefined) {
+    return camera.usesListPrefix;
+  }
+
+  if (!camera.url) {
+    return true;
+  }
+
+  return (
+    camera.url === `${listPrefix}${camera.suffix}` ||
+    camera.url === listPrefix ||
+    (!!listPrefix && camera.url.startsWith(listPrefix)) ||
+    urlHostEndsWithSuffix(camera.url, camera.suffix) ||
+    (!!camera.suffix && /^\d+$/.test(camera.suffix) && urlLooksLikePrivateIpv4Camera(camera.url))
+  );
+}
+
+function applyListPrefixUrl(camera: CameraEntry, listPrefix: string): CameraEntry {
+  return {
+    ...camera,
+    url: `${listPrefix}${camera.suffix}`,
+    usesListPrefix: true
+  };
+}
+
 function updateDerivedCameraUrlForPrefix(
   camera: CameraEntry,
   previousPrefix: string,
   nextPrefix: string
 ): CameraEntry {
-  if (!camera.suffix || camera.prefixOverride) {
+  if (!cameraUsesListPrefix(camera, previousPrefix)) {
     return camera;
   }
 
-  const previousDerivedUrl = `${previousPrefix}${camera.suffix}`;
-  if (
-    camera.url &&
-    camera.url !== previousDerivedUrl &&
-    !urlHostEndsWithSuffix(camera.url, camera.suffix)
-  ) {
-    return camera;
+  return applyListPrefixUrl(camera, nextPrefix);
+}
+
+function applyCameraEntryPatch(
+  camera: CameraEntry,
+  patch: CameraEntryPatch,
+  listPrefix: string
+): CameraEntry {
+  const wasUsingListPrefix = cameraUsesListPrefix(camera, listPrefix);
+  let next: CameraEntry = { ...camera, ...patch };
+
+  if ("suffix" in patch && wasUsingListPrefix) {
+    next = applyListPrefixUrl(next, listPrefix);
   }
 
-  return { ...camera, url: `${nextPrefix}${camera.suffix}` };
+  if ("url" in patch) {
+    const isDerivedUrl =
+      next.url === "" || next.url === `${listPrefix}${next.suffix}` || next.url === listPrefix;
+    next = isDerivedUrl
+      ? applyListPrefixUrl(next, listPrefix)
+      : { ...next, usesListPrefix: false };
+  }
+
+  return next;
+}
+
+function normalizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
+  const cameraLists = workspace.cameraLists.map((list) => ({
+    ...list,
+    cameras: list.cameras.map((camera) =>
+      cameraUsesListPrefix(camera, list.defaultPrefix)
+        ? applyListPrefixUrl(camera, list.defaultPrefix)
+        : camera
+    )
+  }));
+  const camerasById = new Map(
+    cameraLists.flatMap((list) => list.cameras.map((camera) => [camera.id, camera]))
+  );
+  const tiles = workspace.tiles.map((tile) => {
+    const camera = tile.cameraId ? camerasById.get(tile.cameraId) : null;
+    return camera ? { ...tile, url: camera.url, title: formatCameraLabel(camera) } : tile;
+  });
+  let passwordRecords = workspace.passwordRecords;
+
+  for (const list of cameraLists) {
+    passwordRecords = syncListPasswordRecords({ ...workspace, cameraLists, passwordRecords }, list);
+  }
+
+  return {
+    ...workspace,
+    cameraLists,
+    passwordRecords,
+    tiles
+  };
 }
 
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
@@ -122,7 +221,7 @@ export function workspaceReducer(
 ): WorkspaceState {
   switch (action.type) {
     case "hydrateWorkspace":
-      return action.workspace;
+      return normalizeWorkspaceState(action.workspace);
     case "selectTile":
       return { ...state, selectedTileId: action.tileId };
     case "setGridColumns":
@@ -170,6 +269,7 @@ export function workspaceReducer(
           url,
           suffix: row.suffix,
           prefixOverride: "",
+          usesListPrefix: !row.url,
           cameraType: row.cameraType,
           lens: row.lens,
           displayNote: row.displayNote,
@@ -292,7 +392,9 @@ export function workspaceReducer(
         }
 
         const cameras = list.cameras.map((camera) =>
-          camera.id === action.cameraId ? { ...camera, ...action.patch } : camera
+          camera.id === action.cameraId
+            ? applyCameraEntryPatch(camera, action.patch, list.defaultPrefix)
+            : camera
         );
         updatedList = { ...list, cameras };
         return updatedList;
@@ -367,6 +469,7 @@ export function workspaceReducer(
         url: activeList.defaultPrefix,
         suffix: "",
         prefixOverride: "",
+        usesListPrefix: true,
         cameraType: "",
         lens: "",
         displayNote: "",
