@@ -3,6 +3,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
 import type { TileState } from "../../shared/types";
+import { normalizeCameraUrl } from "../../shared/url";
 
 interface WebviewTileProps {
   tile: TileState;
@@ -80,6 +81,7 @@ function WebviewTileComponent({
     viewportHeight: tile.viewport.height,
     manualZoom: tile.zoom
   });
+  const webviewUrl = normalizeCameraUrl(tile.url) || "about:blank";
 
   return (
     <div
@@ -92,7 +94,7 @@ function WebviewTileComponent({
         ref={webviewRef}
         data-tile-id={tile.id}
         className="camera-webview"
-        src={tile.url || "about:blank"}
+        src={webviewUrl}
         partition={tile.partition}
         preload={webviewPreloadPath ?? undefined}
         style={{

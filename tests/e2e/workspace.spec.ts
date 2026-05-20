@@ -39,10 +39,14 @@ test("selected camera address overrides can return to prefix and suffix style", 
   const address = page.getByRole("textbox", { name: "Address" });
   await expect(address).toHaveValue("http://192.168.1.41");
 
-  await address.fill("http://camera-control.local");
+  await address.fill("10.20.100.2");
   await address.press("Enter");
 
-  await expect(address).toHaveValue("http://camera-control.local");
+  await expect(address).toHaveValue("http://10.20.100.2");
+  await expect(page.locator('webview[data-tile-id="tile-41"]')).toHaveAttribute(
+    "src",
+    "http://10.20.100.2"
+  );
 
   const returnToPrefix = page.getByRole("button", {
     name: "Go back to prefix and suffix style"

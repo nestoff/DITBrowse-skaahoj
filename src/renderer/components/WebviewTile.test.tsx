@@ -40,6 +40,21 @@ describe("WebviewTile", () => {
     expect(webview).toHaveAttribute("preload", "/tmp/webviewPreload.js");
   });
 
+  it("adds http to bare LAN webview URLs before rendering src", () => {
+    render(
+      <WebviewTile
+        tile={{ ...tile, url: "10.20.100.2" }}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(document.querySelector("webview")).toHaveAttribute("src", "http://10.20.100.2");
+  });
+
   it("shows a retry action after a load failure", () => {
     render(
       <WebviewTile

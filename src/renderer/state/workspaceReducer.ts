@@ -1,6 +1,7 @@
 import type { CameraCsvRow } from "../../shared/csv";
 import { formatCameraLabel } from "../../shared/cameraLabel";
 import { normalizeCredentialUrl } from "../../shared/credentials";
+import { normalizeCameraPrefix, normalizeCameraUrl } from "../../shared/url";
 import type { CameraEntry, PasswordRecord, WorkspaceState } from "../../shared/types";
 
 export type CameraEntryPatch = Partial<
@@ -145,7 +146,7 @@ function cameraUsesListPrefix(camera: CameraEntry, listPrefix: string): boolean 
 function applyListPrefixUrl(camera: CameraEntry, listPrefix: string): CameraEntry {
   return {
     ...camera,
-    url: `${listPrefix}${camera.suffix}`,
+    url: `${normalizeCameraPrefix(listPrefix)}${camera.suffix}`,
     usesListPrefix: true
   };
 }
@@ -167,22 +168,32 @@ function applyCameraEntryPatch(
   patch: CameraEntryPatch,
   listPrefix: string
 ): CameraEntry {
+  const normalizedListPrefix = normalizeCameraPrefix(listPrefix);
+  const normalizedPatch = {
+    ...patch,
+    ...(patch.url !== undefined ? { url: normalizeCameraUrl(patch.url) } : {}),
+    ...(patch.prefixOverride !== undefined
+      ? { prefixOverride: normalizeCameraPrefix(patch.prefixOverride) }
+      : {})
+  };
   const wasUsingListPrefix = cameraUsesListPrefix(camera, listPrefix);
-  let next: CameraEntry = { ...camera, ...patch };
+  let next: CameraEntry = { ...camera, ...normalizedPatch };
 
   if ("usesListPrefix" in patch) {
     next = patch.usesListPrefix
-      ? applyListPrefixUrl(next, listPrefix)
+      ? applyListPrefixUrl(next, normalizedListPrefix)
       : { ...next, usesListPrefix: false };
   } else if ("suffix" in patch && wasUsingListPrefix) {
-    next = applyListPrefixUrl(next, listPrefix);
+    next = applyListPrefixUrl(next, normalizedListPrefix);
   }
 
   if ("url" in patch) {
     const isDerivedUrl =
-      next.url === "" || next.url === `${listPrefix}${next.suffix}` || next.url === listPrefix;
+      next.url === "" ||
+      next.url === `${normalizedListPrefix}${next.suffix}` ||
+      next.url === normalizedListPrefix;
     next = isDerivedUrl
-      ? applyListPrefixUrl(next, listPrefix)
+      ? applyListPrefixUrl(next, normalizedListPrefix)
       : { ...next, usesListPrefix: false };
   }
 
@@ -200,14 +211,24 @@ function applyCameraEntryPatch(
 }
 
 function normalizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
-  const cameraLists = workspace.cameraLists.map((list) => ({
-    ...list,
-    cameras: list.cameras.map((camera) =>
-      cameraUsesListPrefix(camera, list.defaultPrefix)
-        ? applyListPrefixUrl(camera, list.defaultPrefix)
-        : camera
-    )
-  }));
+  const cameraLists = workspace.cameraLists.map((list) => {
+    const defaultPrefix = normalizeCameraPrefix(list.defaultPrefix);
+    return {
+      ...list,
+      defaultPrefix,
+      cameras: list.cameras.map((camera) => {
+        const normalizedCamera = {
+          ...camera,
+          url: normalizeCameraUrl(camera.url),
+          prefixOverride: normalizeCameraPrefix(camera.prefixOverride)
+        };
+        return cameraUsesListPrefix(camera, list.defaultPrefix) ||
+          cameraUsesListPrefix(normalizedCamera, defaultPrefix)
+          ? applyListPrefixUrl(normalizedCamera, defaultPrefix)
+          : normalizedCamera;
+      })
+    };
+  });
   const camerasById = new Map(
     cameraLists.flatMap((list) => list.cameras.map((camera) => [camera.id, camera]))
   );
@@ -252,13 +273,14 @@ export function workspaceReducer(
     case "setGridColumns":
       return { ...state, gridColumns: Math.max(1, action.columns) };
     case "navigateSelectedTile": {
+      const url = normalizeCameraUrl(action.url);
       const selectedTile = state.tiles.find((tile) => tile.id === state.selectedTileId);
       if (!selectedTile?.cameraId) {
         return {
           ...state,
           tiles: state.tiles.map((tile) =>
             tile.id === state.selectedTileId
-              ? { ...tile, url: action.url, title: action.url }
+              ? { ...tile, url, title: url }
               : tile
           )
         };
@@ -271,13 +293,13 @@ export function workspaceReducer(
           ...state,
           tiles: state.tiles.map((tile) =>
             tile.id === state.selectedTileId
-              ? { ...tile, url: action.url, title: action.url }
+              ? { ...tile, url, title: url }
               : tile
           )
         };
       }
 
-      const updatedCamera = { ...camera, url: action.url, usesListPrefix: false };
+      const updatedCamera = { ...camera, url, usesListPrefix: false };
       const updatedList = {
         ...activeList,
         cameras: activeList.cameras.map((candidate) =>
@@ -347,6 +369,7 @@ export function workspaceReducer(
     }
     case "openNewTile": {
       const id = `tile-${crypto.randomUUID()}`;
+      const url = normalizeCameraUrl(action.url);
       const activeJobId = state.activeJobId ?? "default-job";
       const activeCameraListId = state.activeCameraListId ?? "default-list";
       return {
@@ -357,8 +380,8 @@ export function workspaceReducer(
           {
             id,
             cameraId: null,
-            url: action.url,
-            title: action.url,
+            url,
+            title: url,
             partition: `persist:ditbrowse-${activeJobId}-${activeCameraListId}`,
             viewport: state.defaultViewport,
             zoom: state.defaultZoom
@@ -374,7 +397,9 @@ export function workspaceReducer(
       }
 
       const cameras = action.rows.map((row) => {
-        const url = row.url || `${activeList.defaultPrefix}${row.suffix}`;
+        const url = row.url
+          ? normalizeCameraUrl(row.url)
+          : `${normalizeCameraPrefix(activeList.defaultPrefix)}${row.suffix}`;
         return {
           id: `camera-${crypto.randomUUID()}`,
           name: row.name,
@@ -463,6 +488,7 @@ export function workspaceReducer(
     case "createJobWithList": {
       const jobId = `job-${crypto.randomUUID()}`;
       const listId = `list-${crypto.randomUUID()}`;
+      const defaultPrefix = normalizeCameraPrefix(action.defaultPrefix);
       return {
         ...state,
         jobs: [...state.jobs, { id: jobId, name: action.jobName, listIds: [listId] }],
@@ -472,7 +498,7 @@ export function workspaceReducer(
             id: listId,
             jobId,
             name: action.listName,
-            defaultPrefix: action.defaultPrefix,
+            defaultPrefix,
             cameras: []
           }
         ],
@@ -498,6 +524,7 @@ export function workspaceReducer(
       };
     }
     case "updateActiveListPrefix": {
+      const defaultPrefix = normalizeCameraPrefix(action.defaultPrefix);
       let updatedList: WorkspaceState["cameraLists"][number] | null = null;
       const cameraLists = state.cameraLists.map((list) => {
         if (list.id !== state.activeCameraListId) {
@@ -505,9 +532,9 @@ export function workspaceReducer(
         }
 
         const cameras = list.cameras.map((camera) =>
-          updateDerivedCameraUrlForPrefix(camera, list.defaultPrefix, action.defaultPrefix)
+          updateDerivedCameraUrlForPrefix(camera, list.defaultPrefix, defaultPrefix)
         );
-        updatedList = { ...list, defaultPrefix: action.defaultPrefix, cameras };
+        updatedList = { ...list, defaultPrefix, cameras };
         return updatedList;
       });
 

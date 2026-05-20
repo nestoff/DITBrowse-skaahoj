@@ -54,6 +54,78 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("normalizes bare LAN prefixes and camera URLs when hydrating a saved workspace", () => {
+    const savedWorkspace = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample"
+          ? {
+              ...list,
+              defaultPrefix: "10.20.100.",
+              cameras: list.cameras.map((camera, index) =>
+                index === 0
+                  ? { ...camera, suffix: "2", url: "10.20.100.2", usesListPrefix: true }
+                  : camera
+              )
+            }
+          : list
+      ),
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.cameraId === "camera-41" ? { ...tile, url: "10.20.100.2" } : tile
+      )
+    };
+
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "hydrateWorkspace",
+      workspace: savedWorkspace
+    });
+
+    expect(state.cameraLists[0].defaultPrefix).toBe("http://10.20.100.");
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "2",
+      url: "http://10.20.100.2"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.2"
+    });
+  });
+
+  it("normalizes manual bare LAN camera URLs when hydrating a saved workspace", () => {
+    const savedWorkspace = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample"
+          ? {
+              ...list,
+              cameras: list.cameras.map((camera, index) =>
+                index === 0
+                  ? { ...camera, url: "10.20.100.99", usesListPrefix: false }
+                  : camera
+              )
+            }
+          : list
+      ),
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.cameraId === "camera-41" ? { ...tile, url: "10.20.100.99" } : tile
+      )
+    };
+
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "hydrateWorkspace",
+      workspace: savedWorkspace
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      url: "http://10.20.100.99",
+      usesListPrefix: false
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.99"
+    });
+  });
+
   it("selects a tile", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "selectTile",
@@ -297,6 +369,23 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("normalizes a bare LAN prefix before saving it to the active list", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "10.20.100."
+    });
+
+    expect(state.cameraLists[0].defaultPrefix).toBe("http://10.20.100.");
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "41",
+      url: "http://10.20.100.41"
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.41"
+    });
+  });
+
   it("keeps explicit camera URLs when the active list prefix changes", () => {
     const explicit = workspaceReducer(sampleWorkspace, {
       type: "updateCameraEntry",
@@ -495,6 +584,25 @@ describe("workspaceReducer", () => {
       url: "http://10.0.0.41",
       viewport: { width: 1920, height: 1080 },
       zoom: 1.25
+    });
+  });
+
+  it("normalizes manually entered bare LAN camera URLs", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "updateCameraEntry",
+      cameraId: "camera-41",
+      patch: {
+        url: "10.20.100.99"
+      }
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      url: "http://10.20.100.99",
+      usesListPrefix: false
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.99"
     });
   });
 
