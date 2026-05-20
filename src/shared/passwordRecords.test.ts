@@ -7,6 +7,7 @@ const records: PasswordRecord[] = [
     id: "p1",
     jobId: "job-a",
     cameraListId: "list-a",
+    cameraId: "camera-42",
     url: "http://192.168.1.42",
     username: "admin",
     password: "alpha"
@@ -15,6 +16,7 @@ const records: PasswordRecord[] = [
     id: "p2",
     jobId: "job-b",
     cameraListId: "list-b",
+    cameraId: "camera-42",
     url: "http://192.168.1.42",
     username: "admin",
     password: "beta"

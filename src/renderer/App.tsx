@@ -1,5 +1,7 @@
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { findCredentialRecord } from "../shared/credentials";
+import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import { sampleWorkspace } from "../shared/sampleData";
 import { resolveCameraAddress } from "../shared/url";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
@@ -47,6 +49,36 @@ export function App(): ReactElement {
     workspace.activeJobId && workspace.activeCameraListId
       ? `persist:ditbrowse-${workspace.activeJobId}-${workspace.activeCameraListId}`
       : null;
+  const webviewPreloadPath = window.ditbrowse?.webviewPreloadPath ?? null;
+
+  const credentialsByTileId = useMemo(() => {
+    const credentials = new Map<string, CredentialFill>();
+    if (!workspace.activeJobId || !workspace.activeCameraListId) {
+      return credentials;
+    }
+
+    for (const tile of workspace.tiles) {
+      const record = findCredentialRecord(workspace.passwordRecords, {
+        jobId: workspace.activeJobId,
+        cameraListId: workspace.activeCameraListId,
+        cameraId: tile.cameraId,
+        url: tile.url
+      });
+      if (record) {
+        credentials.set(tile.id, {
+          username: record.username,
+          password: record.password
+        });
+      }
+    }
+
+    return credentials;
+  }, [
+    workspace.activeCameraListId,
+    workspace.activeJobId,
+    workspace.passwordRecords,
+    workspace.tiles
+  ]);
 
   const navigate = useCallback(
     (input: string, target: "selected" | "new"): void => {
@@ -107,6 +139,19 @@ export function App(): ReactElement {
     dispatch({ type: "resetGridToListOrder" });
   }, []);
 
+  const saveCapturedCredential = useCallback(
+    (tileId: string, credential: CapturedCredential): void => {
+      dispatch({
+        type: "saveCapturedCredential",
+        tileId,
+        url: credential.url,
+        username: credential.username,
+        password: credential.password
+      });
+    },
+    []
+  );
+
   return (
     <main className="app-shell">
       <BrowserChrome
@@ -138,6 +183,9 @@ export function App(): ReactElement {
         columns={workspace.gridColumns}
         selectedTileId={workspace.selectedTileId}
         onSelectTile={selectTile}
+        onCredentialCaptured={saveCapturedCredential}
+        credentialsByTileId={credentialsByTileId}
+        webviewPreloadPath={webviewPreloadPath}
       />
       {editorOpen && (
         <CameraListEditor

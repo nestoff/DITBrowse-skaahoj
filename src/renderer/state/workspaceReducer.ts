@@ -1,5 +1,6 @@
 import type { CameraCsvRow } from "../../shared/csv";
 import { formatCameraLabel } from "../../shared/cameraLabel";
+import { normalizeCredentialUrl } from "../../shared/credentials";
 import type { CameraEntry, PasswordRecord, WorkspaceState } from "../../shared/types";
 
 export type CameraEntryPatch = Partial<
@@ -31,6 +32,13 @@ export type WorkspaceAction =
   | { type: "selectCameraList"; cameraListId: string }
   | { type: "updateActiveListPrefix"; defaultPrefix: string }
   | { type: "updateCameraEntry"; cameraId: string; patch: CameraEntryPatch }
+  | {
+      type: "saveCapturedCredential";
+      tileId: string;
+      url: string;
+      username: string;
+      password: string;
+    }
   | { type: "addCameraEntry" }
   | { type: "moveTile"; tileId: string; direction: "left" | "right" }
   | { type: "resetSelectedTileScale" }
@@ -312,6 +320,39 @@ export function workspaceReducer(
             zoom: camera.zoomOverride ?? state.defaultZoom
           };
         })
+      };
+    }
+    case "saveCapturedCredential": {
+      const tile = state.tiles.find((candidate) => candidate.id === action.tileId);
+      if (!tile || !state.activeJobId || !state.activeCameraListId || !action.password) {
+        return state;
+      }
+
+      const url = normalizeCredentialUrl(action.url || tile.url);
+      const existingRecord = state.passwordRecords.find(
+        (record) =>
+          record.jobId === state.activeJobId &&
+          record.cameraListId === state.activeCameraListId &&
+          ((tile.cameraId && record.cameraId === tile.cameraId) ||
+            normalizeCredentialUrl(record.url) === url)
+      );
+      const nextRecord: PasswordRecord = {
+        id: existingRecord?.id ?? `password-${crypto.randomUUID()}`,
+        jobId: state.activeJobId,
+        cameraListId: state.activeCameraListId,
+        cameraId: tile.cameraId,
+        url,
+        username: action.username,
+        password: action.password
+      };
+
+      return {
+        ...state,
+        passwordRecords: existingRecord
+          ? state.passwordRecords.map((record) =>
+              record.id === existingRecord.id ? nextRecord : record
+            )
+          : [...state.passwordRecords, nextRecord]
       };
     }
     case "addCameraEntry": {

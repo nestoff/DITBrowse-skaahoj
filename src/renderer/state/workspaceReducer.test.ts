@@ -273,6 +273,28 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("saves captured webview credentials scoped to the active job, list, and camera", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "saveCapturedCredential",
+      tileId: "tile-41",
+      url: "http://192.168.1.41/login.html",
+      username: "admin",
+      password: "secret"
+    });
+
+    expect(state.passwordRecords).toEqual([
+      {
+        id: "password-new-tile",
+        jobId: "job-sample",
+        cameraListId: "list-sample",
+        cameraId: "camera-41",
+        url: "http://192.168.1.41",
+        username: "admin",
+        password: "secret"
+      }
+    ]);
+  });
+
   it("adds a camera row to the active list and grid", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "addCameraEntry"

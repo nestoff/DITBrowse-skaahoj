@@ -1,15 +1,26 @@
 import type { ReactElement } from "react";
 import { memo, useEffect, useRef, useState } from "react";
 import { computeFitScale } from "../../shared/scale";
+import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
 import type { TileState } from "../../shared/types";
 
 interface WebviewTileProps {
   tile: TileState;
   selected: boolean;
   onSelectTile: (tileId: string) => void;
+  onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
+  savedCredential: CredentialFill | null;
+  webviewPreloadPath: string | null;
 }
 
-function WebviewTileComponent({ tile, selected, onSelectTile }: WebviewTileProps): ReactElement {
+function WebviewTileComponent({
+  tile,
+  selected,
+  onSelectTile,
+  onCredentialCaptured,
+  savedCredential,
+  webviewPreloadPath
+}: WebviewTileProps): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const [bounds, setBounds] = useState({ width: 1, height: 1 });
@@ -38,13 +49,29 @@ function WebviewTileComponent({ tile, selected, onSelectTile }: WebviewTileProps
 
     const clearFailure = (): void => setFailed(false);
     const markFailure = (): void => setFailed(true);
+    const fillCredential = (): void => {
+      if (savedCredential) {
+        webview.send("ditbrowse:credential-fill", savedCredential);
+      }
+    };
+    const captureCredential = (event: Event): void => {
+      const ipcEvent = event as Event & { channel?: string; args?: CapturedCredential[] };
+      const credential = ipcEvent.args?.[0];
+      if (ipcEvent.channel === "ditbrowse:credential-captured" && credential) {
+        onCredentialCaptured(tile.id, credential);
+      }
+    };
     webview.addEventListener("did-start-loading", clearFailure);
     webview.addEventListener("did-fail-load", markFailure);
+    webview.addEventListener("did-finish-load", fillCredential);
+    webview.addEventListener("ipc-message", captureCredential);
     return () => {
       webview.removeEventListener("did-start-loading", clearFailure);
       webview.removeEventListener("did-fail-load", markFailure);
+      webview.removeEventListener("did-finish-load", fillCredential);
+      webview.removeEventListener("ipc-message", captureCredential);
     };
-  }, []);
+  }, [onCredentialCaptured, savedCredential, tile.id]);
 
   const scale = computeFitScale({
     tileWidth: bounds.width,
@@ -67,6 +94,7 @@ function WebviewTileComponent({ tile, selected, onSelectTile }: WebviewTileProps
         className="camera-webview"
         src={tile.url || "about:blank"}
         partition={tile.partition}
+        preload={webviewPreloadPath ?? undefined}
         style={{
           width: `${tile.viewport.width}px`,
           height: `${tile.viewport.height}px`,

@@ -5,6 +5,7 @@ declare global {
   interface Window {
     ditbrowse: {
       version: string;
+      webviewPreloadPath?: string;
       loadWorkspace?: () => Promise<WorkspaceState>;
       saveWorkspace?: (workspace: WorkspaceState) => Promise<void>;
       clearSelectedTileStorage?: (partition: string, url: string) => Promise<void>;
