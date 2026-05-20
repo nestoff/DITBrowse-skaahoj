@@ -93,11 +93,11 @@ button {
 
 .tab {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20px 20px;
+  grid-template-columns: minmax(0, 1fr) 20px 20px 20px;
   align-items: center;
-  flex: 0 1 178px;
-  min-width: 106px;
-  max-width: 178px;
+  flex: 0 1 196px;
+  min-width: 126px;
+  max-width: 196px;
   height: 32px;
   border: 1px solid transparent;
   border-bottom: 0;
@@ -148,7 +148,8 @@ button {
   letter-spacing: 0;
 }
 
-.tab-move {
+.tab-move,
+.tab-close {
   display: grid;
   place-items: center;
   width: 20px;
@@ -160,13 +161,22 @@ button {
   padding: 0;
 }
 
-.tab-move:hover:not(:disabled) {
+.tab-move:hover:not(:disabled),
+.tab-close:hover {
   background: #2a2e31;
   color: var(--text);
 }
 
 .tab-move:disabled {
   opacity: 0.24;
+}
+
+.tab-close {
+  color: #9aa2a5;
+}
+
+.tab-close:hover {
+  color: var(--danger);
 }
 
 .add-tab-button,
@@ -344,8 +354,25 @@ button {
   font-size: 12px;
 }
 
-.zoom-trigger {
-  min-width: 56px;
+.zoom-control {
+  gap: 7px;
+}
+
+.zoom-inline-slider {
+  width: 118px;
+  accent-color: var(--accent);
+}
+
+.zoom-value {
+  min-width: 38px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.global-zoom-trigger {
+  min-width: 38px;
   height: 26px;
   border: 1px solid #343a3d;
   border-radius: 6px;
@@ -356,7 +383,7 @@ button {
   font-weight: 650;
 }
 
-.zoom-trigger:hover {
+.global-zoom-trigger:hover {
   border-color: #485055;
   background: #202326;
 }

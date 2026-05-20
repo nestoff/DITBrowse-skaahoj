@@ -25,7 +25,7 @@ export function GridControls({
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
-  const [zoomOpen, setZoomOpen] = useState(false);
+  const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
   const selectedZoomPercent = Math.round(selectedZoom * 100);
   const globalZoomPercent = Math.round(globalZoom * 100);
 
@@ -48,17 +48,30 @@ export function GridControls({
       </label>
       <div className="grid-control zoom-control">
         <span>Zoom</span>
+        <input
+          className="zoom-inline-slider"
+          type="range"
+          min="0.25"
+          max="3"
+          step="0.01"
+          value={selectedZoom}
+          onChange={(event) => onZoomChange(Number(event.target.value))}
+          aria-label="Selected tile zoom"
+        />
+        <output className="zoom-value" aria-label="Selected zoom value">
+          {selectedZoomPercent}%
+        </output>
         <button
           type="button"
-          className="zoom-trigger"
-          aria-label="Zoom controls"
-          aria-expanded={zoomOpen}
-          onClick={() => setZoomOpen((open) => !open)}
+          className="global-zoom-trigger"
+          aria-label="Global zoom controls"
+          aria-expanded={globalZoomOpen}
+          onClick={() => setGlobalZoomOpen((open) => !open)}
         >
-          {selectedZoomPercent}%
+          All
         </button>
-        {zoomOpen && (
-          <div className="zoom-popover" aria-label="Zoom controls panel">
+        {globalZoomOpen && (
+          <div className="zoom-popover" aria-label="Global zoom controls panel">
             <label className="zoom-slider">
               <span>Global {globalZoomPercent}%</span>
               <input
@@ -69,18 +82,6 @@ export function GridControls({
                 value={globalZoom}
                 onChange={(event) => onGlobalZoomChange(Number(event.target.value))}
                 aria-label="Global zoom"
-              />
-            </label>
-            <label className="zoom-slider">
-              <span>Selected {selectedZoomPercent}%</span>
-              <input
-                type="range"
-                min="0.25"
-                max="3"
-                step="0.01"
-                value={selectedZoom}
-                onChange={(event) => onZoomChange(Number(event.target.value))}
-                aria-label="Selected tile zoom"
               />
             </label>
           </div>

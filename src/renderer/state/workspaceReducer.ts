@@ -44,6 +44,7 @@ export type WorkspaceAction =
       password: string;
     }
   | { type: "addCameraEntry" }
+  | { type: "closeTile"; tileId: string }
   | { type: "moveTile"; tileId: string; direction: "left" | "right" }
   | { type: "resetSelectedTileScale" }
   | { type: "resetGridToListOrder" };
@@ -663,6 +664,24 @@ export function workspaceReducer(
       return {
         ...state,
         tiles: moveItem(state.tiles, fromIndex, toIndex)
+      };
+    }
+    case "closeTile": {
+      const closingIndex = state.tiles.findIndex((tile) => tile.id === action.tileId);
+      if (closingIndex < 0) {
+        return state;
+      }
+
+      const tiles = state.tiles.filter((tile) => tile.id !== action.tileId);
+      const selectedTileId =
+        state.selectedTileId === action.tileId
+          ? tiles[Math.min(closingIndex, tiles.length - 1)]?.id ?? null
+          : state.selectedTileId;
+
+      return {
+        ...state,
+        tiles,
+        selectedTileId
       };
     }
     case "resetSelectedTileScale":

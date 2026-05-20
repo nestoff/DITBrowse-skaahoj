@@ -31,6 +31,14 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
 
   const secondTileBox = await page.locator(".tile-slot").nth(1).boundingBox();
   expect(Math.abs((resizedTileBox?.height ?? 0) - (secondTileBox?.height ?? 0))).toBeLessThan(1);
+
+  await expect(page.getByLabel("Selected tile zoom")).toBeVisible();
+  await page.getByLabel("Selected tile zoom").fill("0.82");
+  await expect(page.getByLabel("Selected tile zoom")).toHaveValue("0.82");
+
+  await page.getByLabel("Close 41").click();
+  await expect(page.getByLabel("Close 41")).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.42");
 });
 
 test("selected camera address overrides can return to prefix and suffix style", async ({ page }) => {

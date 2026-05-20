@@ -100,6 +100,10 @@ export function App(): ReactElement {
     dispatch({ type: "moveTile", tileId, direction });
   }, []);
 
+  const closeTile = useCallback((tileId: string): void => {
+    dispatch({ type: "closeTile", tileId });
+  }, []);
+
   const addBlankTile = useCallback((): void => {
     dispatch({ type: "openNewTile", url: "about:blank" });
   }, []);
@@ -169,6 +173,7 @@ export function App(): ReactElement {
         activePartition={activePartition}
         onSelectTile={selectTile}
         onMoveTile={moveTile}
+        onCloseTile={closeTile}
         onAddTile={addBlankTile}
         onNavigate={navigate}
         onReturnSelectedCameraToPrefix={returnSelectedCameraToPrefix}

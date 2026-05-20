@@ -14,6 +14,7 @@ interface BrowserChromeProps {
   activePartition: string | null;
   onSelectTile: (tileId: string) => void;
   onMoveTile: (tileId: string, direction: "left" | "right") => void;
+  onCloseTile: (tileId: string) => void;
   onAddTile: () => void;
   onNavigate: (input: string, target: "selected" | "new") => void;
   onReturnSelectedCameraToPrefix: () => void;
@@ -41,6 +42,7 @@ export function BrowserChrome({
   activePartition,
   onSelectTile,
   onMoveTile,
+  onCloseTile,
   onAddTile,
   onNavigate,
   onReturnSelectedCameraToPrefix,
@@ -74,6 +76,7 @@ export function BrowserChrome({
           selectedTileId={workspace.selectedTileId}
           onSelectTile={onSelectTile}
           onMoveTile={onMoveTile}
+          onCloseTile={onCloseTile}
           onAddTile={onAddTile}
         />
         <IconButton

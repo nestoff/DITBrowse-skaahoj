@@ -16,6 +16,7 @@ const baseProps = {
   activePartition: "persist:ditbrowse-job-sample-list-sample",
   onSelectTile: vi.fn(),
   onMoveTile: vi.fn(),
+  onCloseTile: vi.fn(),
   onAddTile: vi.fn(),
   onNavigate: vi.fn(),
   onReturnSelectedCameraToPrefix: vi.fn(),
@@ -70,17 +71,28 @@ describe("BrowserChrome", () => {
       />
     );
 
-    expect(screen.queryByLabelText("Zoom controls panel")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Zoom controls"));
-
-    expect(screen.getByLabelText("Zoom controls panel")).toBeVisible();
-
-    fireEvent.change(screen.getByLabelText("Global zoom"), { target: { value: "1.37" } });
     fireEvent.change(screen.getByLabelText("Selected tile zoom"), { target: { value: "0.82" } });
 
-    expect(onGlobalZoomChange).toHaveBeenCalledWith(1.37);
     expect(onZoomChange).toHaveBeenCalledWith(0.82);
+
+    expect(screen.queryByLabelText("Global zoom controls panel")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Global zoom controls"));
+
+    expect(screen.getByLabelText("Global zoom controls panel")).toBeVisible();
+
+    fireEvent.change(screen.getByLabelText("Global zoom"), { target: { value: "1.37" } });
+
+    expect(onGlobalZoomChange).toHaveBeenCalledWith(1.37);
+  });
+
+  it("shows close controls on tabs", () => {
+    const onCloseTile = vi.fn();
+    render(<BrowserChrome {...baseProps} onCloseTile={onCloseTile} />);
+
+    fireEvent.click(screen.getByLabelText("Close 41"));
+
+    expect(onCloseTile).toHaveBeenCalledWith("tile-41");
   });
 
   it("offers to return a manually overridden selected camera to prefix and suffix style", () => {

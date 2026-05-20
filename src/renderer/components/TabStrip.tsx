@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import type { TileState } from "../../shared/types";
 import { IconButton } from "./ui/IconButton";
 
@@ -8,6 +8,7 @@ interface TabStripProps {
   selectedTileId: string | null;
   onSelectTile: (tileId: string) => void;
   onAddTile: () => void;
+  onCloseTile: (tileId: string) => void;
   onMoveTile: (tileId: string, direction: "left" | "right") => void;
 }
 
@@ -16,6 +17,7 @@ export function TabStrip({
   selectedTileId,
   onSelectTile,
   onAddTile,
+  onCloseTile,
   onMoveTile
 }: TabStripProps): ReactElement {
   return (
@@ -43,6 +45,15 @@ export function TabStrip({
             onClick={() => onMoveTile(tile.id, "right")}
           >
             <ChevronRight size={12} strokeWidth={2.4} />
+          </button>
+          <button
+            type="button"
+            className="tab-close"
+            aria-label={`Close ${tile.title || tile.url || "tile"}`}
+            title={`Close ${tile.title || tile.url || "tile"}`}
+            onClick={() => onCloseTile(tile.id)}
+          >
+            <X size={12} strokeWidth={2.4} />
           </button>
         </div>
       ))}

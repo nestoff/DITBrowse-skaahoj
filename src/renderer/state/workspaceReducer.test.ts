@@ -684,6 +684,65 @@ describe("workspaceReducer", () => {
     ]);
   });
 
+  it("closes a non-selected tile without changing the saved camera-list order", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "closeTile",
+      tileId: "tile-42"
+    });
+
+    expect(state.tiles.map((tile) => tile.id)).not.toContain("tile-42");
+    expect(state.selectedTileId).toBe("tile-41");
+    expect(state.cameraLists[0].cameras.map((camera) => camera.id)).toContain("camera-42");
+  });
+
+  it("selects the next tile when closing the selected tile", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "closeTile",
+      tileId: "tile-41"
+    });
+
+    expect(state.tiles[0]).toMatchObject({
+      id: "tile-42",
+      cameraId: "camera-42"
+    });
+    expect(state.selectedTileId).toBe("tile-42");
+  });
+
+  it("selects the previous tile when closing the selected final tile", () => {
+    const selectedLast = {
+      ...sampleWorkspace,
+      selectedTileId: "tile-52"
+    };
+
+    const state = workspaceReducer(selectedLast, {
+      type: "closeTile",
+      tileId: "tile-52"
+    });
+
+    expect(state.tiles.at(-1)).toMatchObject({
+      id: "tile-51",
+      cameraId: "camera-51"
+    });
+    expect(state.selectedTileId).toBe("tile-51");
+  });
+
+  it("clears the selection when closing the last remaining tile", () => {
+    const oneTile = {
+      ...sampleWorkspace,
+      selectedTileId: "tile-41",
+      tiles: [sampleWorkspace.tiles[0]]
+    };
+
+    const state = workspaceReducer(oneTile, {
+      type: "closeTile",
+      tileId: "tile-41"
+    });
+
+    expect(state.tiles).toEqual([]);
+    expect(state.selectedTileId).toBeNull();
+    expect(state.cameraLists[0].cameras).toHaveLength(12);
+  });
+
   it("resets selected tile zoom and viewport to defaults", () => {
     const zoomed = workspaceReducer(sampleWorkspace, {
       type: "setSelectedTileZoom",
