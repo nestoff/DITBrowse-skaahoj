@@ -14,6 +14,7 @@ interface TileGridProps {
   onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
   credentialsByTileId: Map<string, CredentialFill>;
   webviewPreloadPath: string | null;
+  focusMode?: boolean;
 }
 
 function TileGridComponent({
@@ -24,7 +25,8 @@ function TileGridComponent({
   onUrlCommitted,
   onCredentialCaptured,
   credentialsByTileId,
-  webviewPreloadPath
+  webviewPreloadPath,
+  focusMode = false
 }: TileGridProps): ReactElement {
   const tileIds = useMemo(() => tiles.map((tile) => tile.id), [tiles]);
   const slots = useMemo(() => buildGridSlots(tileIds, columns), [columns, tileIds]);
@@ -35,7 +37,7 @@ function TileGridComponent({
 
   return (
     <section
-      className="tile-grid"
+      className={focusMode ? "tile-grid focus-mode" : "tile-grid"}
       style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
       {slots.map((slot) => {
@@ -49,6 +51,7 @@ function TileGridComponent({
             key={tile.id}
             tile={tile}
             selected={tile.id === selectedTileId}
+            focused={focusMode && tile.id === selectedTileId}
             onSelectTile={onSelectTile}
             onUrlCommitted={onUrlCommitted}
             onCredentialCaptured={onCredentialCaptured}

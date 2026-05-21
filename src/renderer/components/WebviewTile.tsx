@@ -55,6 +55,7 @@ function isResetShortcut(event: KeyboardEvent): boolean {
 interface WebviewTileProps {
   tile: TileState;
   selected: boolean;
+  focused?: boolean;
   onSelectTile: (tileId: string) => void;
   onUrlCommitted: (tileId: string, url: string) => void;
   onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
@@ -65,6 +66,7 @@ interface WebviewTileProps {
 function WebviewTileComponent({
   tile,
   selected,
+  focused = false,
   onSelectTile,
   onUrlCommitted,
   onCredentialCaptured,
@@ -88,7 +90,10 @@ function WebviewTileComponent({
 
     const observer = new ResizeObserver(([entry]) => {
       const rect = entry.contentRect;
-      setBounds({ width: rect.width, height: rect.height });
+      setBounds({
+        width: Math.max(1, rect.width),
+        height: Math.max(1, rect.height)
+      });
     });
 
     observer.observe(element);
@@ -294,7 +299,9 @@ function WebviewTileComponent({
   return (
     <div
       ref={containerRef}
-      className={selected ? "tile-slot selected" : "tile-slot"}
+      className={["tile-slot", selected ? "selected" : "", focused ? "focused" : ""]
+        .filter(Boolean)
+        .join(" ")}
       onMouseDown={() => onSelectTile(tile.id)}
     >
       <div className="tile-label">{tile.title || tile.url || "Blank"}</div>

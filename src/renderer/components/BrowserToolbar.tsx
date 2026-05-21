@@ -3,6 +3,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Link2,
+  Maximize2,
+  Minimize2,
   RotateCw,
   Rows3,
   RotateCcw,
@@ -32,6 +34,8 @@ interface BrowserToolbarProps {
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
+  focusMode: boolean;
+  onFocusModeToggle: () => void;
 }
 
 export function BrowserToolbar({
@@ -51,7 +55,9 @@ export function BrowserToolbar({
   onDefaultViewportChange,
   onGlobalViewportChange,
   onZoomChange,
-  onViewportChange
+  onViewportChange,
+  focusMode,
+  onFocusModeToggle
 }: BrowserToolbarProps): ReactElement {
   const selectedName = selectedTile?.title || selectedTile?.url || "No tile selected";
 
@@ -89,6 +95,19 @@ export function BrowserToolbar({
         )}
       </div>
       <div className="toolbar-group browser-layout-controls" aria-label="Layout controls">
+        <IconButton
+          label={focusMode ? "Show all pages" : "Focus selected page"}
+          icon={
+            focusMode ? (
+              <Minimize2 size={14} strokeWidth={2.2} />
+            ) : (
+              <Maximize2 size={14} strokeWidth={2.2} />
+            )
+          }
+          active={focusMode}
+          disabled={!selectedTile}
+          onClick={onFocusModeToggle}
+        />
         <span className="selected-tile-status" title={selectedName}>
           <SquareStack size={14} strokeWidth={2.2} />
           <span>{selectedName}</span>

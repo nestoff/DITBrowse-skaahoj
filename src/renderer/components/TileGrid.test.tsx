@@ -1,0 +1,37 @@
+import { render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { sampleWorkspace } from "../../shared/sampleData";
+import { TileGrid } from "./TileGrid";
+
+class ResizeObserverStub {
+  observe = vi.fn();
+  disconnect = vi.fn();
+}
+
+vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
+const baseProps = {
+  tiles: sampleWorkspace.tiles.slice(0, 4),
+  columns: 2,
+  selectedTileId: "tile-42",
+  onSelectTile: vi.fn(),
+  onUrlCommitted: vi.fn(),
+  onCredentialCaptured: vi.fn(),
+  credentialsByTileId: new Map(),
+  webviewPreloadPath: null
+};
+
+describe("TileGrid", () => {
+  it("keeps every webview mounted while focusing the selected page", () => {
+    const { container } = render(<TileGrid {...baseProps} focusMode />);
+
+    expect(container.querySelectorAll("webview")).toHaveLength(4);
+    expect(container.querySelector(".tile-grid")).toHaveClass("focus-mode");
+    expect(container.querySelector('[data-tile-id="tile-42"]')?.closest(".tile-slot")).toHaveClass(
+      "focused"
+    );
+    expect(container.querySelector('[data-tile-id="tile-41"]')?.closest(".tile-slot")).not.toHaveClass(
+      "focused"
+    );
+  });
+});

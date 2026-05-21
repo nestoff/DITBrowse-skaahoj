@@ -92,6 +92,23 @@ describe("WebviewTile", () => {
     }
   });
 
+  it("clamps zero-size measurements while tiles are visually hidden", () => {
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(() => resizeTile(0, 0)).not.toThrow();
+    expect(document.querySelector("webview")).toBeInTheDocument();
+  });
+
   it("renders a persistent webview for the camera URL", () => {
     render(
       <WebviewTile

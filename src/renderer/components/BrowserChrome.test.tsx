@@ -39,7 +39,9 @@ const baseProps = {
   onResetSelectedScale: vi.fn(),
   onResetGridOrder: vi.fn(),
   onClearSelectedCookies: vi.fn(),
-  onClearListCookies: vi.fn()
+  onClearListCookies: vi.fn(),
+  focusMode: false,
+  onFocusModeToggle: vi.fn()
 };
 
 describe("BrowserChrome", () => {
@@ -138,6 +140,27 @@ describe("BrowserChrome", () => {
     fireEvent.blur(globalZoomPercent);
 
     expect(onGlobalZoomChange).toHaveBeenCalledWith(1.42);
+  });
+
+  it("toggles selected-page focus mode from the toolbar", () => {
+    const onFocusModeToggle = vi.fn();
+    const { rerender } = render(
+      <BrowserChrome {...baseProps} onFocusModeToggle={onFocusModeToggle} />
+    );
+
+    fireEvent.click(screen.getByLabelText("Focus selected page"));
+
+    expect(onFocusModeToggle).toHaveBeenCalledOnce();
+
+    rerender(
+      <BrowserChrome
+        {...baseProps}
+        focusMode
+        onFocusModeToggle={onFocusModeToggle}
+      />
+    );
+
+    expect(screen.getByLabelText("Show all pages")).toBeVisible();
   });
 
   it("resets selected and global zoom when the percent marker is double-clicked", () => {

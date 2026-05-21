@@ -67,6 +67,41 @@ test("selected camera address overrides can return to prefix and suffix style", 
   await expect(returnToPrefix).toBeHidden();
 });
 
+test("focus mode singles out the selected page without unmounting webviews", async ({ page }) => {
+  await page.goto("/");
+
+  const grid = page.locator(".tile-grid");
+  await expect(page.locator("webview")).toHaveCount(12);
+  const gridBox = await grid.boundingBox();
+
+  await page.getByLabel("Focus selected page").click();
+
+  await expect(grid).toHaveClass(/focus-mode/);
+  await expect(page.locator("webview")).toHaveCount(12);
+
+  const firstTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-41"])');
+  const secondTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-42"])');
+  await expect(firstTile).toBeVisible();
+  await expect(secondTile).toBeHidden();
+
+  const focusedBox = await firstTile.boundingBox();
+  expect(focusedBox?.width).toBeGreaterThan((gridBox?.width ?? 0) - 20);
+  expect(focusedBox?.height).toBeGreaterThan((gridBox?.height ?? 0) - 20);
+
+  await page.locator('[aria-label="Tab B"] .tab-select').click();
+
+  await expect(firstTile).toBeHidden();
+  await expect(secondTile).toBeVisible();
+  await expect(page.getByLabel("Show all pages")).toBeVisible();
+  await expect(page.locator("webview")).toHaveCount(12);
+
+  await page.getByLabel("Show all pages").click();
+
+  await expect(grid).not.toHaveClass(/focus-mode/);
+  await expect(firstTile).toBeVisible();
+  await expect(secondTile).toBeVisible();
+});
+
 test("camera list editor moves down on Enter and across on Tab", async ({ page }) => {
   await page.goto("/");
 

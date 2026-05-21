@@ -22,6 +22,7 @@ export function App(): ReactElement {
   const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const selectedTileIdRef = useRef(workspace.selectedTileId);
 
   useEffect(() => {
@@ -101,6 +102,10 @@ export function App(): ReactElement {
   const selectTile = useCallback((tileId: string): void => {
     selectedTileIdRef.current = tileId;
     dispatch({ type: "selectTile", tileId });
+  }, []);
+
+  const toggleFocusMode = useCallback((): void => {
+    setFocusMode((active) => !active);
   }, []);
 
   const moveTile = useCallback((tileId: string, direction: "left" | "right"): void => {
@@ -207,6 +212,12 @@ export function App(): ReactElement {
     dispatch({ type: "commitTileNavigationUrl", tileId, url });
   }, []);
 
+  useEffect(() => {
+    if (!workspace.selectedTileId) {
+      setFocusMode(false);
+    }
+  }, [workspace.selectedTileId]);
+
   return (
     <main className="app-shell">
       <BrowserChrome
@@ -240,11 +251,14 @@ export function App(): ReactElement {
         onResetGridOrder={resetGridOrder}
         onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}
         onClearListCookies={(partition) => void clearPartitionStorage(partition)}
+        focusMode={focusMode && !!workspace.selectedTileId}
+        onFocusModeToggle={toggleFocusMode}
       />
       <TileGrid
         tiles={workspace.tiles}
         columns={workspace.gridColumns}
         selectedTileId={workspace.selectedTileId}
+        focusMode={focusMode && !!workspace.selectedTileId}
         onSelectTile={selectTile}
         onUrlCommitted={commitTileNavigationUrl}
         onCredentialCaptured={saveCapturedCredential}

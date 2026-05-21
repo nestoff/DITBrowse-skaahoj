@@ -38,6 +38,8 @@ interface BrowserChromeProps {
   onResetGridOrder: () => void;
   onClearSelectedCookies: (partition: string, url: string) => void;
   onClearListCookies: (partition: string) => void;
+  focusMode: boolean;
+  onFocusModeToggle: () => void;
 }
 
 export function BrowserChrome({
@@ -70,7 +72,9 @@ export function BrowserChrome({
   onResetSelectedScale,
   onResetGridOrder,
   onClearSelectedCookies,
-  onClearListCookies
+  onClearListCookies,
+  focusMode,
+  onFocusModeToggle
 }: BrowserChromeProps): ReactElement {
   const [toolsOpen, setToolsOpen] = useState(false);
   const selectedCamera = selectedTile?.cameraId
@@ -116,6 +120,8 @@ export function BrowserChrome({
         onGlobalViewportChange={onGlobalViewportChange}
         onZoomChange={onZoomChange}
         onViewportChange={onViewportChange}
+        focusMode={focusMode}
+        onFocusModeToggle={onFocusModeToggle}
       />
       {toolsOpen && (
         <BrowserToolsMenu
