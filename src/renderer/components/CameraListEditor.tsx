@@ -462,7 +462,6 @@ export function CameraListEditor({
                 Add Camera Row
               </PillButton>
               <label className="editor-count-field">
-                Cameras
                 <input
                   aria-label="Camera count"
                   type="number"
@@ -472,6 +471,7 @@ export function CameraListEditor({
                   value={draftList.cameras.length}
                   onChange={(event) => updateCameraCount(event.target.value)}
                 />
+                Cameras
               </label>
             </div>
             <div className="camera-table-wrap">
