@@ -303,6 +303,67 @@ describe("WebviewTile", () => {
     expect(onSelectTile).toHaveBeenCalledWith("tile-42");
   });
 
+  it("selects inactive tiles from a host-side click layer over the page", () => {
+    const onSelectTile = vi.fn();
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={false}
+        onSelectTile={onSelectTile}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    const webview = document.querySelector("webview") as Electron.WebviewTag;
+    webview.sendInputEvent = vi.fn(() => Promise.resolve());
+    webview.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          left: 100,
+          top: 50,
+          width: 512,
+          height: 384,
+          right: 612,
+          bottom: 434,
+          x: 100,
+          y: 50,
+          toJSON: vi.fn()
+        }) as DOMRect
+    );
+
+    fireEvent.pointerDown(screen.getByLabelText("Activate Camera 42"), {
+      clientX: 356,
+      clientY: 242
+    });
+
+    expect(onSelectTile).toHaveBeenCalledWith("tile-42");
+    expect(webview.sendInputEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "mouseDown", x: 512, y: 384 })
+    );
+    expect(webview.sendInputEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "mouseUp", x: 512, y: 384 })
+    );
+  });
+
+  it("removes the host-side click layer after the tile is selected", () => {
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(screen.queryByLabelText("Activate Camera 42")).not.toBeInTheDocument();
+  });
+
   it("temporarily zooms the visible tile from trackpad pinch messages", () => {
     render(
       <WebviewTile

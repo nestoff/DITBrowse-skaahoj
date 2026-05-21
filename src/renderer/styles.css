@@ -841,6 +841,15 @@ textarea::selection {
   background: var(--blank-page);
 }
 
+.tile-activation-catcher {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
 .tile-label {
   position: absolute;
   z-index: 2;

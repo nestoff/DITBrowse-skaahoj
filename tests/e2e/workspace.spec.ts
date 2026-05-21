@@ -102,6 +102,16 @@ test("focus mode singles out the selected page without unmounting webviews", asy
   await expect(secondTile).toBeVisible();
 });
 
+test("clicking the page area of an inactive tile activates its tab", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByLabel("Tab A")).toHaveClass(/active/);
+  await page.getByLabel("Activate B").click();
+
+  await expect(page.getByLabel("Tab B")).toHaveClass(/active/);
+  await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
+});
+
 test("camera list editor moves down on Enter and across on Tab", async ({ page }) => {
   await page.goto("/");
 

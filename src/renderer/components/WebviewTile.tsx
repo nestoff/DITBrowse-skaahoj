@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
@@ -50,6 +50,59 @@ function isResetShortcut(event: KeyboardEvent): boolean {
     event.key.toLowerCase() === "z" &&
     !isEditableTarget(event.target)
   );
+}
+
+function clampInputCoordinate(value: number, max: number): number {
+  return Math.min(Math.max(Math.round(value), 0), max);
+}
+
+function forwardedMousePoint(
+  event: ReactPointerEvent<HTMLElement>,
+  webview: Electron.WebviewTag,
+  viewport: { width: number; height: number }
+): { x: number; y: number } | null {
+  const rect = webview.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) {
+    return null;
+  }
+
+  const clientX = Number.isFinite(event.clientX) ? event.clientX : rect.left + rect.width / 2;
+  const clientY = Number.isFinite(event.clientY) ? event.clientY : rect.top + rect.height / 2;
+
+  return {
+    x: clampInputCoordinate(
+      ((clientX - rect.left) / rect.width) * viewport.width,
+      viewport.width
+    ),
+    y: clampInputCoordinate(
+      ((clientY - rect.top) / rect.height) * viewport.height,
+      viewport.height
+    )
+  };
+}
+
+function safeForwardActivationClick(
+  event: ReactPointerEvent<HTMLElement>,
+  webview: Electron.WebviewTag,
+  viewport: { width: number; height: number }
+): void {
+  if (event.button !== 0 && event.button !== undefined) {
+    return;
+  }
+
+  const point = forwardedMousePoint(event, webview, viewport);
+  if (!point || typeof webview.sendInputEvent !== "function") {
+    return;
+  }
+
+  const input = {
+    button: "left" as const,
+    clickCount: 1,
+    x: point.x,
+    y: point.y
+  };
+  void webview.sendInputEvent({ ...input, type: "mouseDown" }).catch(() => undefined);
+  void webview.sendInputEvent({ ...input, type: "mouseUp" }).catch(() => undefined);
 }
 
 interface WebviewTileProps {
@@ -295,6 +348,20 @@ function WebviewTileComponent({
       ? `translate(${temporaryView.offsetX}px, ${temporaryView.offsetY}px) scale(${scale})`
       : `scale(${scale})`;
   const webviewUrl = normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL;
+  const activationLabel = `Activate ${tile.title || tile.url || "tile"}`;
+  const handleInactivePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelectTile(tile.id);
+
+      const webview = webviewRef.current;
+      if (webview) {
+        safeForwardActivationClick(event, webview, tile.viewport);
+      }
+    },
+    [onSelectTile, tile.id, tile.viewport]
+  );
 
   return (
     <div
@@ -323,6 +390,15 @@ function WebviewTileComponent({
             willChange: "transform"
           }}
         />
+        {!selected && (
+          <div
+            className="tile-activation-catcher"
+            role="button"
+            tabIndex={-1}
+            aria-label={activationLabel}
+            onPointerDown={handleInactivePointerDown}
+          />
+        )}
       </div>
       {failed && (
         <div className="tile-error">
