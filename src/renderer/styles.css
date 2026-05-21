@@ -759,6 +759,40 @@ textarea::selection {
   gap: 8px;
 }
 
+.control-api-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.control-api-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.control-api-actions button {
+  height: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: #12151a;
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.control-api-actions button:hover {
+  background: #20252d;
+}
+
+.control-api-error {
+  margin: 0;
+  color: #ff9a94;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .tool-command {
   flex: 0 0 auto;
 }

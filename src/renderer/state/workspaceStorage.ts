@@ -1,6 +1,11 @@
 import type { WorkspaceState } from "../../shared/types";
 import { sampleWorkspace } from "../../shared/sampleData";
 import type { TemporaryViewGesture } from "../../shared/temporaryView";
+import type {
+  ControlApiCommand,
+  ControlApiInfo,
+  ControlApiResponse
+} from "../../shared/controlApi";
 
 declare global {
   interface Window {
@@ -14,6 +19,11 @@ declare global {
       onHostTemporaryViewGesture?: (
         callback: (gesture: TemporaryViewGesture) => void
       ) => () => void;
+      getControlApiInfo?: () => Promise<ControlApiInfo>;
+      setControlApiPort?: (port: number | null) => Promise<ControlApiInfo>;
+      onControlApiInfo?: (callback: (info: ControlApiInfo) => void) => () => void;
+      onControlApiCommand?: (callback: (command: ControlApiCommand) => void) => () => void;
+      sendControlApiResponse?: (requestId: string, response: ControlApiResponse) => void;
     };
   }
 }

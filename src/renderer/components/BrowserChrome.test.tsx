@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { sampleWorkspace } from "../../shared/sampleData";
 import { BrowserChrome } from "./BrowserChrome";
@@ -41,7 +41,14 @@ const baseProps = {
   onClearSelectedCookies: vi.fn(),
   onClearListCookies: vi.fn(),
   focusMode: false,
-  onFocusModeToggle: vi.fn()
+  onFocusModeToggle: vi.fn(),
+  controlApiInfo: {
+    host: "127.0.0.1",
+    port: 54321,
+    baseUrl: "http://127.0.0.1:54321",
+    configuredPort: 54321
+  },
+  onSetControlApiPort: vi.fn(async () => undefined)
 };
 
 describe("BrowserChrome", () => {
@@ -98,6 +105,27 @@ describe("BrowserChrome", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save Job Name" }));
 
     expect(onUpdateJobName).toHaveBeenCalledWith("Commercial B");
+  });
+
+  it("sets the local control API port from workspace tools", async () => {
+    const onSetControlApiPort = vi.fn(async () => undefined);
+    render(<BrowserChrome {...baseProps} onSetControlApiPort={onSetControlApiPort} />);
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+    fireEvent.change(screen.getByLabelText("API port"), {
+      target: { value: "54001" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Port" }));
+
+    await waitFor(() => {
+      expect(onSetControlApiPort).toHaveBeenCalledWith(54001);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Auto" }));
+
+    await waitFor(() => {
+      expect(onSetControlApiPort).toHaveBeenCalledWith(null);
+    });
   });
 
   it("opens variable zoom controls for global and selected tile zoom", () => {

@@ -1,5 +1,12 @@
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  buildControlApiStatus,
+  resolveControlApiTab,
+  type ControlApiCommand,
+  type ControlApiInfo,
+  type ControlApiResponse
+} from "../shared/controlApi";
 import { findCredentialRecord } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import { sampleWorkspace } from "../shared/sampleData";
@@ -23,7 +30,14 @@ export function App(): ReactElement {
   const [loaded, setLoaded] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
   const selectedTileIdRef = useRef(workspace.selectedTileId);
+  const workspaceRef = useRef(workspace);
+  const effectiveFocusMode = focusMode && !!workspace.selectedTileId;
+  const focusModeRef = useRef(effectiveFocusMode);
+
+  workspaceRef.current = workspace;
+  focusModeRef.current = effectiveFocusMode;
 
   useEffect(() => {
     let active = true;
@@ -39,6 +53,23 @@ export function App(): ReactElement {
   }, []);
 
   useDebouncedWorkspaceSave({ loaded, workspace, saveWorkspace });
+
+  useEffect(() => {
+    let active = true;
+    window.ditbrowse?.getControlApiInfo?.().then((info) => {
+      if (active) {
+        setControlApiInfo(info);
+      }
+    });
+    const unsubscribe = window.ditbrowse?.onControlApiInfo?.((info) => {
+      setControlApiInfo(info);
+    });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
 
   useEffect(() => {
     selectedTileIdRef.current = workspace.selectedTileId;
@@ -106,6 +137,13 @@ export function App(): ReactElement {
 
   const toggleFocusMode = useCallback((): void => {
     setFocusMode((active) => !active);
+  }, []);
+
+  const setControlApiPort = useCallback(async (port: number | null): Promise<void> => {
+    const nextInfo = await window.ditbrowse?.setControlApiPort?.(port);
+    if (nextInfo) {
+      setControlApiInfo(nextInfo);
+    }
   }, []);
 
   const moveTile = useCallback((tileId: string, direction: "left" | "right"): void => {
@@ -218,6 +256,60 @@ export function App(): ReactElement {
     }
   }, [workspace.selectedTileId]);
 
+  const sendControlApiResponse = useCallback(
+    (requestId: string, response: ControlApiResponse): void => {
+      window.ditbrowse?.sendControlApiResponse?.(requestId, response);
+    },
+    []
+  );
+
+  const handleControlApiCommand = useCallback(
+    (command: ControlApiCommand): void => {
+      const currentWorkspace = workspaceRef.current;
+      const currentFocusMode = focusModeRef.current && !!currentWorkspace.selectedTileId;
+
+      if (command.type === "status") {
+        sendControlApiResponse(command.requestId, {
+          ok: true,
+          status: buildControlApiStatus(currentWorkspace, currentFocusMode)
+        });
+        return;
+      }
+
+      if (command.type === "showGrid") {
+        setFocusMode(false);
+        sendControlApiResponse(command.requestId, {
+          ok: true,
+          status: buildControlApiStatus(currentWorkspace, false)
+        });
+        return;
+      }
+
+      const tile = resolveControlApiTab(currentWorkspace.tiles, command.specifier);
+      if (!tile) {
+        sendControlApiResponse(command.requestId, {
+          ok: false,
+          error: "not_found",
+          message: `No tab matches "${command.specifier}"`
+        });
+        return;
+      }
+
+      selectedTileIdRef.current = tile.id;
+      dispatch({ type: "selectTile", tileId: tile.id });
+      setFocusMode(true);
+      sendControlApiResponse(command.requestId, {
+        ok: true,
+        status: buildControlApiStatus({ ...currentWorkspace, selectedTileId: tile.id }, true)
+      });
+    },
+    [sendControlApiResponse]
+  );
+
+  useEffect(() => {
+    return window.ditbrowse?.onControlApiCommand?.(handleControlApiCommand);
+  }, [handleControlApiCommand]);
+
   return (
     <main className="app-shell">
       <BrowserChrome
@@ -251,14 +343,16 @@ export function App(): ReactElement {
         onResetGridOrder={resetGridOrder}
         onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}
         onClearListCookies={(partition) => void clearPartitionStorage(partition)}
-        focusMode={focusMode && !!workspace.selectedTileId}
+        focusMode={effectiveFocusMode}
         onFocusModeToggle={toggleFocusMode}
+        controlApiInfo={controlApiInfo}
+        onSetControlApiPort={setControlApiPort}
       />
       <TileGrid
         tiles={workspace.tiles}
         columns={workspace.gridColumns}
         selectedTileId={workspace.selectedTileId}
-        focusMode={focusMode && !!workspace.selectedTileId}
+        focusMode={effectiveFocusMode}
         onSelectTile={selectTile}
         onUrlCommitted={commitTileNavigationUrl}
         onCredentialCaptured={saveCapturedCredential}

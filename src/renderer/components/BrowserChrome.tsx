@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
+import type { ControlApiInfo } from "../../shared/controlApi";
 import type { CameraList, TileState, ViewportSize, WorkspaceState } from "../../shared/types";
 import { BrowserToolbar } from "./BrowserToolbar";
 import { BrowserToolsMenu } from "./BrowserToolsMenu";
@@ -40,6 +41,8 @@ interface BrowserChromeProps {
   onClearListCookies: (partition: string) => void;
   focusMode: boolean;
   onFocusModeToggle: () => void;
+  controlApiInfo: ControlApiInfo | null;
+  onSetControlApiPort: (port: number | null) => Promise<void>;
 }
 
 export function BrowserChrome({
@@ -74,7 +77,9 @@ export function BrowserChrome({
   onClearSelectedCookies,
   onClearListCookies,
   focusMode,
-  onFocusModeToggle
+  onFocusModeToggle,
+  controlApiInfo,
+  onSetControlApiPort
 }: BrowserChromeProps): ReactElement {
   const [toolsOpen, setToolsOpen] = useState(false);
   const selectedCamera = selectedTile?.cameraId
@@ -140,6 +145,8 @@ export function BrowserChrome({
           onResetGridOrder={onResetGridOrder}
           onClearSelectedCookies={onClearSelectedCookies}
           onClearListCookies={onClearListCookies}
+          controlApiInfo={controlApiInfo}
+          onSetControlApiPort={onSetControlApiPort}
         />
       )}
     </div>
