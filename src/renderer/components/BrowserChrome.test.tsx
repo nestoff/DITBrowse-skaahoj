@@ -128,6 +128,17 @@ describe("BrowserChrome", () => {
     });
   });
 
+  it("shows browser-friendly GET control API shortcuts", () => {
+    render(<BrowserChrome {...baseProps} />);
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+
+    expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent(
+      "GET /api/focus?tab=B"
+    );
+    expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent("GET /api/grid");
+  });
+
   it("opens variable zoom controls for global and selected tile zoom", () => {
     const onGlobalZoomChange = vi.fn();
     const onZoomChange = vi.fn();

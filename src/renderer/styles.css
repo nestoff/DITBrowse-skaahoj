@@ -766,6 +766,25 @@ textarea::selection {
   gap: 8px;
 }
 
+.control-api-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.control-api-shortcuts code {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid #242931;
+  border-radius: 6px;
+  background: #080a0c;
+  color: var(--muted);
+  padding: 4px 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .control-api-actions {
   display: inline-flex;
   gap: 6px;

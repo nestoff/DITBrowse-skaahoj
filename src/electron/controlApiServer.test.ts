@@ -70,6 +70,32 @@ describe("controlApiServer", () => {
     expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "showGrid" }));
   });
 
+  it("accepts browser-friendly GET focus and grid commands", async () => {
+    const { server, dispatch } = await startTestServer();
+
+    await expect(fetch(`${server.baseUrl}/api/tabs/B/focus`)).resolves.toMatchObject({
+      status: 200
+    });
+    await expect(fetch(`${server.baseUrl}/api/focus?tab=3`)).resolves.toMatchObject({
+      status: 200
+    });
+    await expect(fetch(`${server.baseUrl}/api/focus/tile-42`)).resolves.toMatchObject({
+      status: 200
+    });
+    await expect(fetch(`${server.baseUrl}/api/grid`)).resolves.toMatchObject({ status: 200 });
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "focusTab", specifier: "B" })
+    );
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "focusTab", specifier: "3" })
+    );
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "focusTab", specifier: "tile-42" })
+    );
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "showGrid" }));
+  });
+
   it("accepts focus commands from a JSON body", async () => {
     const { server, dispatch } = await startTestServer();
 

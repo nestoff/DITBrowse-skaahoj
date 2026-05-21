@@ -69,23 +69,46 @@ async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
 function commandFromRoute(
   method: string | undefined,
   pathname: string,
+  searchParams: URLSearchParams,
   body: unknown
 ): ControlApiCommand | ControlApiResponse {
   if (method === "GET" && pathname === "/api/status") {
     return { requestId: requestId(), type: "status" };
   }
 
-  if (method === "POST" && pathname === "/api/grid") {
+  if ((method === "GET" || method === "POST") && pathname === "/api/grid") {
     return { requestId: requestId(), type: "showGrid" };
   }
 
   const focusMatch = /^\/api\/tabs\/([^/]+)\/focus$/.exec(pathname);
-  if (method === "POST" && focusMatch) {
+  if ((method === "GET" || method === "POST") && focusMatch) {
     return {
       requestId: requestId(),
       type: "focusTab",
       specifier: decodeURIComponent(focusMatch[1])
     };
+  }
+
+  const simpleFocusMatch = /^\/api\/focus\/([^/]+)$/.exec(pathname);
+  if (method === "GET" && simpleFocusMatch) {
+    return {
+      requestId: requestId(),
+      type: "focusTab",
+      specifier: decodeURIComponent(simpleFocusMatch[1])
+    };
+  }
+
+  if (method === "GET" && pathname === "/api/focus") {
+    const specifier = searchParams.get("tab") ?? "";
+    if (!specifier.trim()) {
+      return {
+        ok: false,
+        error: "bad_request",
+        message: 'GET /api/focus requires a tab query like /api/focus?tab=B'
+      };
+    }
+
+    return { requestId: requestId(), type: "focusTab", specifier };
   }
 
   if (method === "POST" && pathname === "/api/focus") {
@@ -122,7 +145,7 @@ export async function startControlApiServer({
     try {
       const url = new URL(request.url ?? "/", `http://${HOST}`);
       const body = request.method === "POST" ? await readJsonBody(request) : null;
-      const command = commandFromRoute(request.method, url.pathname, body);
+      const command = commandFromRoute(request.method, url.pathname, url.searchParams, body);
       if ("ok" in command) {
         writeJson(response, responseStatus(command), command);
         return;
