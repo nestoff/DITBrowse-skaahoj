@@ -79,5 +79,5 @@ test("camera list editor moves down on Enter and across on Tab", async ({ page }
 
   await page.getByLabel("A index").focus();
   await page.keyboard.press("Tab");
-  await expect(page.getByLabel("A URL")).toBeFocused();
+  await expect(page.getByLabel("A camera number")).toBeFocused();
 });

@@ -25,14 +25,38 @@ describe("CameraListEditor", () => {
   it("shows camera metadata fields without manual username and password columns", () => {
     renderEditor();
 
-    expect(screen.getByRole("columnheader", { name: "Camera #" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Index" })).toBeInTheDocument();
+    const columnHeaders = screen.getAllByRole("columnheader").map((header) => header.textContent);
+    expect(columnHeaders).toEqual([
+      "Move",
+      "Delete",
+      expect.stringContaining("Follow Prefix"),
+      "Index",
+      "Camera #",
+      "Full URL",
+      "Type",
+      "Lens",
+      "Display Note",
+      "Viewport",
+      "Zoom"
+    ]);
     expect(screen.getByRole("columnheader", { name: /Follow Prefix/ })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Type" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Lens" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Display Note" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Username" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Password" })).not.toBeInTheDocument();
+  });
+
+  it("keeps row controls above the camera table", () => {
+    renderEditor();
+
+    const addCameraButton = screen.getByRole("button", { name: "Add Camera Row" });
+    const cameraTable = screen.getByRole("table");
+
+    expect(addCameraButton.closest(".editor-list-toolbar")).toBeInTheDocument();
+    expect(
+      addCameraButton.compareDocumentPosition(cameraTable) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("keeps list edits local until Save Changes is clicked", () => {
@@ -135,6 +159,30 @@ describe("CameraListEditor", () => {
     });
   });
 
+  it("shows an editable camera count that resizes the draft list", () => {
+    const { onSaveList } = renderEditor();
+    const cameraCount = screen.getByLabelText("Camera count");
+
+    expect(cameraCount).toHaveValue(12);
+
+    fireEvent.change(cameraCount, { target: { value: "15" } });
+
+    expect(screen.getByLabelText("O index")).toHaveValue("O");
+    expect(screen.getByLabelText("O camera number")).toHaveValue("15");
+
+    fireEvent.change(cameraCount, { target: { value: "10" } });
+
+    expect(screen.queryByLabelText("K index")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    expect(onSaveList.mock.calls[0][0].cameras).toHaveLength(10);
+    expect(onSaveList.mock.calls[0][0].cameras.at(-1)).toMatchObject({
+      name: "J",
+      suffix: "10"
+    });
+  });
+
   it("imports valid CSV rows into the draft and waits for Save Changes", () => {
     const { onSaveList } = renderEditor();
 
@@ -204,14 +252,14 @@ describe("CameraListEditor", () => {
     renderEditor();
 
     const index = screen.getByLabelText("A index");
-    const url = screen.getByLabelText("A URL");
+    const cameraNumber = screen.getByLabelText("A camera number");
     index.focus();
 
     act(() => {
       fireEvent.keyDown(index, { key: "Tab" });
     });
 
-    expect(url).toHaveFocus();
+    expect(cameraNumber).toHaveFocus();
   });
 
   it("keeps the focused cell inside its camera row for row highlight styling", () => {

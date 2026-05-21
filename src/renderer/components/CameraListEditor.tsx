@@ -79,6 +79,34 @@ function createDraftCameraFromCsv(row: CameraCsvRow, prefix: string): CameraEntr
   };
 }
 
+function appendSequentialCamera(list: CameraList): CameraList {
+  const { index, suffix } = nextCameraDefaults(list.cameras);
+  return {
+    ...list,
+    cameras: [...list.cameras, createDraftCamera(list.defaultPrefix, index, suffix)]
+  };
+}
+
+function resizeDraftCameraList(list: CameraList, count: number): CameraList {
+  const safeCount = Math.max(0, Math.min(99, Math.trunc(count)));
+  if (safeCount === list.cameras.length) {
+    return list;
+  }
+
+  if (safeCount < list.cameras.length) {
+    return {
+      ...list,
+      cameras: list.cameras.slice(0, safeCount)
+    };
+  }
+
+  let next = list;
+  while (next.cameras.length < safeCount) {
+    next = appendSequentialCamera(next);
+  }
+  return next;
+}
+
 function cameraUsesDraftPrefix(camera: CameraEntry): boolean {
   return camera.usesListPrefix !== false;
 }
@@ -256,12 +284,18 @@ export function CameraListEditor({
         return list;
       }
 
-      const { index, suffix } = nextCameraDefaults(list.cameras);
-      return {
-        ...list,
-        cameras: [...list.cameras, createDraftCamera(list.defaultPrefix, index, suffix)]
-      };
+      return appendSequentialCamera(list);
     });
+  }
+
+  function updateCameraCount(value: string): void {
+    const nextCount = Number(value);
+    if (!Number.isInteger(nextCount)) {
+      return;
+    }
+
+    setDraftList((list) => (list ? resizeDraftCameraList(list, nextCount) : list));
+    setLastFollowIndex(null);
   }
 
   function deleteCamera(cameraId: string): void {
@@ -423,6 +457,23 @@ export function CameraListEditor({
                 />
               </label>
             </div>
+            <div className="editor-list-toolbar" aria-label="Camera list controls">
+              <PillButton icon={<Plus size={14} strokeWidth={2.2} />} onClick={addCamera}>
+                Add Camera Row
+              </PillButton>
+              <label className="editor-count-field">
+                Cameras
+                <input
+                  aria-label="Camera count"
+                  type="number"
+                  min="0"
+                  max="99"
+                  step="1"
+                  value={draftList.cameras.length}
+                  onChange={(event) => updateCameraCount(event.target.value)}
+                />
+              </label>
+            </div>
             <div className="camera-table-wrap">
               <table className="camera-table">
                 <thead>
@@ -440,8 +491,8 @@ export function CameraListEditor({
                       />
                     </th>
                     <th>Index</th>
-                    <th>Full URL</th>
                     <th>Camera #</th>
+                    <th>Full URL</th>
                     <th>Type</th>
                     <th>Lens</th>
                     <th>Display Note</th>
@@ -523,21 +574,21 @@ export function CameraListEditor({
                       <td>
                         <input
                           {...cameraCellProps(rowIndex, 2)}
-                          value={camera.url}
-                          onChange={(event) =>
-                            updateDraftCamera(camera.id, { url: event.target.value })
-                          }
-                          aria-label={`${camera.name} URL`}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          {...cameraCellProps(rowIndex, 3)}
                           value={camera.suffix}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { suffix: event.target.value })
                           }
                           aria-label={`${camera.name} camera number`}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          {...cameraCellProps(rowIndex, 3)}
+                          value={camera.url}
+                          onChange={(event) =>
+                            updateDraftCamera(camera.id, { url: event.target.value })
+                          }
+                          aria-label={`${camera.name} URL`}
                         />
                       </td>
                       <td>
@@ -618,9 +669,6 @@ export function CameraListEditor({
                 </tbody>
               </table>
             </div>
-            <PillButton icon={<Plus size={14} strokeWidth={2.2} />} onClick={addCamera}>
-              Add Camera Row
-            </PillButton>
           </>
         )}
         <p className="panel-note">
