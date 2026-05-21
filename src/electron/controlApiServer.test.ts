@@ -47,9 +47,10 @@ describe("controlApiServer", () => {
     const dispatch = vi.fn(async (command: ControlApiCommand): Promise<ControlApiResponse> => ({
       ok: true,
       status: {
-        focusMode: command.type === "focusTab",
-        selectedTileId: command.type === "focusTab" ? "tile-42" : "tile-41",
-        selectedIndex: command.type === "focusTab" ? 2 : 1,
+        focusMode: command.type === "focusTab" || command.type === "focusCamera",
+        selectedTileId:
+          command.type === "focusTab" || command.type === "focusCamera" ? "tile-42" : "tile-41",
+        selectedIndex: command.type === "focusTab" || command.type === "focusCamera" ? 2 : 1,
         tabs: []
       }
     }));
@@ -70,30 +71,39 @@ describe("controlApiServer", () => {
     expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "showGrid" }));
   });
 
-  it("accepts browser-friendly GET focus and grid commands", async () => {
+  it("accepts browser-friendly GET camera focus and grid commands", async () => {
     const { server, dispatch } = await startTestServer();
 
-    await expect(fetch(`${server.baseUrl}/api/tabs/B/focus`)).resolves.toMatchObject({
+    await expect(fetch(`${server.baseUrl}/api/focus/01`)).resolves.toMatchObject({
       status: 200
     });
-    await expect(fetch(`${server.baseUrl}/api/focus?tab=3`)).resolves.toMatchObject({
-      status: 200
-    });
-    await expect(fetch(`${server.baseUrl}/api/focus/tile-42`)).resolves.toMatchObject({
+    await expect(fetch(`${server.baseUrl}/api/focus/02`)).resolves.toMatchObject({
       status: 200
     });
     await expect(fetch(`${server.baseUrl}/api/grid`)).resolves.toMatchObject({ status: 200 });
 
     expect(dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "focusTab", specifier: "B" })
+      expect.objectContaining({ type: "focusCamera", cameraNumber: "01" })
     );
     expect(dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "focusTab", specifier: "3" })
-    );
-    expect(dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "focusTab", specifier: "tile-42" })
+      expect.objectContaining({ type: "focusCamera", cameraNumber: "02" })
     );
     expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "showGrid" }));
+  });
+
+  it("keeps the older tab-focused routes available for compatibility", async () => {
+    const { server, dispatch } = await startTestServer();
+
+    await expect(fetch(`${server.baseUrl}/api/tabs/B/focus`)).resolves.toMatchObject({
+      status: 200
+    });
+    await expect(fetch(`${server.baseUrl}/api/focus?tab=B`)).resolves.toMatchObject({
+      status: 200
+    });
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "focusTab", specifier: "B" })
+    );
   });
 
   it("accepts focus commands from a JSON body", async () => {

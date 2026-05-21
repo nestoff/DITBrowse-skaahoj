@@ -15,12 +15,14 @@ export interface ControlApiConfig {
 export type ControlApiCommand =
   | { requestId: string; type: "status" }
   | { requestId: string; type: "focusTab"; specifier: string }
+  | { requestId: string; type: "focusCamera"; cameraNumber: string }
   | { requestId: string; type: "showGrid" };
 
 export interface ControlApiStatusTab {
   index: number;
   tileId: string;
   cameraId: string | null;
+  cameraNumber: string | null;
   title: string;
   url: string;
 }
@@ -45,6 +47,24 @@ export type ControlApiResponse =
 
 function normalizeSpecifier(specifier: string): string {
   return specifier.trim().toLowerCase();
+}
+
+function normalizeCameraNumber(specifier: string): string | null {
+  const trimmed = specifier.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^\d+$/.test(trimmed)) {
+    const number = Number(trimmed);
+    if (!Number.isInteger(number) || number <= 0) {
+      return null;
+    }
+
+    return String(number).padStart(2, "0");
+  }
+
+  return trimmed.toLowerCase();
 }
 
 function parseOneBasedIndex(specifier: string): number | null {
@@ -85,6 +105,58 @@ export function resolveControlApiTab(
   );
 }
 
+function cameraLookupOrder(workspace: WorkspaceState): WorkspaceState["cameraLists"] {
+  const activeList = workspace.cameraLists.find((list) => list.id === workspace.activeCameraListId);
+  if (!activeList) {
+    return workspace.cameraLists;
+  }
+
+  return [
+    activeList,
+    ...workspace.cameraLists.filter((list) => list.id !== workspace.activeCameraListId)
+  ];
+}
+
+function cameraNumberById(workspace: WorkspaceState): Map<string, string> {
+  const numbers = new Map<string, string>();
+  for (const list of cameraLookupOrder(workspace)) {
+    for (const camera of list.cameras) {
+      if (!numbers.has(camera.id)) {
+        numbers.set(camera.id, camera.suffix);
+      }
+    }
+  }
+
+  return numbers;
+}
+
+export function resolveControlApiCamera(
+  workspace: WorkspaceState,
+  cameraNumber: string
+): TileState | null {
+  const normalized = normalizeCameraNumber(cameraNumber);
+  if (!normalized) {
+    return null;
+  }
+
+  for (const list of cameraLookupOrder(workspace)) {
+    const camera = list.cameras.find((candidate) => {
+      return normalizeCameraNumber(candidate.suffix) === normalized;
+    });
+
+    if (!camera) {
+      continue;
+    }
+
+    const tile = workspace.tiles.find((candidate) => candidate.cameraId === camera.id);
+    if (tile) {
+      return tile;
+    }
+  }
+
+  return null;
+}
+
 export function buildControlApiStatus(
   workspace: WorkspaceState,
   focusMode: boolean
@@ -92,6 +164,8 @@ export function buildControlApiStatus(
   const selectedIndex = workspace.selectedTileId
     ? workspace.tiles.findIndex((tile) => tile.id === workspace.selectedTileId)
     : -1;
+
+  const cameraNumbers = cameraNumberById(workspace);
 
   return {
     focusMode,
@@ -101,6 +175,7 @@ export function buildControlApiStatus(
       index: index + 1,
       tileId: tile.id,
       cameraId: tile.cameraId,
+      cameraNumber: tile.cameraId ? cameraNumbers.get(tile.cameraId) ?? null : null,
       title: tile.title,
       url: tile.url
     }))

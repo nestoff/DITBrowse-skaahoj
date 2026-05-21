@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   buildControlApiStatus,
+  resolveControlApiCamera,
   resolveControlApiTab,
   type ControlApiCommand,
   type ControlApiInfo,
@@ -285,12 +286,17 @@ export function App(): ReactElement {
         return;
       }
 
-      const tile = resolveControlApiTab(currentWorkspace.tiles, command.specifier);
+      const tile =
+        command.type === "focusCamera"
+          ? resolveControlApiCamera(currentWorkspace, command.cameraNumber)
+          : resolveControlApiTab(currentWorkspace.tiles, command.specifier);
       if (!tile) {
+        const label = command.type === "focusCamera" ? "camera number" : "tab";
+        const value = command.type === "focusCamera" ? command.cameraNumber : command.specifier;
         sendControlApiResponse(command.requestId, {
           ok: false,
           error: "not_found",
-          message: `No tab matches "${command.specifier}"`
+          message: `No ${label} matches "${value}"`
         });
         return;
       }

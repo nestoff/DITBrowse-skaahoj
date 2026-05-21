@@ -51,13 +51,13 @@ describe("App control API commands", () => {
     };
   });
 
-  it("focuses a requested tab and returns to grid from local API commands", async () => {
+  it("focuses a requested camera number and returns to grid from local API commands", async () => {
     render(<App />);
 
     await screen.findByDisplayValue("http://192.168.1.01");
 
     act(() => {
-      controlApiCommandHandler?.({ requestId: "focus-1", type: "focusTab", specifier: "B" });
+      controlApiCommandHandler?.({ requestId: "focus-1", type: "focusCamera", cameraNumber: "02" });
     });
 
     await waitFor(() => {
@@ -85,19 +85,19 @@ describe("App control API commands", () => {
     );
   });
 
-  it("returns not_found when a requested tab does not exist", async () => {
+  it("returns not_found when a requested camera number does not exist", async () => {
     render(<App />);
 
     await screen.findByDisplayValue("http://192.168.1.01");
 
     act(() => {
-      controlApiCommandHandler?.({ requestId: "missing-1", type: "focusTab", specifier: "ZZ" });
+      controlApiCommandHandler?.({ requestId: "missing-1", type: "focusCamera", cameraNumber: "99" });
     });
 
     expect(window.ditbrowse.sendControlApiResponse).toHaveBeenCalledWith("missing-1", {
       ok: false,
       error: "not_found",
-      message: "No tab matches \"ZZ\""
+      message: "No camera number matches \"99\""
     });
   });
 });

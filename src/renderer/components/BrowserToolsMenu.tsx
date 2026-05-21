@@ -128,7 +128,7 @@ export function BrowserToolsMenu({
           <strong>{controlApiInfo?.baseUrl ?? "Starting"}</strong>
         </div>
         <div className="control-api-shortcuts" aria-label="Local API shortcuts">
-          <code>GET /api/focus?tab=B</code>
+          <code>GET /api/focus/01</code>
           <code>GET /api/grid</code>
         </div>
         <form className="control-api-form" onSubmit={(event) => void savePort(event)}>

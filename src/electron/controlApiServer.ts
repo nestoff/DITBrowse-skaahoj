@@ -93,18 +93,23 @@ function commandFromRoute(
   if (method === "GET" && simpleFocusMatch) {
     return {
       requestId: requestId(),
-      type: "focusTab",
-      specifier: decodeURIComponent(simpleFocusMatch[1])
+      type: "focusCamera",
+      cameraNumber: decodeURIComponent(simpleFocusMatch[1])
     };
   }
 
   if (method === "GET" && pathname === "/api/focus") {
+    const cameraNumber = searchParams.get("camera") ?? searchParams.get("cameraNumber") ?? "";
+    if (cameraNumber.trim()) {
+      return { requestId: requestId(), type: "focusCamera", cameraNumber };
+    }
+
     const specifier = searchParams.get("tab") ?? "";
     if (!specifier.trim()) {
       return {
         ok: false,
         error: "bad_request",
-        message: 'GET /api/focus requires a tab query like /api/focus?tab=B'
+        message: 'GET /api/focus requires a camera path like /api/focus/01'
       };
     }
 
@@ -112,6 +117,16 @@ function commandFromRoute(
   }
 
   if (method === "POST" && pathname === "/api/focus") {
+    const cameraNumber =
+      body && typeof body === "object" && "camera" in body
+        ? String(body.camera)
+        : body && typeof body === "object" && "cameraNumber" in body
+          ? String(body.cameraNumber)
+          : "";
+    if (cameraNumber.trim()) {
+      return { requestId: requestId(), type: "focusCamera", cameraNumber };
+    }
+
     const specifier =
       body && typeof body === "object" && "tab" in body ? String(body.tab) : "";
     if (!specifier.trim()) {

@@ -134,7 +134,7 @@ describe("BrowserChrome", () => {
     fireEvent.click(screen.getByLabelText("Workspace tools"));
 
     expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent(
-      "GET /api/focus?tab=B"
+      "GET /api/focus/01"
     );
     expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent("GET /api/grid");
   });
