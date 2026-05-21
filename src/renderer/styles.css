@@ -998,7 +998,7 @@ textarea::selection {
 
 .camera-table {
   width: 100%;
-  min-width: 1440px;
+  min-width: 1280px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 12px;
@@ -1077,7 +1077,7 @@ textarea::selection {
 
 .camera-table th:nth-child(6),
 .camera-table td:nth-child(6) {
-  width: 320px;
+  width: 160px;
 }
 
 .camera-table th:nth-child(7),
