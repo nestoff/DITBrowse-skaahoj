@@ -267,6 +267,25 @@ describe("WebviewTile", () => {
     expect(onSelectTile).toHaveBeenCalledWith("tile-42");
   });
 
+  it("selects the tile when the webview surface receives a pointer press", () => {
+    const onSelectTile = vi.fn();
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={false}
+        onSelectTile={onSelectTile}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    fireEvent.pointerDown(document.querySelector("webview") as HTMLElement);
+
+    expect(onSelectTile).toHaveBeenCalledWith("tile-42");
+  });
+
   it("temporarily zooms the visible tile from trackpad pinch messages", () => {
     render(
       <WebviewTile

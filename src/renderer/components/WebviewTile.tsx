@@ -185,6 +185,8 @@ function WebviewTileComponent({
     webview.addEventListener("did-finish-load", fillCredential);
     webview.addEventListener("did-navigate", commitNavigationUrl);
     webview.addEventListener("focus", selectTile);
+    webview.addEventListener("pointerdown", selectTile);
+    webview.addEventListener("mousedown", selectTile);
     webview.addEventListener("ipc-message", captureCredential);
     return () => {
       webview.removeEventListener("did-start-loading", clearFailure);
@@ -192,6 +194,8 @@ function WebviewTileComponent({
       webview.removeEventListener("did-finish-load", fillCredential);
       webview.removeEventListener("did-navigate", commitNavigationUrl);
       webview.removeEventListener("focus", selectTile);
+      webview.removeEventListener("pointerdown", selectTile);
+      webview.removeEventListener("mousedown", selectTile);
       webview.removeEventListener("ipc-message", captureCredential);
     };
   }, [
