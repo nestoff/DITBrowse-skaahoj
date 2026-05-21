@@ -12,6 +12,7 @@ import type { TileState, ViewportSize } from "../../shared/types";
 import { AddressBar } from "./AddressBar";
 import { GridControls } from "./GridControls";
 import { IconButton } from "./ui/IconButton";
+import { PillButton } from "./ui/PillButton";
 
 interface BrowserToolbarProps {
   selectedTile: TileState | null;
@@ -27,6 +28,8 @@ interface BrowserToolbarProps {
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
   onGlobalZoomChange: (zoom: number) => void;
+  onDefaultViewportChange: (viewport: ViewportSize) => void;
+  onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
 }
@@ -45,6 +48,8 @@ export function BrowserToolbar({
   onReloadAll,
   onColumnsChange,
   onGlobalZoomChange,
+  onDefaultViewportChange,
+  onGlobalViewportChange,
   onZoomChange,
   onViewportChange
 }: BrowserToolbarProps): ReactElement {
@@ -73,15 +78,14 @@ export function BrowserToolbar({
       <div className="browser-toolbar-main">
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={onNavigate} />
         {showReturnToPrefix && (
-          <button
-            type="button"
+          <PillButton
             className="return-prefix-button"
+            icon={<Link2 size={14} strokeWidth={2.2} />}
             title="Go back to prefix and suffix style"
             onClick={onReturnSelectedCameraToPrefix}
           >
-            <Link2 size={14} strokeWidth={2.2} />
-            <span>Go back to prefix and suffix style</span>
-          </button>
+            Go back to prefix and suffix style
+          </PillButton>
         )}
       </div>
       <div className="toolbar-group browser-layout-controls" aria-label="Layout controls">
@@ -92,10 +96,13 @@ export function BrowserToolbar({
         <GridControls
           columns={columns}
           globalZoom={defaultZoom}
+          defaultViewport={defaultViewport}
           selectedZoom={selectedTile?.zoom ?? defaultZoom}
           selectedViewport={selectedTile?.viewport ?? defaultViewport}
           onColumnsChange={onColumnsChange}
           onGlobalZoomChange={onGlobalZoomChange}
+          onDefaultViewportChange={onDefaultViewportChange}
+          onGlobalViewportChange={onGlobalViewportChange}
           onZoomChange={onZoomChange}
           onViewportChange={onViewportChange}
           icon={<Rows3 size={14} strokeWidth={2.2} />}

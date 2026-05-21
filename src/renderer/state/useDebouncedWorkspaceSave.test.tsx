@@ -62,4 +62,22 @@ describe("useDebouncedWorkspaceSave", () => {
 
     expect(saveWorkspace).not.toHaveBeenCalled();
   });
+
+  it("flushes the latest workspace before the page unloads", () => {
+    const saveWorkspace = vi.fn();
+
+    function Harness({ workspace }: { workspace: WorkspaceState }): null {
+      useDebouncedWorkspaceSave({ loaded: true, workspace, saveWorkspace, delayMs: 250 });
+      return null;
+    }
+
+    const latestWorkspace = { ...sampleWorkspace, gridColumns: 5 };
+    const { rerender } = render(<Harness workspace={sampleWorkspace} />);
+
+    rerender(<Harness workspace={latestWorkspace} />);
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(saveWorkspace).toHaveBeenCalledTimes(1);
+    expect(saveWorkspace).toHaveBeenLastCalledWith(latestWorkspace);
+  });
 });

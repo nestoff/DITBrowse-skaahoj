@@ -4,9 +4,9 @@ import { formatCameraLabel } from "./cameraLabel";
 
 const baseCamera: CameraEntry = {
   id: "camera-4",
-  name: "Camera 4",
-  url: "http://192.168.1.4",
-  suffix: "4",
+  name: "D",
+  url: "http://192.168.1.04",
+  suffix: "04",
   prefixOverride: "",
   cameraType: "",
   lens: "",
@@ -17,22 +17,22 @@ const baseCamera: CameraEntry = {
 };
 
 describe("formatCameraLabel", () => {
-  it("shows only the camera number when no metadata is set", () => {
-    expect(formatCameraLabel(baseCamera)).toBe("4");
+  it("shows the camera index when no metadata is set", () => {
+    expect(formatCameraLabel(baseCamera)).toBe("D");
   });
 
-  it("shows camera number with type, lens, and display note", () => {
+  it("shows camera index with type, lens, and display note", () => {
     expect(
       formatCameraLabel({
         ...baseCamera,
         cameraType: "ALEXA 35",
         lens: "50mm",
-        displayNote: "Handheld"
+          displayNote: "Handheld"
       })
-    ).toBe("4 • ALEXA 35 • 50mm • Handheld");
+    ).toBe("D • ALEXA 35 • 50mm • Handheld");
   });
 
-  it("falls back to a camera-style name without the word camera", () => {
-    expect(formatCameraLabel({ ...baseCamera, suffix: "", name: "Camera 12" })).toBe("12");
+  it("falls back to the camera number when index is blank", () => {
+    expect(formatCameraLabel({ ...baseCamera, name: "" })).toBe("04");
   });
 });

@@ -6,3 +6,4 @@ dist-electron/
 coverage/
 playwright-report/
 test-results/
+release/

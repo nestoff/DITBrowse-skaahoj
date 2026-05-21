@@ -1,14 +1,114 @@
 import type { ReactElement, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ViewportSize } from "../../shared/types";
+import {
+  DEFAULT_ASPECT_RATIO_PRESETS,
+  DEFAULT_VIEWPORT,
+  VIEWPORT_PRESETS,
+  viewportFromValue,
+  viewportToValue
+} from "../../shared/viewport";
+
+const MIN_ZOOM_PERCENT = 25;
+const MAX_ZOOM_PERCENT = 300;
+
+function clampZoomPercent(value: number): number {
+  return Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, value));
+}
+
+function zoomToPercent(zoom: number): string {
+  return String(Math.round(zoom * 100));
+}
+
+function percentToZoom(percent: number): number {
+  return Number((clampZoomPercent(percent) / 100).toFixed(2));
+}
+
+interface ZoomPercentInputProps {
+  value: number;
+  ariaLabel: string;
+  resetAriaLabel: string;
+  onCommit: (zoom: number) => void;
+}
+
+function ZoomPercentInput({
+  value,
+  ariaLabel,
+  resetAriaLabel,
+  onCommit
+}: ZoomPercentInputProps): ReactElement {
+  const [draft, setDraft] = useState(zoomToPercent(value));
+
+  useEffect(() => {
+    setDraft(zoomToPercent(value));
+  }, [value]);
+
+  const commitDraft = (): void => {
+    if (draft.trim() === "") {
+      setDraft(zoomToPercent(value));
+      return;
+    }
+
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed)) {
+      setDraft(zoomToPercent(value));
+      return;
+    }
+
+    const zoom = percentToZoom(parsed);
+    setDraft(zoomToPercent(zoom));
+    onCommit(zoom);
+  };
+
+  const resetZoom = (): void => {
+    setDraft("100");
+    onCommit(1);
+  };
+
+  return (
+    <div className="zoom-percent-input">
+      <input
+        type="number"
+        min={MIN_ZOOM_PERCENT}
+        max={MAX_ZOOM_PERCENT}
+        step="1"
+        value={draft}
+        aria-label={ariaLabel}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commitDraft();
+          }
+          if (event.key === "Escape") {
+            setDraft(zoomToPercent(value));
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="zoom-percent-reset"
+        aria-label={resetAriaLabel}
+        title="Double-click to reset to 100%"
+        onDoubleClick={resetZoom}
+      >
+        %
+      </button>
+    </div>
+  );
+}
 
 interface GridControlsProps {
   columns: number;
   globalZoom: number;
+  defaultViewport: ViewportSize;
   selectedZoom: number;
   selectedViewport: ViewportSize | null;
   onColumnsChange: (columns: number) => void;
   onGlobalZoomChange: (zoom: number) => void;
+  onDefaultViewportChange: (viewport: ViewportSize) => void;
+  onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
   icon?: ReactNode;
@@ -17,16 +117,19 @@ interface GridControlsProps {
 export function GridControls({
   columns,
   globalZoom,
+  defaultViewport,
   selectedZoom,
   selectedViewport,
   onColumnsChange,
   onGlobalZoomChange,
+  onDefaultViewportChange,
+  onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
   const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
-  const selectedZoomPercent = Math.round(selectedZoom * 100);
+  const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
   const globalZoomPercent = Math.round(globalZoom * 100);
 
   return (
@@ -58,9 +161,12 @@ export function GridControls({
           onChange={(event) => onZoomChange(Number(event.target.value))}
           aria-label="Selected tile zoom"
         />
-        <output className="zoom-value" aria-label="Selected zoom value">
-          {selectedZoomPercent}%
-        </output>
+        <ZoomPercentInput
+          value={selectedZoom}
+          ariaLabel="Selected zoom percent"
+          resetAriaLabel="Reset selected zoom to 100 percent"
+          onCommit={onZoomChange}
+        />
         <button
           type="button"
           className="global-zoom-trigger"
@@ -84,24 +190,72 @@ export function GridControls({
                 aria-label="Global zoom"
               />
             </label>
+            <ZoomPercentInput
+              value={globalZoom}
+              ariaLabel="All tiles zoom percent"
+              resetAriaLabel="Reset all tiles zoom to 100 percent"
+              onCommit={onGlobalZoomChange}
+            />
           </div>
         )}
       </div>
       <label className="grid-control">
-        <span>View</span>
+        <span>Default</span>
         <select
-          value={`${selectedViewport?.width ?? 1280}x${selectedViewport?.height ?? 720}`}
-          onChange={(event) => {
-            const [width, height] = event.target.value.split("x").map(Number);
-            onViewportChange({ width, height });
-          }}
-          aria-label="Selected tile viewport"
+          value={viewportToValue(defaultViewport)}
+          onChange={(event) => onDefaultViewportChange(viewportFromValue(event.target.value))}
+          aria-label="Default aspect ratio"
         >
-          <option value="1280x720">1280x720</option>
-          <option value="1920x1080">1920x1080</option>
-          <option value="1024x768">1024x768</option>
+          {DEFAULT_ASPECT_RATIO_PRESETS.map((preset) => (
+            <option key={preset.value} value={preset.value}>
+              {preset.shortLabel}
+            </option>
+          ))}
         </select>
       </label>
+      <label className="grid-control">
+        <span>View</span>
+        <select
+          value={viewportToValue(selectedViewport ?? DEFAULT_VIEWPORT)}
+          onChange={(event) => onViewportChange(viewportFromValue(event.target.value))}
+          aria-label="Selected tile viewport"
+        >
+          {VIEWPORT_PRESETS.map((preset) => (
+            <option key={preset.value} value={preset.value}>
+              {preset.value}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="grid-control viewport-control">
+        <button
+          type="button"
+          className="global-viewport-trigger"
+          aria-label="All viewport controls"
+          aria-expanded={globalViewportOpen}
+          onClick={() => setGlobalViewportOpen((open) => !open)}
+        >
+          All
+        </button>
+        {globalViewportOpen && (
+          <div className="viewport-popover" aria-label="All viewport controls panel">
+            <label className="viewport-select">
+              <span>All View</span>
+              <select
+                value={viewportToValue(defaultViewport)}
+                onChange={(event) => onGlobalViewportChange(viewportFromValue(event.target.value))}
+                aria-label="All tiles viewport"
+              >
+                {VIEWPORT_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>
+                    {preset.value}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

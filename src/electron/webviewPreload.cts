@@ -1,6 +1,8 @@
 import { ipcRenderer } from "electron";
 import type { CredentialFill } from "../shared/credentials.js";
 
+let temporaryViewZoomed = false;
+
 function inputValue(element: Element | null): string {
   return element instanceof HTMLInputElement ? element.value.trim() : "";
 }
@@ -8,6 +10,31 @@ function inputValue(element: Element | null): string {
 function dispatchInputEvents(input: HTMLInputElement): void {
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+}
+
+function isResetShortcut(event: KeyboardEvent): boolean {
+  return (
+    event.shiftKey &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    event.key.toLowerCase() === "z" &&
+    !isEditableTarget(event.target)
+  );
 }
 
 function findPasswordInput(root: ParentNode = document): HTMLInputElement | null {
@@ -58,6 +85,61 @@ function fillCredential(credential: CredentialFill): void {
 }
 
 document.addEventListener(
+  "wheel",
+  (event) => {
+    if (event.ctrlKey) {
+      event.preventDefault();
+      ipcRenderer.sendToHost("ditbrowse:temporary-view-gesture", {
+        type: "pinch",
+        deltaY: event.deltaY
+      });
+      return;
+    }
+
+    if (temporaryViewZoomed) {
+      event.preventDefault();
+      ipcRenderer.sendToHost("ditbrowse:temporary-view-gesture", {
+        type: "pan",
+        deltaX: event.deltaX,
+        deltaY: event.deltaY
+      });
+    }
+  },
+  { capture: true, passive: false }
+);
+
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (!isResetShortcut(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    ipcRenderer.sendToHost("ditbrowse:temporary-view-gesture", {
+      type: "reset"
+    });
+  },
+  true
+);
+
+document.addEventListener(
+  "pointerdown",
+  () => {
+    ipcRenderer.sendToHost("ditbrowse:tile-interacted");
+  },
+  true
+);
+
+document.addEventListener(
+  "focusin",
+  () => {
+    ipcRenderer.sendToHost("ditbrowse:tile-interacted");
+  },
+  true
+);
+
+document.addEventListener(
   "submit",
   (event) => {
     const form = event.target instanceof HTMLFormElement ? event.target : null;
@@ -82,3 +164,10 @@ document.addEventListener(
 ipcRenderer.on("ditbrowse:credential-fill", (_event, credential: CredentialFill) => {
   fillCredential(credential);
 });
+
+ipcRenderer.on(
+  "ditbrowse:temporary-view-state",
+  (_event, state: { zoomed?: boolean } | null | undefined) => {
+    temporaryViewZoomed = !!state?.zoomed;
+  }
+);

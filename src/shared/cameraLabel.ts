@@ -1,17 +1,7 @@
 import type { CameraEntry } from "./types.js";
 
-function normalizeCameraNumber(camera: Pick<CameraEntry, "name" | "suffix">): string {
-  const suffix = camera.suffix.trim();
-  if (suffix) {
-    return suffix;
-  }
-
-  const cameraNameMatch = camera.name.trim().match(/^camera\s+(.+)$/i);
-  if (cameraNameMatch) {
-    return cameraNameMatch[1].trim();
-  }
-
-  return camera.name.trim();
+function normalizeCameraIndex(camera: Pick<CameraEntry, "name" | "suffix">): string {
+  return camera.name.trim() || camera.suffix.trim();
 }
 
 export function formatCameraLabel(
@@ -19,7 +9,7 @@ export function formatCameraLabel(
     Partial<Pick<CameraEntry, "cameraType" | "lens" | "displayNote">>
 ): string {
   return [
-    normalizeCameraNumber(camera),
+    normalizeCameraIndex(camera),
     (camera.cameraType ?? "").trim(),
     (camera.lens ?? "").trim(),
     (camera.displayNote ?? "").trim()

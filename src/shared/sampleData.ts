@@ -1,6 +1,8 @@
 import type { WorkspaceState } from "./types.js";
 import { formatCameraLabel } from "./cameraLabel.js";
+import { cameraDefaultsFromNumber } from "./cameraIndex.js";
 import { resolveCameraAddress } from "./url.js";
+import { DEFAULT_VIEWPORT } from "./viewport.js";
 
 const prefix = "http://192.168.1.";
 
@@ -13,10 +15,11 @@ export const sampleWorkspace: WorkspaceState = {
       name: "Camera LAN",
       defaultPrefix: prefix,
       cameras: Array.from({ length: 12 }, (_, index) => {
-        const suffix = String(41 + index);
+        const { index: cameraIndex, suffix } = cameraDefaultsFromNumber(index + 1);
+        const idSuffix = String(41 + index);
         return {
-          id: `camera-${suffix}`,
-          name: suffix,
+          id: `camera-${idSuffix}`,
+          name: cameraIndex,
           url: resolveCameraAddress(prefix, suffix),
           suffix,
           prefixOverride: "",
@@ -33,10 +36,11 @@ export const sampleWorkspace: WorkspaceState = {
   ],
   passwordRecords: [],
   tiles: Array.from({ length: 12 }, (_, index) => {
-    const suffix = String(41 + index);
+    const { index: cameraIndex, suffix } = cameraDefaultsFromNumber(index + 1);
+    const idSuffix = String(41 + index);
     const camera = {
-      id: `camera-${suffix}`,
-      name: suffix,
+      id: `camera-${idSuffix}`,
+      name: cameraIndex,
       url: resolveCameraAddress(prefix, suffix),
       suffix,
       prefixOverride: "",
@@ -49,12 +53,12 @@ export const sampleWorkspace: WorkspaceState = {
       zoomOverride: null
     };
     return {
-      id: `tile-${suffix}`,
-      cameraId: `camera-${suffix}`,
+      id: `tile-${idSuffix}`,
+      cameraId: `camera-${idSuffix}`,
       url: resolveCameraAddress(prefix, suffix),
       title: formatCameraLabel(camera),
       partition: "persist:ditbrowse-job-sample-list-sample",
-      viewport: { width: 1280, height: 720 },
+      viewport: DEFAULT_VIEWPORT,
       zoom: 1
     };
   }),
@@ -62,6 +66,6 @@ export const sampleWorkspace: WorkspaceState = {
   activeJobId: "job-sample",
   activeCameraListId: "list-sample",
   gridColumns: 4,
-  defaultViewport: { width: 1280, height: 720 },
+  defaultViewport: DEFAULT_VIEWPORT,
   defaultZoom: 1
 };

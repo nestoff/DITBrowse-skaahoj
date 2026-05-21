@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCameraAddress } from "./url";
+import { cameraBaseFromCommittedUrl, resolveCameraAddress } from "./url";
 
 describe("resolveCameraAddress", () => {
   it("keeps full http URLs unchanged", () => {
@@ -42,5 +42,17 @@ describe("resolveCameraAddress", () => {
     expect(resolveCameraAddress("http://192.168.1.", "  42  ")).toBe(
       "http://192.168.1.42"
     );
+  });
+});
+
+describe("cameraBaseFromCommittedUrl", () => {
+  it("keeps a corrected HTTPS origin without the redirected login path", () => {
+    expect(cameraBaseFromCommittedUrl("https://10.20.100.2/login")).toBe(
+      "https://10.20.100.2"
+    );
+  });
+
+  it("preserves non-http browser URLs unchanged", () => {
+    expect(cameraBaseFromCommittedUrl("about:blank")).toBe("about:blank");
   });
 });

@@ -43,3 +43,18 @@ export function resolveCameraAddress(prefix: string, input: string): string {
 
   return `${normalizeCameraPrefix(prefix)}${trimmed}`;
 }
+
+export function cameraBaseFromCommittedUrl(input: string): string {
+  const normalized = normalizeCameraUrl(input);
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.origin;
+    }
+  } catch {
+    return normalized;
+  }
+
+  return normalized;
+}

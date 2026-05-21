@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { findCredentialRecord } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import { sampleWorkspace } from "../shared/sampleData";
+import type { CameraList } from "../shared/types";
 import { resolveCameraAddress } from "../shared/url";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
 import { BrowserChrome } from "./components/BrowserChrome";
@@ -21,6 +22,7 @@ export function App(): ReactElement {
   const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const selectedTileIdRef = useRef(workspace.selectedTileId);
 
   useEffect(() => {
     let active = true;
@@ -36,6 +38,10 @@ export function App(): ReactElement {
   }, []);
 
   useDebouncedWorkspaceSave({ loaded, workspace, saveWorkspace });
+
+  useEffect(() => {
+    selectedTileIdRef.current = workspace.selectedTileId;
+  }, [workspace.selectedTileId]);
 
   const selectedTile = useMemo(
     () => workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ?? null,
@@ -93,11 +99,16 @@ export function App(): ReactElement {
   );
 
   const selectTile = useCallback((tileId: string): void => {
+    selectedTileIdRef.current = tileId;
     dispatch({ type: "selectTile", tileId });
   }, []);
 
   const moveTile = useCallback((tileId: string, direction: "left" | "right"): void => {
     dispatch({ type: "moveTile", tileId, direction });
+  }, []);
+
+  const moveTileToIndex = useCallback((tileId: string, toIndex: number): void => {
+    dispatch({ type: "moveTileToIndex", tileId, toIndex });
   }, []);
 
   const closeTile = useCallback((tileId: string): void => {
@@ -118,6 +129,22 @@ export function App(): ReactElement {
 
   const setGlobalZoom = useCallback((zoom: number): void => {
     dispatch({ type: "setGlobalZoom", zoom });
+  }, []);
+
+  const setDefaultViewport = useCallback((viewport: { width: number; height: number }): void => {
+    dispatch({
+      type: "setDefaultViewport",
+      width: viewport.width,
+      height: viewport.height
+    });
+  }, []);
+
+  const setGlobalViewport = useCallback((viewport: { width: number; height: number }): void => {
+    dispatch({
+      type: "setGlobalViewport",
+      width: viewport.width,
+      height: viewport.height
+    });
   }, []);
 
   const setSelectedZoom = useCallback((zoom: number): void => {
@@ -143,6 +170,18 @@ export function App(): ReactElement {
     []
   );
 
+  const updateJobName = useCallback((jobName: string): void => {
+    dispatch({ type: "updateActiveJobName", jobName });
+  }, []);
+
+  const deleteJob = useCallback((jobId: string): void => {
+    dispatch({ type: "deleteJob", jobId });
+  }, []);
+
+  const saveCameraListDraft = useCallback((list: CameraList): void => {
+    dispatch({ type: "saveActiveCameraListDraft", list });
+  }, []);
+
   const resetSelectedScale = useCallback((): void => {
     dispatch({ type: "resetSelectedTileScale" });
   }, []);
@@ -164,6 +203,10 @@ export function App(): ReactElement {
     []
   );
 
+  const commitTileNavigationUrl = useCallback((tileId: string, url: string): void => {
+    dispatch({ type: "commitTileNavigationUrl", tileId, url });
+  }, []);
+
   return (
     <main className="app-shell">
       <BrowserChrome
@@ -173,20 +216,25 @@ export function App(): ReactElement {
         activePartition={activePartition}
         onSelectTile={selectTile}
         onMoveTile={moveTile}
+        onMoveTileToIndex={moveTileToIndex}
         onCloseTile={closeTile}
         onAddTile={addBlankTile}
         onNavigate={navigate}
         onReturnSelectedCameraToPrefix={returnSelectedCameraToPrefix}
-        onBack={() => runSelectedTileCommand(workspace.selectedTileId, "back")}
-        onForward={() => runSelectedTileCommand(workspace.selectedTileId, "forward")}
-        onReload={() => runSelectedTileCommand(workspace.selectedTileId, "reload")}
+        onBack={() => runSelectedTileCommand(selectedTileIdRef.current, "back")}
+        onForward={() => runSelectedTileCommand(selectedTileIdRef.current, "forward")}
+        onReload={() => runSelectedTileCommand(selectedTileIdRef.current, "reload")}
         onReloadAll={() => runAllTileCommand("reload")}
         onColumnsChange={setColumns}
         onGlobalZoomChange={setGlobalZoom}
+        onDefaultViewportChange={setDefaultViewport}
+        onGlobalViewportChange={setGlobalViewport}
         onZoomChange={setSelectedZoom}
         onViewportChange={setSelectedViewport}
         onSelectCameraList={selectCameraList}
         onCreateJob={createJob}
+        onUpdateJobName={updateJobName}
+        onDeleteJob={deleteJob}
         onEditList={() => setEditorOpen(true)}
         onResetSelectedScale={resetSelectedScale}
         onResetGridOrder={resetGridOrder}
@@ -198,6 +246,7 @@ export function App(): ReactElement {
         columns={workspace.gridColumns}
         selectedTileId={workspace.selectedTileId}
         onSelectTile={selectTile}
+        onUrlCommitted={commitTileNavigationUrl}
         onCredentialCaptured={saveCapturedCredential}
         credentialsByTileId={credentialsByTileId}
         webviewPreloadPath={webviewPreloadPath}
@@ -206,17 +255,7 @@ export function App(): ReactElement {
         <CameraListEditor
           activeList={activeList ?? null}
           onClose={() => setEditorOpen(false)}
-          onUpdatePrefix={(defaultPrefix) =>
-            dispatch({ type: "updateActiveListPrefix", defaultPrefix })
-          }
-          onUpdateCamera={(cameraId, patch) =>
-            dispatch({ type: "updateCameraEntry", cameraId, patch })
-          }
-          onAddCamera={() => dispatch({ type: "addCameraEntry" })}
-          onImportRows={(rows) => {
-            dispatch({ type: "replaceActiveListFromCsv", rows });
-            setEditorOpen(false);
-          }}
+          onSaveList={saveCameraListDraft}
         />
       )}
     </main>

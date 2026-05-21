@@ -1,21 +1,24 @@
 import { contextBridge, ipcRenderer } from "electron";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import type { TemporaryViewGesture } from "../shared/temporaryView.js";
 import type { WorkspaceState } from "../shared/types.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const api = {
   version: "0.1.0",
-  webviewPreloadPath: path.join(__dirname, "webviewPreload.js"),
+  webviewPreloadPath: `${__dirname}/webviewPreload.cjs`,
   loadWorkspace: () => ipcRenderer.invoke("workspace:load") as Promise<WorkspaceState>,
   saveWorkspace: (workspace: WorkspaceState) =>
     ipcRenderer.invoke("workspace:save", workspace) as Promise<void>,
   clearSelectedTileStorage: (partition: string, url: string) =>
     ipcRenderer.invoke("session:clearSelectedTile", partition, url) as Promise<void>,
   clearPartitionStorage: (partition: string) =>
-    ipcRenderer.invoke("session:clearPartition", partition) as Promise<void>
+    ipcRenderer.invoke("session:clearPartition", partition) as Promise<void>,
+  onHostTemporaryViewGesture: (callback: (gesture: TemporaryViewGesture) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, gesture: TemporaryViewGesture): void => {
+      callback(gesture);
+    };
+    ipcRenderer.on("ditbrowse:host-temporary-view-gesture", listener);
+    return () => ipcRenderer.removeListener("ditbrowse:host-temporary-view-gesture", listener);
+  }
 };
 
 contextBridge.exposeInMainWorld("ditbrowse", api);

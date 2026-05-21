@@ -16,6 +16,7 @@ interface BrowserChromeProps {
   onMoveTile: (tileId: string, direction: "left" | "right") => void;
   onCloseTile: (tileId: string) => void;
   onAddTile: () => void;
+  onMoveTileToIndex: (tileId: string, toIndex: number) => void;
   onNavigate: (input: string, target: "selected" | "new") => void;
   onReturnSelectedCameraToPrefix: () => void;
   onBack: () => void;
@@ -24,10 +25,14 @@ interface BrowserChromeProps {
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
   onGlobalZoomChange: (zoom: number) => void;
+  onDefaultViewportChange: (viewport: ViewportSize) => void;
+  onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
   onSelectCameraList: (cameraListId: string) => void;
   onCreateJob: (jobName: string, listName: string, defaultPrefix: string) => void;
+  onUpdateJobName: (jobName: string) => void;
+  onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
@@ -44,6 +49,7 @@ export function BrowserChrome({
   onMoveTile,
   onCloseTile,
   onAddTile,
+  onMoveTileToIndex,
   onNavigate,
   onReturnSelectedCameraToPrefix,
   onBack,
@@ -52,10 +58,14 @@ export function BrowserChrome({
   onReloadAll,
   onColumnsChange,
   onGlobalZoomChange,
+  onDefaultViewportChange,
+  onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
   onSelectCameraList,
   onCreateJob,
+  onUpdateJobName,
+  onDeleteJob,
   onEditList,
   onResetSelectedScale,
   onResetGridOrder,
@@ -76,6 +86,7 @@ export function BrowserChrome({
           selectedTileId={workspace.selectedTileId}
           onSelectTile={onSelectTile}
           onMoveTile={onMoveTile}
+          onMoveTileToIndex={onMoveTileToIndex}
           onCloseTile={onCloseTile}
           onAddTile={onAddTile}
         />
@@ -101,6 +112,8 @@ export function BrowserChrome({
         onReloadAll={onReloadAll}
         onColumnsChange={onColumnsChange}
         onGlobalZoomChange={onGlobalZoomChange}
+        onDefaultViewportChange={onDefaultViewportChange}
+        onGlobalViewportChange={onGlobalViewportChange}
         onZoomChange={onZoomChange}
         onViewportChange={onViewportChange}
       />
@@ -114,6 +127,8 @@ export function BrowserChrome({
           activePartition={activePartition}
           onSelectCameraList={onSelectCameraList}
           onCreateJob={onCreateJob}
+          onUpdateJobName={onUpdateJobName}
+          onDeleteJob={onDeleteJob}
           onEditList={onEditList}
           onResetSelectedScale={onResetSelectedScale}
           onResetGridOrder={onResetGridOrder}

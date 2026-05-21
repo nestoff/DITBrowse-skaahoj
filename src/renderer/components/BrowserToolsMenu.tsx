@@ -3,7 +3,7 @@ import { ListRestart, Maximize2, PencilLine } from "lucide-react";
 import type { CameraList, Job, TileState } from "../../shared/types";
 import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
-import { IconButton } from "./ui/IconButton";
+import { PillButton } from "./ui/PillButton";
 
 interface BrowserToolsMenuProps {
   jobs: Job[];
@@ -14,6 +14,8 @@ interface BrowserToolsMenuProps {
   activePartition: string | null;
   onSelectCameraList: (cameraListId: string) => void;
   onCreateJob: (jobName: string, listName: string, defaultPrefix: string) => void;
+  onUpdateJobName: (jobName: string) => void;
+  onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
@@ -30,6 +32,8 @@ export function BrowserToolsMenu({
   activePartition,
   onSelectCameraList,
   onCreateJob,
+  onUpdateJobName,
+  onDeleteJob,
   onEditList,
   onResetSelectedScale,
   onResetGridOrder,
@@ -47,23 +51,35 @@ export function BrowserToolsMenu({
           jobs={jobs}
           cameraLists={cameraLists}
           activeCameraListId={activeCameraListId}
+          activeList={activeList}
           onSelectCameraList={onSelectCameraList}
           onCreateJob={onCreateJob}
+          onUpdateJobName={onUpdateJobName}
+          onDeleteJob={onDeleteJob}
         />
       </div>
       <div className="tools-section tools-actions">
-        <button type="button" className="tool-command" onClick={onEditList}>
-          <PencilLine size={15} strokeWidth={2.2} />
+        <PillButton
+          className="tool-command"
+          icon={<PencilLine size={15} strokeWidth={2.2} />}
+          onClick={onEditList}
+        >
           Edit List
-        </button>
-        <button type="button" className="tool-command" onClick={onResetSelectedScale}>
-          <Maximize2 size={15} strokeWidth={2.2} />
+        </PillButton>
+        <PillButton
+          className="tool-command"
+          icon={<Maximize2 size={15} strokeWidth={2.2} />}
+          onClick={onResetSelectedScale}
+        >
           Reset Scale
-        </button>
-        <button type="button" className="tool-command" onClick={onResetGridOrder}>
-          <ListRestart size={15} strokeWidth={2.2} />
+        </PillButton>
+        <PillButton
+          className="tool-command"
+          icon={<ListRestart size={15} strokeWidth={2.2} />}
+          onClick={onResetGridOrder}
+        >
           Reset Order
-        </button>
+        </PillButton>
       </div>
       <CookieCommands
         selectedTile={selectedTile}

@@ -36,16 +36,16 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   await page.getByLabel("Selected tile zoom").fill("0.82");
   await expect(page.getByLabel("Selected tile zoom")).toHaveValue("0.82");
 
-  await page.getByLabel("Close 41").click();
-  await expect(page.getByLabel("Close 41")).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.42");
+  await page.getByLabel("Close A").click();
+  await expect(page.getByLabel("Close A")).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
 });
 
 test("selected camera address overrides can return to prefix and suffix style", async ({ page }) => {
   await page.goto("/");
 
   const address = page.getByRole("textbox", { name: "Address" });
-  await expect(address).toHaveValue("http://192.168.1.41");
+  await expect(address).toHaveValue("http://192.168.1.01");
 
   await address.fill("10.20.100.2");
   await address.press("Enter");
@@ -63,6 +63,21 @@ test("selected camera address overrides can return to prefix and suffix style", 
 
   await returnToPrefix.click();
 
-  await expect(address).toHaveValue("http://192.168.1.41");
+  await expect(address).toHaveValue("http://192.168.1.01");
   await expect(returnToPrefix).toBeHidden();
+});
+
+test("camera list editor moves down on Enter and across on Tab", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Workspace tools" }).click();
+  await page.getByRole("button", { name: "Edit List" }).click();
+
+  await page.getByLabel("A type").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("B type")).toBeFocused();
+
+  await page.getByLabel("A index").focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("A URL")).toBeFocused();
 });

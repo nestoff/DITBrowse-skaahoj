@@ -1,43 +1,180 @@
-import type { ReactElement } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GripVertical, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import {
+  defaultIndexForSuffix,
+  isDefaultIndexForSuffix,
+  nextCameraDefaults,
+  normalizeCameraNumberSuffix
+} from "../../shared/cameraIndex";
 import { parseCameraCsv } from "../../shared/csv";
 import type { CameraCsvRow } from "../../shared/csv";
 import type { CameraEntry, CameraList } from "../../shared/types";
+import { normalizeCameraPrefix, normalizeCameraUrl } from "../../shared/url";
+import { VIEWPORT_PRESETS } from "../../shared/viewport";
 import type { CameraEntryPatch } from "../state/workspaceReducer";
+import { PillButton } from "./ui/PillButton";
+
+const CAMERA_TABLE_COLUMN_COUNT = 9;
+const CAMERA_CELL_SELECTOR = "[data-camera-list-cell='true']";
+
+function isEnterNavigationKey(event: KeyboardEvent): boolean {
+  return (
+    event.key === "Enter" ||
+    event.key === "NumpadEnter" ||
+    event.key === "Return" ||
+    event.code === "Enter" ||
+    event.code === "NumpadEnter"
+  );
+}
+
+function cloneCameraList(list: CameraList): CameraList {
+  return {
+    ...list,
+    cameras: list.cameras.map((camera) => ({
+      ...camera,
+      viewportOverride: camera.viewportOverride ? { ...camera.viewportOverride } : null
+    }))
+  };
+}
+
+function draftCameraId(): string {
+  return `camera-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+}
+
+function createDraftCamera(prefix: string, index: string, suffix: string): CameraEntry {
+  const normalizedPrefix = normalizeCameraPrefix(prefix);
+  return {
+    id: draftCameraId(),
+    name: index,
+    url: `${normalizedPrefix}${suffix}`,
+    suffix,
+    prefixOverride: "",
+    usesListPrefix: true,
+    cameraType: "",
+    lens: "",
+    displayNote: "",
+    notes: "",
+    viewportOverride: null,
+    zoomOverride: null
+  };
+}
+
+function createDraftCameraFromCsv(row: CameraCsvRow, prefix: string): CameraEntry {
+  const normalizedPrefix = normalizeCameraPrefix(prefix);
+  const url = row.url ? normalizeCameraUrl(row.url) : `${normalizedPrefix}${row.suffix}`;
+  return {
+    id: draftCameraId(),
+    name: row.name,
+    url,
+    suffix: row.suffix,
+    prefixOverride: "",
+    usesListPrefix: !row.url,
+    cameraType: row.cameraType,
+    lens: row.lens,
+    displayNote: row.displayNote,
+    notes: row.notes,
+    viewportOverride: null,
+    zoomOverride: null
+  };
+}
+
+function cameraUsesDraftPrefix(camera: CameraEntry): boolean {
+  return camera.usesListPrefix !== false;
+}
+
+function applyDraftCameraPatch(
+  camera: CameraEntry,
+  patch: CameraEntryPatch,
+  listPrefix: string
+): CameraEntry {
+  const normalizedPrefix = normalizeCameraPrefix(listPrefix);
+  const normalizedPatch = {
+    ...patch,
+    ...(patch.suffix !== undefined
+      ? { suffix: normalizeCameraNumberSuffix(patch.suffix) }
+      : {}),
+    ...(patch.url !== undefined ? { url: normalizeCameraUrl(patch.url) } : {})
+  };
+  const shouldUpdateDefaultIndex =
+    "suffix" in normalizedPatch && isDefaultIndexForSuffix(camera.name, camera.suffix);
+  let next: CameraEntry = { ...camera, ...normalizedPatch };
+
+  if (shouldUpdateDefaultIndex) {
+    next = { ...next, name: defaultIndexForSuffix(next.suffix) || next.name };
+  }
+
+  if ("usesListPrefix" in normalizedPatch) {
+    next =
+      normalizedPatch.usesListPrefix === false
+        ? { ...next, usesListPrefix: false }
+        : { ...next, usesListPrefix: true, url: `${normalizedPrefix}${next.suffix}` };
+  } else if ("suffix" in normalizedPatch && cameraUsesDraftPrefix(camera)) {
+    next = { ...next, usesListPrefix: true, url: `${normalizedPrefix}${next.suffix}` };
+  } else if ("url" in normalizedPatch) {
+    const isDerivedUrl =
+      next.url === "" || next.url === normalizedPrefix || next.url === `${normalizedPrefix}${next.suffix}`;
+    next = isDerivedUrl
+      ? { ...next, usesListPrefix: true, url: `${normalizedPrefix}${next.suffix}` }
+      : { ...next, usesListPrefix: false };
+  }
+
+  if (
+    "zoomOverride" in normalizedPatch &&
+    normalizedPatch.zoomOverride !== null &&
+    normalizedPatch.zoomOverride !== undefined
+  ) {
+    next = { ...next, zoomOverride: Number(normalizedPatch.zoomOverride) };
+  }
+
+  return next;
+}
+
+function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) {
+    return items;
+  }
+
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
 
 interface CameraListEditorProps {
   activeList: CameraList | null;
-  onImportRows: (rows: CameraCsvRow[]) => void;
-  onUpdatePrefix: (defaultPrefix: string) => void;
-  onUpdateCamera: (cameraId: string, patch: CameraEntryPatch) => void;
-  onAddCamera: () => void;
+  onSaveList: (list: CameraList) => void;
   onClose: () => void;
 }
 
 export function CameraListEditor({
   activeList,
-  onImportRows,
-  onUpdatePrefix,
-  onUpdateCamera,
-  onAddCamera,
+  onSaveList,
   onClose
 }: CameraListEditorProps): ReactElement {
   const [csvText, setCsvText] = useState(
     "number,url,type,lens,display_note,notes\n42,,ALEXA 35,50mm,Handheld,"
   );
-  const [draftPrefix, setDraftPrefix] = useState(activeList?.defaultPrefix ?? "");
+  const [draftList, setDraftList] = useState<CameraList | null>(
+    activeList ? cloneCameraList(activeList) : null
+  );
   const [lastFollowIndex, setLastFollowIndex] = useState<number | null>(null);
+  const [draggedCameraId, setDraggedCameraId] = useState<string | null>(null);
   const allFollowCheckboxRef = useRef<HTMLInputElement | null>(null);
   const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
   const allRowsFollowPrefix =
-    activeList?.cameras.every((camera) => camera.usesListPrefix !== false) ?? false;
+    draftList?.cameras.every((camera) => camera.usesListPrefix !== false) ?? false;
   const someRowsFollowPrefix =
-    activeList?.cameras.some((camera) => camera.usesListPrefix !== false) ?? false;
+    draftList?.cameras.some((camera) => camera.usesListPrefix !== false) ?? false;
+  const dirty =
+    !!activeList &&
+    !!draftList &&
+    JSON.stringify(activeList) !== JSON.stringify(draftList);
 
   useEffect(() => {
-    setDraftPrefix(activeList?.defaultPrefix ?? "");
+    setDraftList(activeList ? cloneCameraList(activeList) : null);
     setLastFollowIndex(null);
-  }, [activeList?.id, activeList?.defaultPrefix]);
+  }, [activeList]);
 
   useEffect(() => {
     if (allFollowCheckboxRef.current) {
@@ -46,14 +183,33 @@ export function CameraListEditor({
     }
   }, [allRowsFollowPrefix, someRowsFollowPrefix]);
 
+  function updateDraftListPrefix(defaultPrefix: string): void {
+    setDraftList((list) => (list ? { ...list, defaultPrefix } : list));
+  }
+
+  function updateDraftCamera(cameraId: string, patch: CameraEntryPatch): void {
+    setDraftList((list) =>
+      list
+        ? {
+            ...list,
+            cameras: list.cameras.map((camera) =>
+              camera.id === cameraId
+                ? applyDraftCameraPatch(camera, patch, list.defaultPrefix)
+                : camera
+            )
+          }
+        : list
+    );
+  }
+
   function updateViewport(camera: CameraEntry, width: number, height: number): void {
-    onUpdateCamera(camera.id, {
+    updateDraftCamera(camera.id, {
       viewportOverride: width > 0 && height > 0 ? { width, height } : null
     });
   }
 
   function updateFollowPrefixRange(index: number, usesListPrefix: boolean, shiftKey: boolean): void {
-    if (!activeList) {
+    if (!draftList) {
       return;
     }
 
@@ -61,52 +217,218 @@ export function CameraListEditor({
       shiftKey && lastFollowIndex !== null ? Math.min(lastFollowIndex, index) : index;
     const rangeEnd =
       shiftKey && lastFollowIndex !== null ? Math.max(lastFollowIndex, index) : index;
+    const cameraIds = draftList.cameras
+      .slice(rangeStart, rangeEnd + 1)
+      .map((camera) => camera.id);
 
-    activeList.cameras.slice(rangeStart, rangeEnd + 1).forEach((camera) => {
-      onUpdateCamera(camera.id, { usesListPrefix });
-    });
+    setDraftList((list) =>
+      list
+        ? {
+            ...list,
+            cameras: list.cameras.map((camera) =>
+              cameraIds.includes(camera.id)
+                ? applyDraftCameraPatch(camera, { usesListPrefix }, list.defaultPrefix)
+                : camera
+            )
+          }
+        : list
+    );
     setLastFollowIndex(index);
   }
 
   function updateAllFollowPrefix(usesListPrefix: boolean): void {
-    activeList?.cameras.forEach((camera) => {
-      onUpdateCamera(camera.id, { usesListPrefix });
-    });
+    setDraftList((list) =>
+      list
+        ? {
+            ...list,
+            cameras: list.cameras.map((camera) =>
+              applyDraftCameraPatch(camera, { usesListPrefix }, list.defaultPrefix)
+            )
+          }
+        : list
+    );
     setLastFollowIndex(null);
+  }
+
+  function addCamera(): void {
+    setDraftList((list) => {
+      if (!list) {
+        return list;
+      }
+
+      const { index, suffix } = nextCameraDefaults(list.cameras);
+      return {
+        ...list,
+        cameras: [...list.cameras, createDraftCamera(list.defaultPrefix, index, suffix)]
+      };
+    });
+  }
+
+  function deleteCamera(cameraId: string): void {
+    setDraftList((list) =>
+      list
+        ? {
+            ...list,
+            cameras: list.cameras.filter((camera) => camera.id !== cameraId)
+          }
+        : list
+    );
+  }
+
+  function importRows(rows: CameraCsvRow[]): void {
+    setDraftList((list) =>
+      list
+        ? {
+            ...list,
+            cameras: rows.map((row) => createDraftCameraFromCsv(row, list.defaultPrefix))
+          }
+        : list
+    );
+    setLastFollowIndex(null);
+  }
+
+  function moveCamera(cameraId: string, toIndex: number): void {
+    setDraftList((list) => {
+      if (!list) {
+        return list;
+      }
+
+      const fromIndex = list.cameras.findIndex((camera) => camera.id === cameraId);
+      return {
+        ...list,
+        cameras: moveItem(list.cameras, fromIndex, toIndex)
+      };
+    });
+  }
+
+  function saveChanges(): void {
+    if (!draftList) {
+      return;
+    }
+
+    onSaveList(draftList);
+    onClose();
+  }
+
+  function discardChanges(): void {
+    onClose();
+  }
+
+  function focusCameraCell(
+    tableBody: HTMLTableSectionElement,
+    rowIndex: number,
+    columnIndex: number
+  ): boolean {
+    const target = tableBody.querySelector<HTMLElement>(
+      `${CAMERA_CELL_SELECTOR}[data-camera-list-row='${rowIndex}'][data-camera-list-column='${columnIndex}']`
+    );
+    target?.focus();
+    return Boolean(target);
+  }
+
+  function handleCameraTableKeyDown(event: KeyboardEvent<HTMLTableSectionElement>): void {
+    const isEnterKey = isEnterNavigationKey(event);
+    if (!draftList || (!isEnterKey && event.key !== "Tab")) {
+      return;
+    }
+
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    const cell = (event.target as HTMLElement | null)?.closest<HTMLElement>(CAMERA_CELL_SELECTOR);
+    if (!cell || !event.currentTarget.contains(cell)) {
+      return;
+    }
+
+    if (isEnterKey && event.target instanceof HTMLButtonElement) {
+      return;
+    }
+
+    const rowIndex = Number(cell.dataset.cameraListRow);
+    const columnIndex = Number(cell.dataset.cameraListColumn);
+    if (!Number.isInteger(rowIndex) || !Number.isInteger(columnIndex)) {
+      return;
+    }
+
+    if (isEnterKey) {
+      const targetRowIndex = rowIndex + (event.shiftKey ? -1 : 1);
+      if (targetRowIndex < 0 || targetRowIndex >= draftList.cameras.length) {
+        event.preventDefault();
+        return;
+      }
+
+      event.preventDefault();
+      focusCameraCell(event.currentTarget, targetRowIndex, columnIndex);
+      return;
+    }
+
+    const nextColumnIndex = columnIndex + (event.shiftKey ? -1 : 1);
+    const targetColumnIndex =
+      nextColumnIndex < 0
+        ? CAMERA_TABLE_COLUMN_COUNT - 1
+        : nextColumnIndex >= CAMERA_TABLE_COLUMN_COUNT
+          ? 0
+          : nextColumnIndex;
+    const targetRowIndex =
+      nextColumnIndex < 0
+        ? rowIndex - 1
+        : nextColumnIndex >= CAMERA_TABLE_COLUMN_COUNT
+          ? rowIndex + 1
+          : rowIndex;
+
+    if (targetRowIndex < 0 || targetRowIndex >= draftList.cameras.length) {
+      return;
+    }
+
+    event.preventDefault();
+    focusCameraCell(event.currentTarget, targetRowIndex, targetColumnIndex);
+  }
+
+  function cameraCellProps(rowIndex: number, columnIndex: number) {
+    return {
+      "data-camera-list-cell": "true",
+      "data-camera-list-row": String(rowIndex),
+      "data-camera-list-column": String(columnIndex)
+    };
   }
 
   return (
     <div className="panel-backdrop">
       <section className="editor-panel" aria-label="Camera list editor">
         <header className="panel-header">
-          <h2>{activeList?.name ?? "Camera List"}</h2>
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
+          <h2>{draftList?.name ?? "Camera List"}</h2>
+          <div className="panel-header-actions">
+            <PillButton icon={<X size={14} strokeWidth={2.2} />} onClick={discardChanges}>
+              Discard
+            </PillButton>
+            <PillButton
+              icon={<Save size={14} strokeWidth={2.2} />}
+              tone="primary"
+              disabled={!dirty}
+              onClick={saveChanges}
+            >
+              Save Changes
+            </PillButton>
+          </div>
         </header>
-        {activeList && (
+        {draftList && (
           <>
             <div className="editor-prefix-row">
               <label className="editor-field">
                 List Prefix
                 <input
-                  value={draftPrefix}
-                  onChange={(event) => setDraftPrefix(event.target.value)}
+                  value={draftList.defaultPrefix}
+                  onChange={(event) => updateDraftListPrefix(event.target.value)}
                 />
               </label>
-              <button
-                type="button"
-                className="save-prefix-button"
-                disabled={draftPrefix.trim() === activeList.defaultPrefix}
-                onClick={() => onUpdatePrefix(draftPrefix.trim())}
-              >
-                Save Prefix
-              </button>
             </div>
             <div className="camera-table-wrap">
               <table className="camera-table">
                 <thead>
                   <tr>
+                    <th>Move</th>
+                    <th>Delete</th>
                     <th>
                       <span>Follow Prefix</span>
                       <input
@@ -117,7 +439,7 @@ export function CameraListEditor({
                         onChange={(event) => updateAllFollowPrefix(event.target.checked)}
                       />
                     </th>
-                    <th>Name</th>
+                    <th>Index</th>
                     <th>Full URL</th>
                     <th>Camera #</th>
                     <th>Type</th>
@@ -127,16 +449,57 @@ export function CameraListEditor({
                     <th>Zoom</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {activeList.cameras.map((camera) => (
-                    <tr key={camera.id}>
+                <tbody onKeyDown={handleCameraTableKeyDown}>
+                  {draftList.cameras.map((camera, rowIndex) => (
+                    <tr
+                      key={camera.id}
+                      draggable
+                      onDragStart={(event) => {
+                        setDraggedCameraId(camera.id);
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", camera.id);
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const sourceCameraId =
+                          draggedCameraId || event.dataTransfer.getData("text/plain");
+                        if (sourceCameraId && sourceCameraId !== camera.id) {
+                          moveCamera(sourceCameraId, rowIndex);
+                        }
+                        setDraggedCameraId(null);
+                      }}
+                      onDragEnd={() => setDraggedCameraId(null)}
+                    >
+                      <td className="camera-row-action-cell">
+                        <button
+                          type="button"
+                          className="camera-row-drag"
+                          aria-label={`Move ${camera.name}`}
+                          title={`Drag ${camera.name}`}
+                        >
+                          <GripVertical size={14} strokeWidth={2.2} />
+                        </button>
+                      </td>
+                      <td className="camera-row-action-cell">
+                        <button
+                          type="button"
+                          className="camera-row-delete"
+                          aria-label={`Delete ${camera.name}`}
+                          title={`Delete ${camera.name}`}
+                          onClick={() => deleteCamera(camera.id)}
+                        >
+                          <Trash2 size={14} strokeWidth={2.2} />
+                        </button>
+                      </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 0)}
                           type="checkbox"
                           checked={camera.usesListPrefix !== false}
                           onClick={(event) =>
                             updateFollowPrefixRange(
-                              activeList.cameras.findIndex(
+                              draftList.cameras.findIndex(
                                 (candidate) => candidate.id === camera.id
                               ),
                               event.currentTarget.checked,
@@ -149,60 +512,67 @@ export function CameraListEditor({
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 1)}
                           value={camera.name}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { name: event.target.value })
+                            updateDraftCamera(camera.id, { name: event.target.value })
                           }
-                          aria-label={`${camera.name} name`}
+                          aria-label={`${camera.name} index`}
                         />
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 2)}
                           value={camera.url}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { url: event.target.value })
+                            updateDraftCamera(camera.id, { url: event.target.value })
                           }
                           aria-label={`${camera.name} URL`}
                         />
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 3)}
                           value={camera.suffix}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { suffix: event.target.value })
+                            updateDraftCamera(camera.id, { suffix: event.target.value })
                           }
-                          aria-label={`${camera.name} suffix`}
+                          aria-label={`${camera.name} camera number`}
                         />
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 4)}
                           value={camera.cameraType}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { cameraType: event.target.value })
+                            updateDraftCamera(camera.id, { cameraType: event.target.value })
                           }
                           aria-label={`${camera.name} type`}
                         />
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 5)}
                           value={camera.lens}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { lens: event.target.value })
+                            updateDraftCamera(camera.id, { lens: event.target.value })
                           }
                           aria-label={`${camera.name} lens`}
                         />
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 6)}
                           value={camera.displayNote}
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, { displayNote: event.target.value })
+                            updateDraftCamera(camera.id, { displayNote: event.target.value })
                           }
                           aria-label={`${camera.name} display note`}
                         />
                       </td>
                       <td>
                         <select
+                          {...cameraCellProps(rowIndex, 7)}
                           value={
                             camera.viewportOverride
                               ? `${camera.viewportOverride.width}x${camera.viewportOverride.height}`
@@ -210,7 +580,7 @@ export function CameraListEditor({
                           }
                           onChange={(event) => {
                             if (!event.target.value) {
-                              onUpdateCamera(camera.id, { viewportOverride: null });
+                              updateDraftCamera(camera.id, { viewportOverride: null });
                               return;
                             }
                             const [width, height] = event.target.value.split("x").map(Number);
@@ -219,13 +589,16 @@ export function CameraListEditor({
                           aria-label={`${camera.name} viewport`}
                         >
                           <option value="">Default</option>
-                          <option value="1280x720">1280x720</option>
-                          <option value="1920x1080">1920x1080</option>
-                          <option value="1024x768">1024x768</option>
+                          {VIEWPORT_PRESETS.map((preset) => (
+                            <option key={preset.value} value={preset.value}>
+                              {preset.label}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td>
                         <input
+                          {...cameraCellProps(rowIndex, 8)}
                           type="number"
                           min="0.25"
                           max="3"
@@ -233,7 +606,7 @@ export function CameraListEditor({
                           value={camera.zoomOverride ?? ""}
                           placeholder="Default"
                           onChange={(event) =>
-                            onUpdateCamera(camera.id, {
+                            updateDraftCamera(camera.id, {
                               zoomOverride: event.target.value ? Number(event.target.value) : null
                             })
                           }
@@ -245,9 +618,9 @@ export function CameraListEditor({
                 </tbody>
               </table>
             </div>
-            <button type="button" onClick={onAddCamera}>
+            <PillButton icon={<Plus size={14} strokeWidth={2.2} />} onClick={addCamera}>
               Add Camera Row
-            </button>
+            </PillButton>
           </>
         )}
         <p className="panel-note">
@@ -271,13 +644,13 @@ export function CameraListEditor({
             ))}
           </ul>
         )}
-        <button
-          type="button"
+        <PillButton
+          icon={<Upload size={14} strokeWidth={2.2} />}
           disabled={parsed.validRows.length === 0}
-          onClick={() => onImportRows(parsed.validRows)}
+          onClick={() => importRows(parsed.validRows)}
         >
           Import Valid Rows
-        </button>
+        </PillButton>
       </section>
     </div>
   );

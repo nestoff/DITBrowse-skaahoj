@@ -1,21 +1,24 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { sampleWorkspace } from "../../shared/sampleData";
+import type { CameraList } from "../../shared/types";
 import { CameraListEditor } from "./CameraListEditor";
 
-function renderEditor(overrides: Partial<Parameters<typeof CameraListEditor>[0]> = {}) {
-  const props = {
+type CameraListEditorProps = ComponentProps<typeof CameraListEditor>;
+
+function renderEditor(overrides: Partial<CameraListEditorProps> = {}) {
+  const onSaveList = vi.fn<(list: CameraList) => void>();
+  const onClose = vi.fn();
+  const props: CameraListEditorProps = {
     activeList: sampleWorkspace.cameraLists[0],
-    onImportRows: vi.fn(),
-    onUpdatePrefix: vi.fn(),
-    onUpdateCamera: vi.fn(),
-    onAddCamera: vi.fn(),
-    onClose: vi.fn(),
+    onSaveList,
+    onClose,
     ...overrides
   };
 
   render(<CameraListEditor {...props} />);
-  return props;
+  return { ...props, onSaveList, onClose };
 }
 
 describe("CameraListEditor", () => {
@@ -23,6 +26,7 @@ describe("CameraListEditor", () => {
     renderEditor();
 
     expect(screen.getByRole("columnheader", { name: "Camera #" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Index" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /Follow Prefix/ })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Type" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Lens" })).toBeInTheDocument();
@@ -31,47 +35,192 @@ describe("CameraListEditor", () => {
     expect(screen.queryByRole("columnheader", { name: "Password" })).not.toBeInTheDocument();
   });
 
-  it("keeps prefix edits local until the save button is clicked", () => {
-    const { onUpdatePrefix } = renderEditor();
+  it("keeps list edits local until Save Changes is clicked", () => {
+    const { onSaveList } = renderEditor();
 
     fireEvent.change(screen.getByLabelText("List Prefix"), {
       target: { value: "http://10.10.20." }
     });
+    fireEvent.change(screen.getByLabelText("A camera number"), {
+      target: { value: "4" }
+    });
 
-    expect(onUpdatePrefix).not.toHaveBeenCalled();
+    expect(onSaveList).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Save Prefix" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onUpdatePrefix).toHaveBeenCalledTimes(1);
-    expect(onUpdatePrefix).toHaveBeenCalledWith("http://10.10.20.");
+    expect(onSaveList).toHaveBeenCalledTimes(1);
+    expect(onSaveList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultPrefix: "http://10.10.20.",
+        cameras: expect.arrayContaining([
+          expect.objectContaining({
+            id: "camera-41",
+            name: "D",
+            suffix: "04"
+          })
+        ])
+      })
+    );
   });
 
   it("updates one follow-prefix row when a row checkbox is clicked", () => {
-    const { onUpdateCamera } = renderEditor();
+    const { onSaveList } = renderEditor();
 
-    fireEvent.click(screen.getByLabelText("41 follow prefix"));
+    fireEvent.click(screen.getByLabelText("A follow prefix"));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onUpdateCamera).toHaveBeenCalledWith("camera-41", { usesListPrefix: false });
+    expect(onSaveList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cameras: expect.arrayContaining([
+          expect.objectContaining({ id: "camera-41", usesListPrefix: false })
+        ])
+      })
+    );
   });
 
   it("updates a follow-prefix range when shift-clicking row checkboxes", () => {
-    const { onUpdateCamera } = renderEditor();
+    const { onSaveList } = renderEditor();
 
-    fireEvent.click(screen.getByLabelText("41 follow prefix"));
-    fireEvent.click(screen.getByLabelText("43 follow prefix"), { shiftKey: true });
+    fireEvent.click(screen.getByLabelText("A follow prefix"));
+    fireEvent.click(screen.getByLabelText("C follow prefix"), { shiftKey: true });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onUpdateCamera).toHaveBeenCalledWith("camera-41", { usesListPrefix: false });
-    expect(onUpdateCamera).toHaveBeenCalledWith("camera-42", { usesListPrefix: false });
-    expect(onUpdateCamera).toHaveBeenCalledWith("camera-43", { usesListPrefix: false });
+    const saved = onSaveList.mock.calls[0][0];
+    expect(saved.cameras.slice(0, 3).map((camera) => camera.usesListPrefix)).toEqual([
+      false,
+      false,
+      false
+    ]);
   });
 
   it("updates all follow-prefix rows from the header checkbox", () => {
-    const { onUpdateCamera } = renderEditor();
+    const { onSaveList } = renderEditor();
 
     fireEvent.click(screen.getByLabelText("All follow prefix"));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onUpdateCamera).toHaveBeenCalledTimes(sampleWorkspace.cameraLists[0].cameras.length);
-    expect(onUpdateCamera).toHaveBeenCalledWith("camera-41", { usesListPrefix: false });
-    expect(onUpdateCamera).toHaveBeenCalledWith("camera-52", { usesListPrefix: false });
+    const saved = onSaveList.mock.calls[0][0];
+    expect(saved.cameras.every((camera) => camera.usesListPrefix === false)).toBe(true);
+  });
+
+  it("deletes a camera row from the draft list editor", () => {
+    const { onSaveList } = renderEditor();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete A" }));
+
+    expect(screen.queryByLabelText("A index")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    expect(onSaveList.mock.calls[0][0].cameras.map((camera) => camera.id)).not.toContain(
+      "camera-41"
+    );
+  });
+
+  it("adds a sequential camera row in the draft list", () => {
+    const { onSaveList } = renderEditor();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Camera Row" }));
+
+    expect(screen.getByLabelText("M index")).toHaveValue("M");
+    expect(screen.getByLabelText("M camera number")).toHaveValue("13");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    expect(onSaveList.mock.calls[0][0].cameras.at(-1)).toMatchObject({
+      name: "M",
+      suffix: "13",
+      url: "http://192.168.1.13"
+    });
+  });
+
+  it("imports valid CSV rows into the draft and waits for Save Changes", () => {
+    const { onSaveList } = renderEditor();
+
+    fireEvent.change(screen.getByLabelText("CSV import"), {
+      target: {
+        value: "number,url,type,lens,display_note,notes\n04,,ALEXA 35,50mm,Studio,imported"
+      }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import Valid Rows" }));
+
+    expect(onSaveList).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("D index")).toHaveValue("D");
+    expect(screen.getByLabelText("D camera number")).toHaveValue("04");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    expect(onSaveList.mock.calls[0][0].cameras).toEqual([
+      expect.objectContaining({
+        name: "D",
+        suffix: "04",
+        cameraType: "ALEXA 35",
+        lens: "50mm",
+        displayNote: "Studio"
+      })
+    ]);
+  });
+
+  it("moves focus down to the same column when pressing Enter in the list table", () => {
+    renderEditor();
+
+    const firstType = screen.getByLabelText("A type");
+    const secondType = screen.getByLabelText("B type");
+    firstType.focus();
+
+    act(() => {
+      fireEvent.keyDown(firstType, { key: "Enter" });
+    });
+
+    expect(secondType).toHaveFocus();
+  });
+
+  it("moves focus down when the keyboard reports keypad Enter or Return", () => {
+    renderEditor();
+
+    const firstLens = screen.getByLabelText("A lens");
+    const secondLens = screen.getByLabelText("B lens");
+    firstLens.focus();
+
+    act(() => {
+      fireEvent.keyDown(firstLens, { key: "NumpadEnter", code: "NumpadEnter" });
+    });
+
+    expect(secondLens).toHaveFocus();
+
+    const secondDisplayNote = screen.getByLabelText("B display note");
+    const thirdDisplayNote = screen.getByLabelText("C display note");
+    secondDisplayNote.focus();
+
+    act(() => {
+      fireEvent.keyDown(secondDisplayNote, { key: "Return", code: "Enter" });
+    });
+
+    expect(thirdDisplayNote).toHaveFocus();
+  });
+
+  it("moves focus to the next column when pressing Tab in the list table", () => {
+    renderEditor();
+
+    const index = screen.getByLabelText("A index");
+    const url = screen.getByLabelText("A URL");
+    index.focus();
+
+    act(() => {
+      fireEvent.keyDown(index, { key: "Tab" });
+    });
+
+    expect(url).toHaveFocus();
+  });
+
+  it("keeps the focused cell inside its camera row for row highlight styling", () => {
+    renderEditor();
+
+    const firstType = screen.getByLabelText("A type");
+    firstType.focus();
+
+    expect(firstType.closest("tr")).toContainElement(firstType);
+    expect(firstType).toHaveFocus();
   });
 });

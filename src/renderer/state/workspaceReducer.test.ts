@@ -7,6 +7,30 @@ vi.stubGlobal("crypto", {
 });
 
 describe("workspaceReducer", () => {
+  it("starts camera tiles at the 1024x768 default viewport", () => {
+    expect(sampleWorkspace.defaultViewport).toEqual({ width: 1024, height: 768 });
+    expect(sampleWorkspace.tiles[0].viewport).toEqual({ width: 1024, height: 768 });
+  });
+
+  it("migrates the old 1280x720 saved default viewport to 1024x768", () => {
+    const legacyWorkspace = {
+      ...sampleWorkspace,
+      defaultViewport: { width: 1280, height: 720 },
+      tiles: sampleWorkspace.tiles.map((tile) => ({
+        ...tile,
+        viewport: { width: 1280, height: 720 }
+      }))
+    };
+
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "hydrateWorkspace",
+      workspace: legacyWorkspace
+    });
+
+    expect(state.defaultViewport).toEqual({ width: 1024, height: 768 });
+    expect(state.tiles[0].viewport).toEqual({ width: 1024, height: 768 });
+  });
+
   it("hydrates a full saved workspace", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "hydrateWorkspace",
@@ -170,7 +194,7 @@ describe("workspaceReducer", () => {
       title: "http://192.168.1.80"
     });
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      url: "http://192.168.1.41",
+      url: "http://192.168.1.01",
       usesListPrefix: true
     });
   });
@@ -182,13 +206,13 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
+      suffix: "01",
       url: "http://192.168.1.80",
       usesListPrefix: false
     });
     expect(state.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId)).toMatchObject({
       cameraId: "camera-41",
-      title: "41",
+      title: "A",
       url: "http://192.168.1.80"
     });
   });
@@ -204,14 +228,14 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
-      url: "http://192.168.1.41",
+      suffix: "01",
+      url: "http://192.168.1.01",
       usesListPrefix: true
     });
     expect(state.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId)).toMatchObject({
       cameraId: "camera-41",
-      title: "41",
-      url: "http://192.168.1.41"
+      title: "A",
+      url: "http://192.168.1.01"
     });
   });
 
@@ -248,7 +272,7 @@ describe("workspaceReducer", () => {
       displayNote: "Studio"
     });
     expect(state.tiles).toHaveLength(1);
-    expect(state.tiles[0].title).toBe("90 • ALEXA 35 • 50mm • Studio");
+    expect(state.tiles[0].title).toBe("Imported A • ALEXA 35 • 50mm • Studio");
     expect(state.passwordRecords).toEqual([]);
   });
 
@@ -293,6 +317,83 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("updates the default viewport for default-sized camera tiles without changing camera overrides", () => {
+    const withCameraOverride = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample"
+          ? {
+              ...list,
+              cameras: list.cameras.map((camera) =>
+                camera.id === "camera-42"
+                  ? { ...camera, viewportOverride: { width: 1920, height: 1080 } }
+                  : camera
+              )
+            }
+          : list
+      ),
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.cameraId === "camera-42"
+          ? { ...tile, viewport: { width: 1920, height: 1080 } }
+          : tile
+      )
+    };
+
+    const state = workspaceReducer(withCameraOverride, {
+      type: "setDefaultViewport",
+      width: 1280,
+      height: 720
+    });
+
+    expect(state.defaultViewport).toEqual({ width: 1280, height: 720 });
+    expect(state.tiles.find((tile) => tile.cameraId === "camera-41")?.viewport).toEqual({
+      width: 1280,
+      height: 720
+    });
+    expect(state.tiles.find((tile) => tile.cameraId === "camera-42")?.viewport).toEqual({
+      width: 1920,
+      height: 1080
+    });
+  });
+
+  it("updates the global viewport for every tile and resets per-camera viewport overrides", () => {
+    const withCameraOverride = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample"
+          ? {
+              ...list,
+              cameras: list.cameras.map((camera) =>
+                camera.id === "camera-42"
+                  ? { ...camera, viewportOverride: { width: 1920, height: 1080 } }
+                  : camera
+              )
+            }
+          : list
+      ),
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.cameraId === "camera-42"
+          ? { ...tile, viewport: { width: 1920, height: 1080 } }
+          : tile
+      )
+    };
+
+    const state = workspaceReducer(withCameraOverride, {
+      type: "setGlobalViewport",
+      width: 1280,
+      height: 720
+    });
+
+    expect(state.defaultViewport).toEqual({ width: 1280, height: 720 });
+    expect(state.tiles.every((tile) => tile.viewport.width === 1280)).toBe(true);
+    expect(state.tiles.every((tile) => tile.viewport.height === 720)).toBe(true);
+    expect(
+      state.cameraLists.every((list) =>
+        list.cameras.every((camera) => camera.viewportOverride === null)
+      )
+    ).toBe(true);
+  });
+
   it("creates a new job with an empty camera list", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "createJobWithList",
@@ -313,6 +414,52 @@ describe("workspaceReducer", () => {
     expect(state.activeCameraListId).toBe(state.cameraLists.at(-1)?.id);
   });
 
+  it("renames the active job", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "updateActiveJobName",
+      jobName: "Commercial A"
+    });
+
+    expect(state.jobs.find((job) => job.id === sampleWorkspace.activeJobId)?.name).toBe(
+      "Commercial A"
+    );
+  });
+
+  it("deletes the active job and opens the next job list", () => {
+    const workspaceWithSecondJob = workspaceReducer(sampleWorkspace, {
+      type: "createJobWithList",
+      jobName: "Second Job",
+      listName: "Second List",
+      defaultPrefix: "http://10.0.0."
+    });
+    const state = workspaceReducer(workspaceWithSecondJob, {
+      type: "deleteJob",
+      jobId: workspaceWithSecondJob.activeJobId ?? ""
+    });
+
+    expect(state.jobs.map((job) => job.name)).toEqual(["Sample Job"]);
+    expect(state.activeJobId).toBe("job-sample");
+    expect(state.activeCameraListId).toBe("list-sample");
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.01"
+    });
+  });
+
+  it("keeps a blank job available after deleting the only job", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "deleteJob",
+      jobId: "job-sample"
+    });
+
+    expect(state.jobs).toHaveLength(1);
+    expect(state.cameraLists).toHaveLength(1);
+    expect(state.jobs[0].name).toBe("New Job");
+    expect(state.cameraLists[0].cameras).toEqual([]);
+    expect(state.tiles).toEqual([]);
+    expect(state.selectedTileId).toBeNull();
+  });
+
   it("selects an existing camera list and loads its cameras into tiles", () => {
     const unloaded = {
       ...sampleWorkspace,
@@ -328,7 +475,7 @@ describe("workspaceReducer", () => {
     expect(state.tiles).toHaveLength(12);
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.41",
+      url: "http://192.168.1.01",
       partition: "persist:ditbrowse-job-sample-list-sample"
     });
   });
@@ -342,7 +489,7 @@ describe("workspaceReducer", () => {
           jobId: "job-sample",
           cameraListId: "list-sample",
           cameraId: "camera-41",
-          url: "http://192.168.1.41",
+          url: "http://192.168.1.01",
           username: "admin",
           password: "secret"
         }
@@ -356,16 +503,16 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].defaultPrefix).toBe("http://10.10.20.");
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
-      url: "http://10.10.20.41"
+      suffix: "01",
+      url: "http://10.10.20.01"
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://10.10.20.41"
+      url: "http://10.10.20.01"
     });
     expect(state.passwordRecords[0]).toMatchObject({
       cameraListId: "list-sample",
-      url: "http://10.10.20.41"
+      url: "http://10.10.20.01"
     });
   });
 
@@ -377,12 +524,12 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].defaultPrefix).toBe("http://10.20.100.");
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
-      url: "http://10.20.100.41"
+      suffix: "01",
+      url: "http://10.20.100.01"
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://10.20.100.41"
+      url: "http://10.20.100.01"
     });
   });
 
@@ -401,7 +548,7 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
+      suffix: "01",
       url: "http://camera-control.local"
     });
     expect(state.tiles[0]).toMatchObject({
@@ -425,7 +572,7 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
+      suffix: "01",
       url: "http://192.168.1.99",
       usesListPrefix: false
     });
@@ -450,13 +597,13 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
-      url: "http://192.168.1.41",
+      suffix: "01",
+      url: "http://192.168.1.01",
       usesListPrefix: false
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.41"
+      url: "http://192.168.1.01"
     });
   });
 
@@ -485,13 +632,13 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "4",
-      url: "http://192.168.1.4",
+      suffix: "04",
+      url: "http://192.168.1.04",
       usesListPrefix: true
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.4"
+      url: "http://192.168.1.04"
     });
   });
 
@@ -509,12 +656,12 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "41",
-      url: "http://172.20.30.41"
+      suffix: "01",
+      url: "http://172.20.30.01"
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://172.20.30.41"
+      url: "http://172.20.30.01"
     });
   });
 
@@ -528,12 +675,12 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "4",
-      url: "http://192.168.1.4"
+      suffix: "04",
+      url: "http://192.168.1.04"
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.4"
+      url: "http://192.168.1.04"
     });
   });
 
@@ -552,12 +699,12 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "4",
-      url: "http://10.10.20.4"
+      suffix: "04",
+      url: "http://10.10.20.04"
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://10.10.20.4"
+      url: "http://10.10.20.04"
     });
   });
 
@@ -580,7 +727,7 @@ describe("workspaceReducer", () => {
       zoomOverride: 1.25
     });
     expect(state.tiles[0]).toMatchObject({
-      title: "41",
+      title: "A Cam",
       url: "http://10.0.0.41",
       viewport: { width: 1920, height: 1080 },
       zoom: 1.25
@@ -606,6 +753,79 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("saves a server-corrected HTTPS URL as the selected camera base", () => {
+    const navigated = workspaceReducer(sampleWorkspace, {
+      type: "navigateSelectedTile",
+      url: "10.20.100.2"
+    });
+
+    const state = workspaceReducer(navigated, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-41",
+      url: "https://10.20.100.2/login"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "https://10.20.100.2",
+      usesListPrefix: false
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      title: "A",
+      url: "https://10.20.100.2"
+    });
+  });
+
+  it("keeps prefix-following cameras following after server HTTPS correction", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-41",
+      url: "https://192.168.1.01/login"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "https://192.168.1.1",
+      usesListPrefix: true
+    });
+  });
+
+  it("saves a server-corrected URL on an unlinked tile without changing the camera list", () => {
+    const unlinkedWorkspace = {
+      ...sampleWorkspace,
+      selectedTileId: "tile-unlinked",
+      tiles: [
+        ...sampleWorkspace.tiles,
+        {
+          id: "tile-unlinked",
+          cameraId: null,
+          url: "http://10.20.100.2",
+          title: "http://10.20.100.2",
+          partition: "persist:ditbrowse-job-sample-list-sample",
+          viewport: { width: 1280, height: 720 },
+          zoom: 1
+        }
+      ]
+    };
+
+    const state = workspaceReducer(unlinkedWorkspace, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-unlinked",
+      url: "https://10.20.100.2/login"
+    });
+
+    expect(state.tiles.at(-1)).toMatchObject({
+      cameraId: null,
+      title: "https://10.20.100.2",
+      url: "https://10.20.100.2"
+    });
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      url: "http://192.168.1.01",
+      usesListPrefix: true
+    });
+  });
+
   it("updates camera metadata and uses it for tile labels", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "updateCameraEntry",
@@ -619,14 +839,14 @@ describe("workspaceReducer", () => {
     });
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
-      suffix: "4",
+      suffix: "04",
       cameraType: "ALEXA 35",
       lens: "50mm",
       displayNote: "Handheld"
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      title: "4 • ALEXA 35 • 50mm • Handheld"
+      title: "D • ALEXA 35 • 50mm • Handheld"
     });
   });
 
@@ -659,18 +879,74 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras.at(-1)).toMatchObject({
       id: "camera-new-tile",
-      name: "New Camera",
-      url: "http://192.168.1.",
-      suffix: ""
+      name: "M",
+      url: "http://192.168.1.13",
+      suffix: "13"
     });
     expect(state.tiles.at(-1)).toMatchObject({
       cameraId: "camera-new-tile",
-      title: "New Camera",
-      url: "http://192.168.1."
+      title: "M",
+      url: "http://192.168.1.13"
     });
   });
 
-  it("moves tiles without changing the saved camera-list order", () => {
+  it("adds camera ZA after camera Z", () => {
+    const cameras = Array.from({ length: 26 }, (_, index) => {
+      const number = String(index + 1).padStart(2, "0");
+      const name = String.fromCharCode(65 + index);
+      return {
+        ...sampleWorkspace.cameraLists[0].cameras[0],
+        id: `camera-${number}`,
+        name,
+        suffix: number,
+        url: `http://192.168.1.${number}`
+      };
+    });
+    const fullAlphabet = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) =>
+        list.id === "list-sample" ? { ...list, cameras } : list
+      )
+    };
+
+    const state = workspaceReducer(fullAlphabet, { type: "addCameraEntry" });
+
+    expect(state.cameraLists[0].cameras.at(-1)).toMatchObject({
+      name: "ZA",
+      suffix: "27",
+      url: "http://192.168.1.27"
+    });
+  });
+
+  it("deletes a camera row from the active list, grid, and saved passwords", () => {
+    const withPassword = {
+      ...sampleWorkspace,
+      selectedTileId: "tile-42",
+      passwordRecords: [
+        {
+          id: "password-42",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-42",
+          url: "http://192.168.1.42",
+          username: "admin",
+          password: "secret"
+        }
+      ]
+    };
+
+    const state = workspaceReducer(withPassword, {
+      type: "deleteCameraEntry",
+      cameraId: "camera-42"
+    });
+
+    expect(state.cameraLists[0].cameras.map((camera) => camera.id)).not.toContain("camera-42");
+    expect(state.tiles.map((tile) => tile.cameraId)).not.toContain("camera-42");
+    expect(state.passwordRecords).toEqual([]);
+    expect(state.selectedTileId).toBe("tile-43");
+  });
+
+  it("moves camera tabs and updates the saved camera-list order", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "moveTile",
       tileId: "tile-42",
@@ -679,9 +955,103 @@ describe("workspaceReducer", () => {
 
     expect(state.tiles.slice(0, 2).map((tile) => tile.id)).toEqual(["tile-42", "tile-41"]);
     expect(state.cameraLists[0].cameras.slice(0, 2).map((camera) => camera.id)).toEqual([
+      "camera-42",
+      "camera-41"
+    ]);
+  });
+
+  it("drags a camera tab to an absolute index while keeping manual tabs in the same order", () => {
+    const manualTile = {
+      id: "tile-manual",
+      cameraId: null,
+      url: "about:blank",
+      title: "about:blank",
+      partition: "persist:ditbrowse-job-sample-list-sample",
+      viewport: { width: 1024, height: 768 },
+      zoom: 1
+    };
+    const mixedWorkspace = {
+      ...sampleWorkspace,
+      tiles: [sampleWorkspace.tiles[0], manualTile, ...sampleWorkspace.tiles.slice(1)]
+    };
+
+    const state = workspaceReducer(mixedWorkspace, {
+      type: "moveTileToIndex",
+      tileId: "tile-43",
+      toIndex: 0
+    });
+
+    expect(state.tiles.slice(0, 4).map((tile) => tile.id)).toEqual([
+      "tile-43",
+      "tile-41",
+      "tile-manual",
+      "tile-42"
+    ]);
+    expect(state.cameraLists[0].cameras.slice(0, 3).map((camera) => camera.id)).toEqual([
+      "camera-43",
       "camera-41",
       "camera-42"
     ]);
+  });
+
+  it("moves camera-list rows and reorders the matching tabs", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "moveCameraEntry",
+      cameraId: "camera-43",
+      toIndex: 0
+    });
+
+    expect(state.cameraLists[0].cameras.slice(0, 3).map((camera) => camera.id)).toEqual([
+      "camera-43",
+      "camera-41",
+      "camera-42"
+    ]);
+    expect(state.tiles.slice(0, 3).map((tile) => tile.cameraId)).toEqual([
+      "camera-43",
+      "camera-41",
+      "camera-42"
+    ]);
+  });
+
+  it("saves an edited active list draft and reconciles tile order without replacing manual tabs", () => {
+    const manualTile = {
+      id: "tile-manual",
+      cameraId: null,
+      url: "about:blank",
+      title: "about:blank",
+      partition: "persist:ditbrowse-job-sample-list-sample",
+      viewport: { width: 1024, height: 768 },
+      zoom: 1
+    };
+    const mixedWorkspace = {
+      ...sampleWorkspace,
+      tiles: [sampleWorkspace.tiles[0], manualTile, ...sampleWorkspace.tiles.slice(1)]
+    };
+    const draftList = {
+      ...sampleWorkspace.cameraLists[0],
+      defaultPrefix: "10.20.100.",
+      cameras: [
+        { ...sampleWorkspace.cameraLists[0].cameras[2], suffix: "3", usesListPrefix: true },
+        { ...sampleWorkspace.cameraLists[0].cameras[0], suffix: "1", usesListPrefix: true }
+      ]
+    };
+
+    const state = workspaceReducer(mixedWorkspace, {
+      type: "saveActiveCameraListDraft",
+      list: draftList
+    });
+
+    expect(state.cameraLists[0].defaultPrefix).toBe("http://10.20.100.");
+    expect(state.cameraLists[0].cameras.map((camera) => camera.id)).toEqual([
+      "camera-43",
+      "camera-41"
+    ]);
+    expect(state.cameraLists[0].cameras.map((camera) => camera.url)).toEqual([
+      "http://10.20.100.03",
+      "http://10.20.100.01"
+    ]);
+    expect(state.tiles.map((tile) => tile.id)).toEqual(["tile-43", "tile-manual", "tile-41"]);
+    expect(state.passwordRecords).toEqual([]);
   });
 
   it("closes a non-selected tile without changing the saved camera-list order", () => {
@@ -757,21 +1127,20 @@ describe("workspaceReducer", () => {
 
     expect(reset.tiles[0]).toMatchObject({
       zoom: 1,
-      viewport: { width: 1280, height: 720 }
+      viewport: { width: 1024, height: 768 }
     });
   });
 
   it("resets the grid to active list order", () => {
-    const moved = workspaceReducer(sampleWorkspace, {
-      type: "moveTile",
-      tileId: "tile-42",
-      direction: "left"
-    });
+    const moved = {
+      ...sampleWorkspace,
+      tiles: [sampleWorkspace.tiles[1], sampleWorkspace.tiles[0], ...sampleWorkspace.tiles.slice(2)]
+    };
     const reset = workspaceReducer(moved, { type: "resetGridToListOrder" });
 
     expect(reset.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.41"
+      url: "http://192.168.1.01"
     });
   });
 });

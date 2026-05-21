@@ -10,6 +10,7 @@ interface TileGridProps {
   columns: number;
   selectedTileId: string | null;
   onSelectTile: (tileId: string) => void;
+  onUrlCommitted: (tileId: string, url: string) => void;
   onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
   credentialsByTileId: Map<string, CredentialFill>;
   webviewPreloadPath: string | null;
@@ -20,6 +21,7 @@ function TileGridComponent({
   columns,
   selectedTileId,
   onSelectTile,
+  onUrlCommitted,
   onCredentialCaptured,
   credentialsByTileId,
   webviewPreloadPath
@@ -48,6 +50,7 @@ function TileGridComponent({
             tile={tile}
             selected={tile.id === selectedTileId}
             onSelectTile={onSelectTile}
+            onUrlCommitted={onUrlCommitted}
             onCredentialCaptured={onCredentialCaptured}
             savedCredential={credentialsByTileId.get(tile.id) ?? null}
             webviewPreloadPath={webviewPreloadPath}

@@ -1,3 +1,5 @@
+import { defaultIndexForSuffix, normalizeCameraNumberSuffix } from "./cameraIndex.js";
+
 export interface CameraCsvRow {
   rowNumber: number;
   name: string;
@@ -86,8 +88,11 @@ export function parseCameraCsv(csvText: string): CameraCsvParseResult {
     const rowNumber = lineIndex + 1;
     const values = splitCsvLine(lines[lineIndex]);
     const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
-    const suffix = readField(row, ["number", "camera #", "camera_number", "suffix"]);
+    const suffix = normalizeCameraNumberSuffix(
+      readField(row, ["number", "camera #", "camera_number", "suffix"])
+    );
     const url = readField(row, ["url", "full url", "full_url"]);
+    const index = readField(row, ["index", "name"]);
 
     if (!url && !suffix) {
       errors.push({ rowNumber, message: "Row must include url or suffix" });
@@ -96,7 +101,7 @@ export function parseCameraCsv(csvText: string): CameraCsvParseResult {
 
     validRows.push({
       rowNumber,
-      name: row.name || suffix || url,
+      name: index || defaultIndexForSuffix(suffix) || url,
       url,
       suffix,
       cameraType: readField(row, ["type", "camera type", "camera_type"]),
