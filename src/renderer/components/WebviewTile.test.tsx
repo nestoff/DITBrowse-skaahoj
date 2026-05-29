@@ -785,6 +785,46 @@ describe("WebviewTile", () => {
     expect(onUrlCommitted).toHaveBeenCalledWith("tile-42", "https://192.168.1.42/login");
   });
 
+  it("does not rewrite src after the webview commits its own navigation", () => {
+    const onUrlCommitted = vi.fn();
+    const committedTile = { ...tile, url: "http://192.168.1.42/rmt.html" };
+    const { rerender } = render(
+      <WebviewTile
+        tile={tile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={onUrlCommitted}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    const webview = document.querySelector("webview") as HTMLElement;
+    const event = new Event("did-navigate") as Event & { url: string; isMainFrame: boolean };
+    event.url = committedTile.url;
+    event.isMainFrame = true;
+    fireEvent(webview, event);
+    webview.setAttribute("src", committedTile.url);
+    const setAttributeSpy = vi.spyOn(webview, "setAttribute");
+
+    rerender(
+      <WebviewTile
+        tile={committedTile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={onUrlCommitted}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(onUrlCommitted).toHaveBeenCalledWith("tile-42", committedTile.url);
+    expect(setAttributeSpy).not.toHaveBeenCalledWith("src", committedTile.url);
+    expect(webview).toHaveAttribute("src", committedTile.url);
+  });
+
   it("ignores subframe webview navigation URLs", () => {
     const onUrlCommitted = vi.fn();
     render(

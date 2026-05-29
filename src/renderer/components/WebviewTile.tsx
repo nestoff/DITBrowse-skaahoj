@@ -133,8 +133,12 @@ function WebviewTileComponent({
   const [bounds, setBounds] = useState({ width: 1, height: 1 });
   const [failed, setFailed] = useState(false);
   const [initialLoadReady, setInitialLoadReady] = useState(loadDelayMs <= 0);
+  const [webviewUrl, setWebviewUrl] = useState(() =>
+    loadDelayMs <= 0 ? normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL : BLANK_WEBVIEW_URL
+  );
   const [temporaryView, setTemporaryView] = useState(DEFAULT_TEMPORARY_VIEW);
   const temporaryViewRef = useRef(DEFAULT_TEMPORARY_VIEW);
+  const committedNavigationRef = useRef<string | null>(null);
 
   temporaryViewRef.current = temporaryView;
 
@@ -165,6 +169,20 @@ function WebviewTileComponent({
     const timeout = window.setTimeout(() => setInitialLoadReady(true), loadDelayMs);
     return () => window.clearTimeout(timeout);
   }, [loadDelayMs]);
+
+  useEffect(() => {
+    if (!initialLoadReady) {
+      return;
+    }
+
+    const nextUrl = normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL;
+    if (committedNavigationRef.current === nextUrl) {
+      committedNavigationRef.current = null;
+      return;
+    }
+
+    setWebviewUrl((currentUrl) => (currentUrl === nextUrl ? currentUrl : nextUrl));
+  }, [initialLoadReady, tile.url]);
 
   const frame = {
     width: bounds.width,
@@ -220,6 +238,7 @@ function WebviewTileComponent({
           ? navigationEvent.url
           : webview.getURL();
       if (url) {
+        committedNavigationRef.current = normalizeCameraUrl(url) || BLANK_WEBVIEW_URL;
         setFailed(false);
         onUrlCommitted(tile.id, url);
       }
@@ -360,9 +379,6 @@ function WebviewTileComponent({
     temporaryView.offsetX || temporaryView.offsetY
       ? `translate(${temporaryView.offsetX}px, ${temporaryView.offsetY}px) scale(${scale})`
       : `scale(${scale})`;
-  const webviewUrl = initialLoadReady
-    ? normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL
-    : BLANK_WEBVIEW_URL;
   const activationLabel = `Activate ${tile.title || tile.url || "tile"}`;
   const handleInactivePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>): void => {
