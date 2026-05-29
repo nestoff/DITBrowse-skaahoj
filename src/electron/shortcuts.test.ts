@@ -54,4 +54,33 @@ describe("electron shortcuts", () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(webContents.send).toHaveBeenCalledWith("ditbrowse:reload-selected-tile");
   });
+
+  it("replaces the default app reload menu accelerator with selected-page reload", () => {
+    const webContents = {
+      on: vi.fn(),
+      send: vi.fn()
+    };
+    const menuApi = {
+      buildFromTemplate: vi.fn((template) => ({ template })),
+      setApplicationMenu: vi.fn()
+    };
+
+    installMainWindowShortcuts({ webContents }, menuApi);
+
+    const template = menuApi.buildFromTemplate.mock.calls[0][0];
+    const viewMenu = template.find((item: { label?: string }) => item.label === "View");
+    const reloadItem = viewMenu.submenu.find(
+      (item: { label?: string }) => item.label === "Reload Selected Page"
+    );
+
+    expect(reloadItem).toMatchObject({
+      accelerator: "CommandOrControl+R"
+    });
+    expect(viewMenu.submenu).not.toContainEqual(expect.objectContaining({ role: "reload" }));
+    expect(menuApi.setApplicationMenu).toHaveBeenCalledWith({ template });
+
+    reloadItem.click();
+
+    expect(webContents.send).toHaveBeenCalledWith("ditbrowse:reload-selected-tile");
+  });
 });

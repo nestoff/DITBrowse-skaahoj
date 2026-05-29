@@ -1,4 +1,4 @@
-import { BrowserWindow, app, ipcMain } from "electron";
+import { BrowserWindow, Menu, app, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { WebContents } from "electron";
@@ -119,7 +119,7 @@ const createWindow = async (): Promise<void> => {
   lockWebContentsZoom(mainWindow.webContents, (gesture) => {
     mainWindow.webContents.send("ditbrowse:host-temporary-view-gesture", gesture);
   });
-  installMainWindowShortcuts(mainWindow);
+  installMainWindowShortcuts(mainWindow, Menu);
 
   const startOrRestartControlApi = async (
     configuredPort: number | null,
