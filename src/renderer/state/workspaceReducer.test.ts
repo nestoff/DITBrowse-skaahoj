@@ -791,6 +791,24 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("keeps camera GUI redirect paths instead of forcing the root URL", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-41",
+      url: "http://192.168.1.01/rmt.html"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "http://192.168.1.1/rmt.html",
+      usesListPrefix: true
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.1/rmt.html"
+    });
+  });
+
   it("saves a server-corrected URL on an unlinked tile without changing the camera list", () => {
     const unlinkedWorkspace = {
       ...sampleWorkspace,

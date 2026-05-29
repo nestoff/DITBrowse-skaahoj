@@ -58,6 +58,18 @@ describe("cameraBaseFromCommittedUrl", () => {
     );
   });
 
+  it("keeps a corrected camera GUI path as the stable page URL", () => {
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.105/rmt.html")).toBe(
+      "http://10.20.100.105/rmt.html"
+    );
+  });
+
+  it("keeps a corrected camera GUI path with query parameters", () => {
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.105/rmt.html?view=main")).toBe(
+      "http://10.20.100.105/rmt.html?view=main"
+    );
+  });
+
   it("preserves non-http browser URLs unchanged", () => {
     expect(cameraBaseFromCommittedUrl("about:blank")).toBe("about:blank");
   });

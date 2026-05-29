@@ -12,6 +12,11 @@ function looksLikeBareHost(input: string): boolean {
   return BARE_IPV4_PATTERN.test(input) || BARE_HOSTNAME_PATTERN.test(input);
 }
 
+function isLoginPath(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, "").toLowerCase();
+  return path === "/login" || path === "/login.html";
+}
+
 export function normalizeCameraUrl(input: string): string {
   const trimmed = input.trim();
   if (!trimmed || hasScheme(trimmed)) {
@@ -50,7 +55,15 @@ export function cameraBaseFromCommittedUrl(input: string): string {
   try {
     const parsed = new URL(normalized);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.origin;
+      if (parsed.pathname === "/" && !parsed.search && !parsed.hash) {
+        return parsed.origin;
+      }
+
+      if (isLoginPath(parsed.pathname)) {
+        return parsed.origin;
+      }
+
+      return parsed.href;
     }
   } catch {
     return normalized;
