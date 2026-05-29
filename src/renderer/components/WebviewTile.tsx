@@ -15,10 +15,6 @@ const BLANK_WEBVIEW_URL = `data:text/html;charset=utf-8,${encodeURIComponent(
   '<!doctype html><html><head><meta name="color-scheme" content="dark"><style>html,body{margin:0;width:100%;height:100%;background:#1b1d1f;}</style></head><body></body></html>'
 )}`;
 
-function isBlankWebviewUrl(url: string): boolean {
-  return !url || url === BLANK_WEBVIEW_URL || url.startsWith("data:text/html");
-}
-
 function safeSendToWebview(
   webview: Electron.WebviewTag,
   channel: string,
@@ -140,7 +136,6 @@ function WebviewTileComponent({
   const [webviewUrl, setWebviewUrl] = useState(() =>
     loadDelayMs <= 0 ? normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL : BLANK_WEBVIEW_URL
   );
-  const [loading, setLoading] = useState(() => Boolean(normalizeCameraUrl(tile.url)));
   const [temporaryView, setTemporaryView] = useState(DEFAULT_TEMPORARY_VIEW);
   const temporaryViewRef = useRef(DEFAULT_TEMPORARY_VIEW);
   const committedNavigationRef = useRef<string | null>(null);
@@ -186,12 +181,8 @@ function WebviewTileComponent({
       return;
     }
 
-    if (webviewUrl !== nextUrl) {
-      setFailed(false);
-      setLoading(!isBlankWebviewUrl(nextUrl));
-      setWebviewUrl(nextUrl);
-    }
-  }, [initialLoadReady, tile.url, webviewUrl]);
+    setWebviewUrl((currentUrl) => (currentUrl === nextUrl ? currentUrl : nextUrl));
+  }, [initialLoadReady, tile.url]);
 
   const frame = {
     width: bounds.width,
@@ -220,34 +211,18 @@ function WebviewTileComponent({
       return;
     }
 
-    const clearFailure = (): void => {
-      setFailed(false);
-      if (!isBlankWebviewUrl(webview.getAttribute("src") ?? webviewUrl)) {
-        setLoading(true);
-      }
-    };
-    const finishLoading = (): void => {
-      const loadedUrl =
-        typeof webview.getURL === "function"
-          ? webview.getURL()
-          : webview.getAttribute("src") ?? webviewUrl;
-      if (!isBlankWebviewUrl(loadedUrl)) {
-        setLoading(false);
-      }
-    };
+    const clearFailure = (): void => setFailed(false);
     const markFailure = (event: Event): void => {
       const failureEvent = event as Event & { errorCode?: number; isMainFrame?: boolean };
       if (failureEvent.isMainFrame !== true || failureEvent.errorCode === -3) {
         return;
       }
 
-      setLoading(false);
       setFailed(true);
     };
     const selectTile = (): void => onSelectTile(tile.id);
     const fillCredential = (): void => {
       setFailed(false);
-      finishLoading();
       if (savedCredential) {
         safeSendToWebview(webview, "ditbrowse:credential-fill", savedCredential);
       }
@@ -296,7 +271,6 @@ function WebviewTileComponent({
       }
     };
     webview.addEventListener("did-start-loading", clearFailure);
-    webview.addEventListener("did-stop-loading", finishLoading);
     webview.addEventListener("did-fail-load", markFailure);
     webview.addEventListener("did-finish-load", fillCredential);
     webview.addEventListener("did-navigate", commitNavigationUrl);
@@ -306,7 +280,6 @@ function WebviewTileComponent({
     webview.addEventListener("ipc-message", captureCredential);
     return () => {
       webview.removeEventListener("did-start-loading", clearFailure);
-      webview.removeEventListener("did-stop-loading", finishLoading);
       webview.removeEventListener("did-fail-load", markFailure);
       webview.removeEventListener("did-finish-load", fillCredential);
       webview.removeEventListener("did-navigate", commitNavigationUrl);
@@ -321,8 +294,7 @@ function WebviewTileComponent({
     onSelectTile,
     onUrlCommitted,
     savedCredential,
-    tile.id,
-    webviewUrl
+    tile.id
   ]);
 
   useEffect(() => {
@@ -408,8 +380,6 @@ function WebviewTileComponent({
       ? `translate(${temporaryView.offsetX}px, ${temporaryView.offsetY}px) scale(${scale})`
       : `scale(${scale})`;
   const activationLabel = `Activate ${tile.title || tile.url || "tile"}`;
-  const loadingLabel = `Loading ${tile.title || tile.url || "page"}`;
-  const showLoadingOverlay = loading && !failed;
   const handleInactivePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>): void => {
       event.preventDefault();
@@ -437,9 +407,7 @@ function WebviewTileComponent({
         <webview
           ref={webviewRef}
           data-tile-id={tile.id}
-          className={["camera-webview", showLoadingOverlay ? "loading" : ""]
-            .filter(Boolean)
-            .join(" ")}
+          className="camera-webview"
           src={webviewUrl}
           partition={tile.partition}
           preload={webviewPreloadPath ?? undefined}
@@ -461,12 +429,6 @@ function WebviewTileComponent({
             aria-label={activationLabel}
             onPointerDown={handleInactivePointerDown}
           />
-        )}
-        {showLoadingOverlay && (
-          <div className="tile-loading" role="status" aria-label={loadingLabel}>
-            <div className="tile-loading-spinner" />
-            <span>{loadingLabel}</span>
-          </div>
         )}
       </div>
       {failed && (

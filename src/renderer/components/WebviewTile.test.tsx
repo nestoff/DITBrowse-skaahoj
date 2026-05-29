@@ -690,62 +690,6 @@ describe("WebviewTile", () => {
     expect(webview.reload).toHaveBeenCalledTimes(1);
   });
 
-  it("covers the webview with a loading screen until the page finishes loading", () => {
-    render(
-      <WebviewTile
-        tile={tile}
-        selected={true}
-        onSelectTile={vi.fn()}
-        onUrlCommitted={vi.fn()}
-        onCredentialCaptured={vi.fn()}
-        savedCredential={null}
-        webviewPreloadPath={null}
-      />
-    );
-
-    const webview = document.querySelector("webview") as HTMLElement;
-    expect(screen.getByRole("status", { name: "Loading Camera 42" })).toBeInTheDocument();
-    expect(webview).toHaveClass("loading");
-
-    fireEvent(webview, new Event("did-finish-load"));
-
-    expect(screen.queryByRole("status", { name: "Loading Camera 42" })).not.toBeInTheDocument();
-    expect(webview).not.toHaveClass("loading");
-  });
-
-  it("shows the loading screen again when the tile navigates to a new URL", () => {
-    const { rerender } = render(
-      <WebviewTile
-        tile={tile}
-        selected={true}
-        onSelectTile={vi.fn()}
-        onUrlCommitted={vi.fn()}
-        onCredentialCaptured={vi.fn()}
-        savedCredential={null}
-        webviewPreloadPath={null}
-      />
-    );
-
-    const webview = document.querySelector("webview") as HTMLElement;
-    fireEvent(webview, new Event("did-finish-load"));
-    expect(screen.queryByRole("status", { name: "Loading Camera 42" })).not.toBeInTheDocument();
-
-    rerender(
-      <WebviewTile
-        tile={{ ...tile, url: "http://192.168.1.105" }}
-        selected={true}
-        onSelectTile={vi.fn()}
-        onUrlCommitted={vi.fn()}
-        onCredentialCaptured={vi.fn()}
-        savedCredential={null}
-        webviewPreloadPath={null}
-      />
-    );
-
-    expect(screen.getByRole("status", { name: "Loading Camera 42" })).toBeInTheDocument();
-    expect(webview).toHaveClass("loading");
-  });
-
   it("clears the retry overlay after the page finishes loading", () => {
     render(
       <WebviewTile

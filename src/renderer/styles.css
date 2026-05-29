@@ -912,10 +912,6 @@ textarea::selection {
   background: var(--blank-page);
 }
 
-.camera-webview.loading {
-  opacity: 0;
-}
-
 .tile-activation-catcher {
   position: absolute;
   inset: 0;
@@ -946,42 +942,10 @@ textarea::selection {
   white-space: nowrap;
 }
 
-.tile-loading {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(18, 21, 24, 0.98), rgba(11, 13, 15, 0.98));
-  color: #d9dee6;
-  font-size: 12px;
-  font-weight: 760;
-}
-
-.tile-loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(217, 222, 230, 0.22);
-  border-top-color: var(--accent-cyan);
-  border-radius: 50%;
-  animation: tile-loading-spin 720ms linear infinite;
-}
-
-@keyframes tile-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .tile-error {
   position: absolute;
   inset: 34px 8px 8px;
-  z-index: 4;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   justify-content: center;
