@@ -3,7 +3,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
 import type { TileState } from "../../shared/types";
-import { resolveCameraWebviewUrl } from "../../shared/url";
+import { normalizeCameraUrl } from "../../shared/url";
 import {
   applyTemporaryViewGesture,
   DEFAULT_TEMPORARY_VIEW,
@@ -347,7 +347,7 @@ function WebviewTileComponent({
     temporaryView.offsetX || temporaryView.offsetY
       ? `translate(${temporaryView.offsetX}px, ${temporaryView.offsetY}px) scale(${scale})`
       : `scale(${scale})`;
-  const webviewUrl = resolveCameraWebviewUrl(tile.url) || BLANK_WEBVIEW_URL;
+  const webviewUrl = normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL;
   const activationLabel = `Activate ${tile.title || tile.url || "tile"}`;
   const handleInactivePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>): void => {

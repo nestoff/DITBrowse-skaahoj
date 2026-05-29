@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  cameraBaseFromCommittedUrl,
-  resolveCameraAddress,
-  resolveCameraWebviewUrl
-} from "./url";
+import { cameraBaseFromCommittedUrl, resolveCameraAddress } from "./url";
 
 describe("resolveCameraAddress", () => {
-  it("opens full private camera IP roots at the GUI page", () => {
+  it("keeps full http URLs unchanged", () => {
     expect(resolveCameraAddress("http://192.168.1.", "http://10.0.0.12")).toBe(
-      "http://10.0.0.12/rmt.html"
+      "http://10.0.0.12"
     );
   });
 
@@ -18,9 +14,9 @@ describe("resolveCameraAddress", () => {
     );
   });
 
-  it("opens bare LAN addresses at the GUI page instead of treating them as shortcuts", () => {
+  it("adds http to bare LAN addresses instead of treating them as shortcuts", () => {
     expect(resolveCameraAddress("http://192.168.1.", "10.20.100.2")).toBe(
-      "http://10.20.100.2/rmt.html"
+      "http://10.20.100.2"
     );
   });
 
@@ -52,24 +48,6 @@ describe("resolveCameraAddress", () => {
     expect(resolveCameraAddress("http://192.168.1.", "  42  ")).toBe(
       "http://192.168.1.42"
     );
-  });
-});
-
-describe("resolveCameraWebviewUrl", () => {
-  it("loads saved private IP roots through the camera GUI page", () => {
-    expect(resolveCameraWebviewUrl("http://10.20.100.108")).toBe(
-      "http://10.20.100.108/rmt.html"
-    );
-  });
-
-  it("does not change private IP URLs that already include a path", () => {
-    expect(resolveCameraWebviewUrl("http://10.20.100.108/login.html")).toBe(
-      "http://10.20.100.108/login.html"
-    );
-  });
-
-  it("keeps regular web hosts at their entered URL", () => {
-    expect(resolveCameraWebviewUrl("http://camera.local")).toBe("http://camera.local");
   });
 });
 

@@ -124,13 +124,13 @@ describe("WebviewTile", () => {
 
     expect(screen.getByText("Camera 42")).toBeInTheDocument();
     const webview = document.querySelector("webview");
-    expect(webview).toHaveAttribute("src", "http://192.168.1.42/rmt.html");
+    expect(webview).toHaveAttribute("src", "http://192.168.1.42");
     expect(webview).toHaveAttribute("partition", "persist:ditbrowse-job-list");
     expect(webview).toHaveAttribute("preload", "/tmp/webviewPreload.js");
     expect(webview).toHaveAttribute("webpreferences", "nodeIntegrationInSubFrames=yes");
   });
 
-  it("opens bare LAN webview URLs at the camera GUI page", () => {
+  it("adds http to bare LAN webview URLs before rendering src", () => {
     render(
       <WebviewTile
         tile={{ ...tile, url: "10.20.100.2" }}
@@ -143,10 +143,7 @@ describe("WebviewTile", () => {
       />
     );
 
-    expect(document.querySelector("webview")).toHaveAttribute(
-      "src",
-      "http://10.20.100.2/rmt.html"
-    );
+    expect(document.querySelector("webview")).toHaveAttribute("src", "http://10.20.100.2");
   });
 
   it("uses a dark blank page instead of a white about:blank page for empty tiles", () => {

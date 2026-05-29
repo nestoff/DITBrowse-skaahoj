@@ -50,10 +50,10 @@ test("selected camera address overrides can return to prefix and suffix style", 
   await address.fill("10.20.100.2");
   await address.press("Enter");
 
-  await expect(address).toHaveValue("http://10.20.100.2/rmt.html");
+  await expect(address).toHaveValue("http://10.20.100.2");
   await expect(page.locator('webview[data-tile-id="tile-41"]')).toHaveAttribute(
     "src",
-    "http://10.20.100.2/rmt.html"
+    "http://10.20.100.2"
   );
 
   const returnToPrefix = page.getByRole("button", {
