@@ -247,7 +247,7 @@ textarea::selection {
 
 .browser-toolbar {
   display: grid;
-  grid-template-columns: auto minmax(280px, 1fr) auto;
+  grid-template-columns: auto minmax(160px, min(34vw, 520px)) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -279,7 +279,7 @@ textarea::selection {
 
 .browser-layout-controls {
   gap: 7px;
-  max-width: min(52vw, 760px);
+  max-width: none;
 }
 
 .icon-button,
