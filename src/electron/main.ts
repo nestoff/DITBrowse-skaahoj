@@ -17,6 +17,7 @@ import { getMainPreloadPath } from "./preloadPaths.js";
 import { createJsonStorage } from "./storage.js";
 import { loadWindowState, saveWindowState, toBrowserWindowOptions } from "./windowState.js";
 import { lockWebContentsZoom } from "./zoomGuard.js";
+import { installMainWindowShortcuts } from "./shortcuts.js";
 import type {
   ControlApiCommand,
   ControlApiInfo,
@@ -118,6 +119,7 @@ const createWindow = async (): Promise<void> => {
   lockWebContentsZoom(mainWindow.webContents, (gesture) => {
     mainWindow.webContents.send("ditbrowse:host-temporary-view-gesture", gesture);
   });
+  installMainWindowShortcuts(mainWindow);
 
   const startOrRestartControlApi = async (
     configuredPort: number | null,

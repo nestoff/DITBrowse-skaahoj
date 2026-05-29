@@ -24,6 +24,7 @@ declare global {
       onControlApiInfo?: (callback: (info: ControlApiInfo) => void) => () => void;
       onControlApiCommand?: (callback: (command: ControlApiCommand) => void) => () => void;
       sendControlApiResponse?: (requestId: string, response: ControlApiResponse) => void;
+      onReloadSelectedTileShortcut?: (callback: () => void) => () => void;
     };
   }
 }

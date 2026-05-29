@@ -5,6 +5,7 @@ import { sampleWorkspace } from "../shared/sampleData";
 import { App } from "./App";
 
 let controlApiCommandHandler: ((command: ControlApiCommand) => void) | null = null;
+let reloadSelectedTileHandler: (() => void) | null = null;
 
 class ResizeObserverStub {
   observe = vi.fn();
@@ -16,6 +17,7 @@ vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 describe("App control API commands", () => {
   beforeEach(() => {
     controlApiCommandHandler = null;
+    reloadSelectedTileHandler = null;
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
@@ -45,6 +47,10 @@ describe("App control API commands", () => {
       onControlApiInfo: vi.fn(() => vi.fn()),
       onControlApiCommand: vi.fn((callback) => {
         controlApiCommandHandler = callback;
+        return vi.fn();
+      }),
+      onReloadSelectedTileShortcut: vi.fn((callback) => {
+        reloadSelectedTileHandler = callback;
         return vi.fn();
       }),
       sendControlApiResponse: vi.fn()
@@ -99,5 +105,27 @@ describe("App control API commands", () => {
       error: "not_found",
       message: "No camera number matches \"99\""
     });
+  });
+
+  it("reloads only the selected webview from the host Command+R shortcut", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const selectedWebview = document.querySelector(
+      'webview[data-tile-id="tile-41"]'
+    ) as Electron.WebviewTag;
+    const otherWebview = document.querySelector(
+      'webview[data-tile-id="tile-42"]'
+    ) as Electron.WebviewTag;
+    selectedWebview.reload = vi.fn();
+    otherWebview.reload = vi.fn();
+
+    act(() => {
+      reloadSelectedTileHandler?.();
+    });
+
+    expect(selectedWebview.reload).toHaveBeenCalledTimes(1);
+    expect(otherWebview.reload).not.toHaveBeenCalled();
   });
 });

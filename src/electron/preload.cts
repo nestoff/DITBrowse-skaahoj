@@ -43,6 +43,13 @@ const api = {
     };
     ipcRenderer.on("ditbrowse:host-temporary-view-gesture", listener);
     return () => ipcRenderer.removeListener("ditbrowse:host-temporary-view-gesture", listener);
+  },
+  onReloadSelectedTileShortcut: (callback: () => void) => {
+    const listener = (): void => {
+      callback();
+    };
+    ipcRenderer.on("ditbrowse:reload-selected-tile", listener);
+    return () => ipcRenderer.removeListener("ditbrowse:reload-selected-tile", listener);
   }
 };
 

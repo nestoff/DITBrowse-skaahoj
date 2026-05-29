@@ -316,6 +316,12 @@ export function App(): ReactElement {
     return window.ditbrowse?.onControlApiCommand?.(handleControlApiCommand);
   }, [handleControlApiCommand]);
 
+  useEffect(() => {
+    return window.ditbrowse?.onReloadSelectedTileShortcut?.(() => {
+      runSelectedTileCommand(selectedTileIdRef.current, "reload");
+    });
+  }, []);
+
   return (
     <main className="app-shell">
       <BrowserChrome
