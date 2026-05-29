@@ -5,6 +5,8 @@ import type { CapturedCredential, CredentialFill } from "../../shared/credential
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
 
+const WEBVIEW_LOAD_STAGGER_MS = 175;
+
 interface TileGridProps {
   tiles: TileState[];
   columns: number;
@@ -57,6 +59,7 @@ function TileGridComponent({
             onCredentialCaptured={onCredentialCaptured}
             savedCredential={credentialsByTileId.get(tile.id) ?? null}
             webviewPreloadPath={webviewPreloadPath}
+            loadDelayMs={slot.index * WEBVIEW_LOAD_STAGGER_MS}
           />
         );
       })}

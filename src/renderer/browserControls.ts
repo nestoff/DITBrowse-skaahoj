@@ -1,5 +1,7 @@
 export type SelectedTileCommand = "back" | "forward" | "reload";
 
+const RELOAD_ALL_STAGGER_MS = 175;
+
 function findWebviewForTile(tileId: string | null): Electron.WebviewTag | null {
   if (!tileId) {
     return null;
@@ -39,7 +41,7 @@ export function runAllTileCommand(command: Extract<SelectedTileCommand, "reload"
   }
 
   const webviews = Array.from(document.querySelectorAll("webview")) as Electron.WebviewTag[];
-  for (const webview of webviews) {
-    webview.reload();
-  }
+  webviews.forEach((webview, index) => {
+    window.setTimeout(() => webview.reload(), index * RELOAD_ALL_STAGGER_MS);
+  });
 }

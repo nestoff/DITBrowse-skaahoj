@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
 
 function addWebview(tileId: string): Electron.WebviewTag {
@@ -16,6 +16,10 @@ function addWebview(tileId: string): Electron.WebviewTag {
 describe("runSelectedTileCommand", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("runs back on the selected webview only", () => {
@@ -37,12 +41,20 @@ describe("runSelectedTileCommand", () => {
   });
 
   it("reloads all webviews", () => {
+    vi.useFakeTimers();
     const first = addWebview("tile-1");
     const second = addWebview("tile-2");
 
     runAllTileCommand("reload");
 
+    expect(first.reload).not.toHaveBeenCalled();
+    expect(second.reload).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
     expect(first.reload).toHaveBeenCalledTimes(1);
+    expect(second.reload).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(175);
     expect(second.reload).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
 
@@ -53,6 +53,10 @@ describe("WebviewTile", () => {
         return vi.fn();
       })
     };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("does not break rendering if the webview is not ready for IPC yet", () => {
@@ -144,6 +148,35 @@ describe("WebviewTile", () => {
     );
 
     expect(document.querySelector("webview")).toHaveAttribute("src", "http://10.20.100.2");
+  });
+
+  it("can stagger the initial camera load", () => {
+    vi.useFakeTimers();
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+        loadDelayMs={350}
+      />
+    );
+
+    const webview = document.querySelector("webview");
+    expect(webview?.getAttribute("src")).toMatch(/^data:text\/html/);
+
+    act(() => {
+      vi.advanceTimersByTime(349);
+    });
+    expect(webview?.getAttribute("src")).toMatch(/^data:text\/html/);
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(webview).toHaveAttribute("src", "http://192.168.1.42");
   });
 
   it("uses a dark blank page instead of a white about:blank page for empty tiles", () => {

@@ -114,6 +114,7 @@ interface WebviewTileProps {
   onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
   savedCredential: CredentialFill | null;
   webviewPreloadPath: string | null;
+  loadDelayMs?: number;
 }
 
 function WebviewTileComponent({
@@ -124,12 +125,14 @@ function WebviewTileComponent({
   onUrlCommitted,
   onCredentialCaptured,
   savedCredential,
-  webviewPreloadPath
+  webviewPreloadPath,
+  loadDelayMs = 0
 }: WebviewTileProps): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const [bounds, setBounds] = useState({ width: 1, height: 1 });
   const [failed, setFailed] = useState(false);
+  const [initialLoadReady, setInitialLoadReady] = useState(loadDelayMs <= 0);
   const [temporaryView, setTemporaryView] = useState(DEFAULT_TEMPORARY_VIEW);
   const temporaryViewRef = useRef(DEFAULT_TEMPORARY_VIEW);
 
@@ -152,6 +155,16 @@ function WebviewTileComponent({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (loadDelayMs <= 0) {
+      setInitialLoadReady(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setInitialLoadReady(true), loadDelayMs);
+    return () => window.clearTimeout(timeout);
+  }, [loadDelayMs]);
 
   const frame = {
     width: bounds.width,
@@ -347,7 +360,9 @@ function WebviewTileComponent({
     temporaryView.offsetX || temporaryView.offsetY
       ? `translate(${temporaryView.offsetX}px, ${temporaryView.offsetY}px) scale(${scale})`
       : `scale(${scale})`;
-  const webviewUrl = normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL;
+  const webviewUrl = initialLoadReady
+    ? normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL
+    : BLANK_WEBVIEW_URL;
   const activationLabel = `Activate ${tile.title || tile.url || "tile"}`;
   const handleInactivePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>): void => {
