@@ -278,8 +278,22 @@ textarea::selection {
 }
 
 .browser-layout-controls {
-  gap: 7px;
+  justify-self: stretch;
+  gap: 6px;
+  width: 100%;
   max-width: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.browser-layout-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.browser-layout-controls > * {
+  flex: 0 0 auto;
 }
 
 .icon-button,
@@ -355,8 +369,9 @@ textarea::selection {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: 76px;
-  max-width: 180px;
+  flex: 0 1 clamp(126px, 13vw, 168px);
+  min-width: 88px;
+  max-width: clamp(126px, 13vw, 168px);
   height: 24px;
   border-right: 1px solid var(--line);
   color: #c7ccd4;
@@ -375,13 +390,15 @@ textarea::selection {
 .grid-controls {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .grid-controls-icon {
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
   color: var(--warning);
 }
 
@@ -390,6 +407,7 @@ textarea::selection {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex: 0 0 auto;
   min-width: 0;
   color: var(--muted);
   font-size: 11px;
@@ -428,11 +446,11 @@ textarea::selection {
 }
 
 .zoom-control {
-  gap: 7px;
+  gap: 6px;
 }
 
 .zoom-inline-slider {
-  width: 124px;
+  width: clamp(76px, 7vw, 102px);
   accent-color: var(--accent);
 }
 

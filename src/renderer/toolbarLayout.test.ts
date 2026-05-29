@@ -15,4 +15,13 @@ describe("toolbar layout CSS", () => {
     );
     expect(styles).toContain("max-width: none;");
   });
+
+  it("keeps layout controls accessible instead of clipping them", async () => {
+    const styles = await readFile(stylesPath, "utf8");
+
+    expect(styles).toContain("overflow-x: auto;");
+    expect(styles).toContain("white-space: nowrap;");
+    expect(styles).toContain(".browser-layout-controls > *");
+    expect(styles).toContain("width: clamp(76px, 7vw, 102px);");
+  });
 });
