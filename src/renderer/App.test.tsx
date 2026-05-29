@@ -1,11 +1,13 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ControlApiCommand } from "../shared/controlApi";
+import type { HttpAuthRequest } from "../shared/httpAuth";
 import { sampleWorkspace } from "../shared/sampleData";
 import { App } from "./App";
 
 let controlApiCommandHandler: ((command: ControlApiCommand) => void) | null = null;
 let reloadSelectedTileHandler: (() => void) | null = null;
+let httpAuthRequestHandler: ((request: HttpAuthRequest) => void) | null = null;
 
 class ResizeObserverStub {
   observe = vi.fn();
@@ -18,6 +20,7 @@ describe("App control API commands", () => {
   beforeEach(() => {
     controlApiCommandHandler = null;
     reloadSelectedTileHandler = null;
+    httpAuthRequestHandler = null;
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
@@ -53,7 +56,12 @@ describe("App control API commands", () => {
         reloadSelectedTileHandler = callback;
         return vi.fn();
       }),
-      sendControlApiResponse: vi.fn()
+      sendControlApiResponse: vi.fn(),
+      onHttpAuthRequest: vi.fn((callback) => {
+        httpAuthRequestHandler = callback;
+        return vi.fn();
+      }),
+      sendHttpAuthResponse: vi.fn()
     };
   });
 
@@ -127,5 +135,72 @@ describe("App control API commands", () => {
 
     expect(selectedWebview.reload).toHaveBeenCalledTimes(1);
     expect(otherWebview.reload).not.toHaveBeenCalled();
+  });
+
+  it("answers camera HTTP auth challenges with saved credentials", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-camera-41",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.01",
+          username: "admin",
+          password: "secret"
+        }
+      ]
+    }));
+
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-1",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80,
+        realm: "Please enter your ID and password.",
+        scheme: "digest",
+        isProxy: false
+      });
+    });
+
+    await waitFor(() => {
+      expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith("auth-1", {
+        username: "admin",
+        password: "secret"
+      });
+    });
+    expect(screen.queryByRole("dialog", { name: "Camera sign in" })).not.toBeInTheDocument();
+  });
+
+  it("prompts for camera HTTP auth credentials when none are saved", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-2",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80,
+        realm: "Please enter your ID and password.",
+        scheme: "digest",
+        isProxy: false
+      });
+    });
+
+    expect(await screen.findByRole("dialog", { name: "Camera sign in" })).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "operator" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith("auth-2", {
+      username: "operator",
+      password: "pw"
+    });
   });
 });

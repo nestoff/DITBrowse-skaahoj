@@ -1,7 +1,7 @@
 import { BrowserWindow, Menu, app, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { WebContents } from "electron";
+import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
 import { clearPartitionStorage, clearSelectedTileStorage } from "./session.js";
 import {
   loadControlApiConfig,
@@ -23,6 +23,7 @@ import type {
   ControlApiInfo,
   ControlApiResponse
 } from "../shared/controlApi.js";
+import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 import type { WorkspaceState } from "../shared/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +41,7 @@ const pendingControlResponses = new Map<
 
 let controlApiServer: ControlApiServer | null = null;
 let controlApiInfo: ControlApiInfo | null = null;
+let appWindow: BrowserWindow | null = null;
 
 function sendControlApiCommand(
   webContents: WebContents,
@@ -71,6 +73,45 @@ function sendControlApiCommand(
   });
 }
 
+const pendingHttpAuthResponses = new Map<
+  string,
+  {
+    resolve: (response: HttpAuthResponse) => void;
+    timeout: NodeJS.Timeout;
+  }
+>();
+
+function sendHttpAuthRequest(
+  webContents: WebContents,
+  details: AuthenticationResponseDetails,
+  authInfo: AuthInfo
+): Promise<HttpAuthResponse> {
+  if (webContents.isDestroyed()) {
+    return Promise.resolve({});
+  }
+
+  const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const request: HttpAuthRequest = {
+    requestId,
+    url: details.url,
+    host: authInfo.host,
+    port: authInfo.port,
+    ...(authInfo.realm ? { realm: authInfo.realm } : {}),
+    ...(authInfo.scheme ? { scheme: authInfo.scheme } : {}),
+    ...(authInfo.isProxy !== undefined ? { isProxy: authInfo.isProxy } : {})
+  };
+
+  return new Promise<HttpAuthResponse>((resolve) => {
+    const timeout = setTimeout(() => {
+      pendingHttpAuthResponses.delete(requestId);
+      resolve({});
+    }, 120_000);
+
+    pendingHttpAuthResponses.set(requestId, { resolve, timeout });
+    webContents.send("http-auth:request", request);
+  });
+}
+
 ipcMain.on(
   "control-api:response",
   (_event, requestId: string, response: ControlApiResponse): void => {
@@ -81,6 +122,20 @@ ipcMain.on(
 
     clearTimeout(pending.timeout);
     pendingControlResponses.delete(requestId);
+    pending.resolve(response);
+  }
+);
+
+ipcMain.on(
+  "http-auth:response",
+  (_event, requestId: string, response: HttpAuthResponse): void => {
+    const pending = pendingHttpAuthResponses.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    clearTimeout(pending.timeout);
+    pendingHttpAuthResponses.delete(requestId);
     pending.resolve(response);
   }
 );
@@ -116,6 +171,7 @@ const createWindow = async (): Promise<void> => {
       webviewTag: true
     }
   });
+  appWindow = mainWindow;
   lockWebContentsZoom(mainWindow.webContents, (gesture) => {
     mainWindow.webContents.send("ditbrowse:host-temporary-view-gesture", gesture);
   });
@@ -182,6 +238,12 @@ const createWindow = async (): Promise<void> => {
     void saveWindowState(userDataPath, mainWindow.getBounds());
   });
 
+  mainWindow.on("closed", () => {
+    if (appWindow === mainWindow) {
+      appWindow = null;
+    }
+  });
+
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   if (devServerUrl) {
     await mainWindow.loadURL(devServerUrl);
@@ -193,6 +255,18 @@ const createWindow = async (): Promise<void> => {
 };
 
 app.whenReady().then(createWindow);
+
+app.on("login", (event, _webContents, details, authInfo, callback) => {
+  const targetWindow = appWindow ?? BrowserWindow.getAllWindows()[0] ?? null;
+  if (!targetWindow) {
+    return;
+  }
+
+  event.preventDefault();
+  void sendHttpAuthRequest(targetWindow.webContents, details, authInfo).then((response) => {
+    callback(response.username, response.password);
+  });
+});
 
 app.on("window-all-closed", () => {
   app.quit();

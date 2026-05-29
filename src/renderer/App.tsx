@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { FormEvent, ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   buildControlApiStatus,
@@ -9,9 +9,11 @@ import {
   type ControlApiResponse
 } from "../shared/controlApi";
 import { findCredentialRecord } from "../shared/credentials";
+import { normalizeCredentialUrl } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
+import type { HttpAuthRequest } from "../shared/httpAuth";
 import { sampleWorkspace } from "../shared/sampleData";
-import type { CameraList } from "../shared/types";
+import type { CameraList, TileState, WorkspaceState } from "../shared/types";
 import { resolveCameraAddress } from "../shared/url";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
 import { BrowserChrome } from "./components/BrowserChrome";
@@ -26,11 +28,42 @@ import {
 import { workspaceReducer } from "./state/workspaceReducer";
 import { useDebouncedWorkspaceSave } from "./state/useDebouncedWorkspaceSave";
 
+interface HttpAuthPromptState {
+  request: HttpAuthRequest;
+  tileId: string | null;
+  cameraLabel: string;
+  username: string;
+  password: string;
+  save: boolean;
+}
+
+function authUrlFromRequest(request: HttpAuthRequest): string {
+  if (request.url) {
+    return request.url;
+  }
+
+  const port = request.port && ![80, 443].includes(request.port) ? `:${request.port}` : "";
+  return `http://${request.host}${port}`;
+}
+
+function findTileForAuthRequest(
+  workspace: WorkspaceState,
+  request: HttpAuthRequest
+): TileState | null {
+  const requestOrigin = normalizeCredentialUrl(authUrlFromRequest(request));
+  return (
+    workspace.tiles.find((tile) => normalizeCredentialUrl(tile.url) === requestOrigin) ??
+    workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ??
+    null
+  );
+}
+
 export function App(): ReactElement {
   const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [httpAuthPrompt, setHttpAuthPrompt] = useState<HttpAuthPromptState | null>(null);
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
   const selectedTileIdRef = useRef(workspace.selectedTileId);
   const workspaceRef = useRef(workspace);
@@ -118,6 +151,40 @@ export function App(): ReactElement {
     workspace.passwordRecords,
     workspace.tiles
   ]);
+
+  useEffect(() => {
+    return window.ditbrowse?.onHttpAuthRequest?.((request) => {
+      const currentWorkspace = workspaceRef.current;
+      const authUrl = authUrlFromRequest(request);
+      const tile = findTileForAuthRequest(currentWorkspace, request);
+      const record =
+        currentWorkspace.activeJobId && currentWorkspace.activeCameraListId
+          ? findCredentialRecord(currentWorkspace.passwordRecords, {
+              jobId: currentWorkspace.activeJobId,
+              cameraListId: currentWorkspace.activeCameraListId,
+              cameraId: tile?.cameraId ?? null,
+              url: authUrl
+            })
+          : null;
+
+      if (record) {
+        window.ditbrowse?.sendHttpAuthResponse?.(request.requestId, {
+          username: record.username,
+          password: record.password
+        });
+        return;
+      }
+
+      setHttpAuthPrompt({
+        request,
+        tileId: tile?.id ?? currentWorkspace.selectedTileId,
+        cameraLabel: tile?.title || authUrl,
+        username: "",
+        password: "",
+        save: true
+      });
+    });
+  }, []);
 
   const navigate = useCallback(
     (input: string, target: "selected" | "new"): void => {
@@ -245,6 +312,43 @@ export function App(): ReactElement {
       });
     },
     []
+  );
+
+  const cancelHttpAuth = useCallback((): void => {
+    if (!httpAuthPrompt) {
+      return;
+    }
+
+    window.ditbrowse?.sendHttpAuthResponse?.(httpAuthPrompt.request.requestId, {});
+    setHttpAuthPrompt(null);
+  }, [httpAuthPrompt]);
+
+  const submitHttpAuth = useCallback(
+    (event: FormEvent<HTMLFormElement>): void => {
+      event.preventDefault();
+      if (!httpAuthPrompt || !httpAuthPrompt.password) {
+        return;
+      }
+
+      const username = httpAuthPrompt.username.trim();
+      window.ditbrowse?.sendHttpAuthResponse?.(httpAuthPrompt.request.requestId, {
+        username,
+        password: httpAuthPrompt.password
+      });
+
+      if (httpAuthPrompt.save && httpAuthPrompt.tileId) {
+        dispatch({
+          type: "saveCapturedCredential",
+          tileId: httpAuthPrompt.tileId,
+          url: authUrlFromRequest(httpAuthPrompt.request),
+          username,
+          password: httpAuthPrompt.password
+        });
+      }
+
+      setHttpAuthPrompt(null);
+    },
+    [httpAuthPrompt]
   );
 
   const commitTileNavigationUrl = useCallback((tileId: string, url: string): void => {
@@ -377,6 +481,70 @@ export function App(): ReactElement {
           onClose={() => setEditorOpen(false)}
           onSaveList={saveCameraListDraft}
         />
+      )}
+      {httpAuthPrompt && (
+        <div className="http-auth-backdrop" role="presentation">
+          <form
+            className="http-auth-dialog"
+            aria-label="Camera sign in"
+            role="dialog"
+            onSubmit={submitHttpAuth}
+          >
+            <div className="http-auth-title">Sign in to camera</div>
+            <div className="http-auth-details">
+              <strong>{httpAuthPrompt.cameraLabel}</strong>
+              <span>{httpAuthPrompt.request.realm || httpAuthPrompt.request.host}</span>
+            </div>
+            <label className="http-auth-field">
+              <span>Username</span>
+              <input
+                autoFocus
+                value={httpAuthPrompt.username}
+                onChange={(event) =>
+                  setHttpAuthPrompt((prompt) =>
+                    prompt ? { ...prompt, username: event.target.value } : prompt
+                  )
+                }
+              />
+            </label>
+            <label className="http-auth-field">
+              <span>Password</span>
+              <input
+                type="password"
+                value={httpAuthPrompt.password}
+                onChange={(event) =>
+                  setHttpAuthPrompt((prompt) =>
+                    prompt ? { ...prompt, password: event.target.value } : prompt
+                  )
+                }
+              />
+            </label>
+            <label className="http-auth-save">
+              <input
+                type="checkbox"
+                checked={httpAuthPrompt.save}
+                onChange={(event) =>
+                  setHttpAuthPrompt((prompt) =>
+                    prompt ? { ...prompt, save: event.target.checked } : prompt
+                  )
+                }
+              />
+              <span>Save for this camera</span>
+            </label>
+            <div className="http-auth-actions">
+              <button type="button" className="pill-button" onClick={cancelHttpAuth}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="pill-button pill-button-primary"
+                disabled={!httpAuthPrompt.password}
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </main>
   );

@@ -6,6 +6,7 @@ import type {
   ControlApiInfo,
   ControlApiResponse
 } from "../../shared/controlApi";
+import type { HttpAuthRequest, HttpAuthResponse } from "../../shared/httpAuth";
 
 declare global {
   interface Window {
@@ -25,6 +26,8 @@ declare global {
       onControlApiCommand?: (callback: (command: ControlApiCommand) => void) => () => void;
       sendControlApiResponse?: (requestId: string, response: ControlApiResponse) => void;
       onReloadSelectedTileShortcut?: (callback: () => void) => () => void;
+      onHttpAuthRequest?: (callback: (request: HttpAuthRequest) => void) => () => void;
+      sendHttpAuthResponse?: (requestId: string, response: HttpAuthResponse) => void;
     };
   }
 }

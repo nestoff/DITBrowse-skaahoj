@@ -4,6 +4,7 @@ import type {
   ControlApiInfo,
   ControlApiResponse
 } from "../shared/controlApi.js";
+import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 import type { TemporaryViewGesture } from "../shared/temporaryView.js";
 import type { WorkspaceState } from "../shared/types.js";
 
@@ -36,6 +37,16 @@ const api = {
   },
   sendControlApiResponse: (requestId: string, response: ControlApiResponse) => {
     ipcRenderer.send("control-api:response", requestId, response);
+  },
+  onHttpAuthRequest: (callback: (request: HttpAuthRequest) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, request: HttpAuthRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on("http-auth:request", listener);
+    return () => ipcRenderer.removeListener("http-auth:request", listener);
+  },
+  sendHttpAuthResponse: (requestId: string, response: HttpAuthResponse) => {
+    ipcRenderer.send("http-auth:response", requestId, response);
   },
   onHostTemporaryViewGesture: (callback: (gesture: TemporaryViewGesture) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, gesture: TemporaryViewGesture): void => {
