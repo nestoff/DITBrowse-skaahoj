@@ -214,7 +214,7 @@ function WebviewTileComponent({
     const clearFailure = (): void => setFailed(false);
     const markFailure = (event: Event): void => {
       const failureEvent = event as Event & { errorCode?: number; isMainFrame?: boolean };
-      if (failureEvent.isMainFrame === false || failureEvent.errorCode === -3) {
+      if (failureEvent.isMainFrame !== true || failureEvent.errorCode === -3) {
         return;
       }
 

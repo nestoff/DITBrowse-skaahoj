@@ -43,6 +43,21 @@ function resizeTile(width: number, height: number): void {
   });
 }
 
+function createLoadFailureEvent(
+  options: { errorCode?: number; isMainFrame?: boolean } = {}
+): Event & {
+  errorCode?: number;
+  isMainFrame?: boolean;
+} {
+  const event = new Event("did-fail-load") as Event & {
+    errorCode?: number;
+    isMainFrame?: boolean;
+  };
+  event.errorCode = options.errorCode ?? -2;
+  event.isMainFrame = options.isMainFrame ?? true;
+  return event;
+}
+
 describe("WebviewTile", () => {
   beforeEach(() => {
     hostTemporaryViewGestureCallback = null;
@@ -668,7 +683,7 @@ describe("WebviewTile", () => {
 
     const webview = document.querySelector("webview") as HTMLElement & { reload: () => void };
     webview.reload = vi.fn();
-    fireEvent(webview, new Event("did-fail-load"));
+    fireEvent(webview, createLoadFailureEvent());
 
     expect(screen.getByText("Failed to load")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry loading Camera 42" }));
@@ -689,7 +704,7 @@ describe("WebviewTile", () => {
     );
 
     const webview = document.querySelector("webview") as HTMLElement;
-    fireEvent(webview, new Event("did-fail-load"));
+    fireEvent(webview, createLoadFailureEvent());
     expect(screen.getByText("Failed to load")).toBeInTheDocument();
 
     fireEvent(webview, new Event("did-finish-load"));
@@ -711,13 +726,27 @@ describe("WebviewTile", () => {
     );
 
     const webview = document.querySelector("webview") as HTMLElement;
-    const event = new Event("did-fail-load") as Event & {
-      errorCode: number;
-      isMainFrame: boolean;
-    };
-    event.errorCode = -3;
-    event.isMainFrame = true;
-    fireEvent(webview, event);
+    fireEvent(webview, createLoadFailureEvent({ errorCode: -3 }));
+
+    expect(screen.queryByText("Failed to load")).not.toBeInTheDocument();
+  });
+
+  it("ignores load failures that are not confirmed top-level page failures", () => {
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    const webview = document.querySelector("webview") as HTMLElement;
+    fireEvent(webview, new Event("did-fail-load"));
+    fireEvent(webview, createLoadFailureEvent({ isMainFrame: false }));
 
     expect(screen.queryByText("Failed to load")).not.toBeInTheDocument();
   });

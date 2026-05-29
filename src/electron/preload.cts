@@ -48,6 +48,9 @@ const api = {
   sendHttpAuthResponse: (requestId: string, response: HttpAuthResponse) => {
     ipcRenderer.send("http-auth:response", requestId, response);
   },
+  clearHttpAuthCache: () => {
+    ipcRenderer.send("http-auth:clear-cache");
+  },
   onHostTemporaryViewGesture: (callback: (gesture: TemporaryViewGesture) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, gesture: TemporaryViewGesture): void => {
       callback(gesture);

@@ -12,6 +12,10 @@ import {
 } from "./controlApiConfig.js";
 import type { ControlApiServer } from "./controlApiServer.js";
 import { startControlApiServer } from "./controlApiServer.js";
+import {
+  HttpAuthCredentialCache,
+  type HttpAuthChallenge
+} from "./httpAuthCache.js";
 import { installProcessStreamGuards } from "./processStreamGuards.js";
 import { getMainPreloadPath } from "./preloadPaths.js";
 import { createJsonStorage } from "./storage.js";
@@ -80,11 +84,27 @@ const pendingHttpAuthResponses = new Map<
     timeout: NodeJS.Timeout;
   }
 >();
+const httpAuthCredentialCache = new HttpAuthCredentialCache();
+
+function httpAuthChallengeFrom(
+  details: AuthenticationResponseDetails,
+  authInfo: AuthInfo,
+  webContents: WebContents | null
+): HttpAuthChallenge {
+  return {
+    url: details.url,
+    host: authInfo.host,
+    port: authInfo.port,
+    ...(authInfo.realm ? { realm: authInfo.realm } : {}),
+    ...(authInfo.scheme ? { scheme: authInfo.scheme } : {}),
+    ...(authInfo.isProxy !== undefined ? { isProxy: authInfo.isProxy } : {}),
+    ...(webContents?.id ? { webContentsId: webContents.id } : {})
+  };
+}
 
 function sendHttpAuthRequest(
   webContents: WebContents,
-  details: AuthenticationResponseDetails,
-  authInfo: AuthInfo
+  challenge: HttpAuthChallenge
 ): Promise<HttpAuthResponse> {
   if (webContents.isDestroyed()) {
     return Promise.resolve({});
@@ -93,12 +113,12 @@ function sendHttpAuthRequest(
   const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const request: HttpAuthRequest = {
     requestId,
-    url: details.url,
-    host: authInfo.host,
-    port: authInfo.port,
-    ...(authInfo.realm ? { realm: authInfo.realm } : {}),
-    ...(authInfo.scheme ? { scheme: authInfo.scheme } : {}),
-    ...(authInfo.isProxy !== undefined ? { isProxy: authInfo.isProxy } : {})
+    url: challenge.url,
+    host: challenge.host,
+    port: challenge.port,
+    ...(challenge.realm ? { realm: challenge.realm } : {}),
+    ...(challenge.scheme ? { scheme: challenge.scheme } : {}),
+    ...(challenge.isProxy !== undefined ? { isProxy: challenge.isProxy } : {})
   };
 
   return new Promise<HttpAuthResponse>((resolve) => {
@@ -139,6 +159,10 @@ ipcMain.on(
     pending.resolve(response);
   }
 );
+
+ipcMain.on("http-auth:clear-cache", (): void => {
+  httpAuthCredentialCache.clear();
+});
 
 const createWindow = async (): Promise<void> => {
   const userDataPath = app.getPath("userData");
@@ -256,14 +280,23 @@ const createWindow = async (): Promise<void> => {
 
 app.whenReady().then(createWindow);
 
-app.on("login", (event, _webContents, details, authInfo, callback) => {
-  const targetWindow = appWindow ?? BrowserWindow.getAllWindows()[0] ?? null;
-  if (!targetWindow) {
+app.on("login", (event, webContents, details, authInfo, callback) => {
+  event.preventDefault();
+  const challenge = httpAuthChallengeFrom(details, authInfo, webContents ?? null);
+  const cached = httpAuthCredentialCache.get(challenge);
+  if (cached) {
+    callback(cached.username, cached.password);
     return;
   }
 
-  event.preventDefault();
-  void sendHttpAuthRequest(targetWindow.webContents, details, authInfo).then((response) => {
+  const targetWindow = appWindow ?? BrowserWindow.getAllWindows()[0] ?? null;
+  if (!targetWindow) {
+    callback();
+    return;
+  }
+
+  void sendHttpAuthRequest(targetWindow.webContents, challenge).then((response) => {
+    httpAuthCredentialCache.set(challenge, response);
     callback(response.username, response.password);
   });
 });

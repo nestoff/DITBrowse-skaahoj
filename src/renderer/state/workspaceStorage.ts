@@ -28,6 +28,7 @@ declare global {
       onReloadSelectedTileShortcut?: (callback: () => void) => () => void;
       onHttpAuthRequest?: (callback: (request: HttpAuthRequest) => void) => () => void;
       sendHttpAuthResponse?: (requestId: string, response: HttpAuthResponse) => void;
+      clearHttpAuthCache?: () => void;
     };
   }
 }

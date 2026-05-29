@@ -109,6 +109,10 @@ export function App(): ReactElement {
     selectedTileIdRef.current = workspace.selectedTileId;
   }, [workspace.selectedTileId]);
 
+  useEffect(() => {
+    window.ditbrowse?.clearHttpAuthCache?.();
+  }, [workspace.activeJobId, workspace.activeCameraListId]);
+
   const selectedTile = useMemo(
     () => workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ?? null,
     [workspace.selectedTileId, workspace.tiles]
