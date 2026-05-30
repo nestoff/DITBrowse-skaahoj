@@ -56,6 +56,8 @@ export interface CredentialPreset {
   id: string;
   username: string;
   password: string;
+  urlPrefix: string;
+  cameraType: string;
 }
 
 export interface WorkspaceState {

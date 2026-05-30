@@ -73,7 +73,13 @@ export type WorkspaceAction =
       password: string;
     }
   | { type: "discardTileCredential"; tileId: string }
-  | { type: "addCredentialPreset"; username: string; password: string }
+  | {
+      type: "addCredentialPreset";
+      username: string;
+      password: string;
+      urlPrefix?: string;
+      cameraType?: string;
+    }
   | { type: "deleteCredentialPreset"; presetId: string }
   | { type: "addCameraEntry" }
   | { type: "closeTile"; tileId: string }
@@ -334,7 +340,11 @@ function normalizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
   return {
     ...workspace,
     globalZoom: normalizeZoom(workspace.globalZoom ?? 1),
-    credentialPresets: workspace.credentialPresets ?? [],
+    credentialPresets: (workspace.credentialPresets ?? []).map((preset) => ({
+      ...preset,
+      urlPrefix: preset.urlPrefix ?? "",
+      cameraType: preset.cameraType ?? ""
+    })),
     defaultViewport,
     cameraLists,
     passwordRecords,
@@ -1127,12 +1137,18 @@ export function workspaceReducer(
     case "addCredentialPreset": {
       const username = action.username.trim();
       const password = action.password;
+      const urlPrefix = action.urlPrefix?.trim() ?? "";
+      const cameraType = action.cameraType?.trim() ?? "";
       if (!username || !password) {
         return state;
       }
 
       const duplicate = state.credentialPresets.some(
-        (preset) => preset.username === username && preset.password === password
+        (preset) =>
+          preset.username === username &&
+          preset.password === password &&
+          preset.urlPrefix === urlPrefix &&
+          preset.cameraType === cameraType
       );
       if (duplicate) {
         return state;
@@ -1145,7 +1161,9 @@ export function workspaceReducer(
           {
             id: `credential-preset-${crypto.randomUUID()}`,
             username,
-            password
+            password,
+            urlPrefix,
+            cameraType
           }
         ]
       };

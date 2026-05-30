@@ -42,7 +42,12 @@ interface BrowserChromeProps {
   onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
   credentialPresets: CredentialPreset[];
-  onAddCredentialPreset: (username: string, password: string) => void;
+  onAddCredentialPreset: (
+    username: string,
+    password: string,
+    urlPrefix?: string,
+    cameraType?: string
+  ) => void;
   onDeleteCredentialPreset: (presetId: string) => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;

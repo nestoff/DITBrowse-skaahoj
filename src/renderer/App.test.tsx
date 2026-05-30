@@ -207,7 +207,15 @@ describe("App control API commands", () => {
   it("fills the camera sign-in form from a global credential preset", async () => {
     window.ditbrowse.loadWorkspace = vi.fn(async () => ({
       ...sampleWorkspace,
-      credentialPresets: [{ id: "preset-1", username: "admin", password: "ABCD1234" }]
+      credentialPresets: [
+        {
+          id: "preset-1",
+          username: "admin",
+          password: "ABCD1234",
+          urlPrefix: "",
+          cameraType: ""
+        }
+      ]
     }));
 
     render(<App />);
@@ -229,6 +237,39 @@ describe("App control API commands", () => {
     fireEvent.click(screen.getByRole("button", { name: /admin/ }));
 
     expect(screen.getByLabelText("Username")).toHaveValue("admin");
+    expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
+  });
+
+  it("auto-fills the camera sign-in form from a matching URL prefix preset", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...sampleWorkspace,
+      credentialPresets: [
+        {
+          id: "preset-1",
+          username: "admin",
+          password: "ABCD1234",
+          urlPrefix: "http://192.168.1.",
+          cameraType: ""
+        }
+      ]
+    }));
+
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-4",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80,
+        realm: "Please enter your ID and password.",
+        scheme: "digest",
+        isProxy: false
+      });
+    });
+
+    expect(await screen.findByLabelText("Username")).toHaveValue("admin");
     expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
   });
 });

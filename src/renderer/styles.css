@@ -714,9 +714,14 @@ textarea::selection {
 
 .credential-preset-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   gap: 8px;
   align-items: end;
+}
+
+.credential-preset-form .job-inline-field:nth-child(3),
+.credential-preset-form .job-inline-field:nth-child(4) {
+  grid-column: span 1;
 }
 
 .credential-preset-form button,
@@ -742,7 +747,7 @@ textarea::selection {
 
 .credential-preset-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
   min-height: 32px;
@@ -757,6 +762,14 @@ textarea::selection {
 
 .credential-preset-row span {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.credential-preset-row small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

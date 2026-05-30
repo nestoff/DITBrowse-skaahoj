@@ -922,21 +922,27 @@ describe("workspaceReducer", () => {
     const withPreset = workspaceReducer(sampleWorkspace, {
       type: "addCredentialPreset",
       username: " admin ",
-      password: "ABCD1234"
+      password: "ABCD1234",
+      urlPrefix: " http://10.20.100. ",
+      cameraType: " VENICE 2 "
     });
 
     expect(withPreset.credentialPresets).toEqual([
       {
         id: "credential-preset-new-tile",
         username: "admin",
-        password: "ABCD1234"
+        password: "ABCD1234",
+        urlPrefix: "http://10.20.100.",
+        cameraType: "VENICE 2"
       }
     ]);
 
     const duplicate = workspaceReducer(withPreset, {
       type: "addCredentialPreset",
       username: "admin",
-      password: "ABCD1234"
+      password: "ABCD1234",
+      urlPrefix: "http://10.20.100.",
+      cameraType: "VENICE 2"
     });
 
     expect(duplicate.credentialPresets).toHaveLength(1);

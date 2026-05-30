@@ -13,7 +13,13 @@ import { normalizeCredentialUrl } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import type { HttpAuthRequest } from "../shared/httpAuth";
 import { sampleWorkspace } from "../shared/sampleData";
-import type { CameraList, TileState, WorkspaceState } from "../shared/types";
+import type {
+  CameraEntry,
+  CameraList,
+  CredentialPreset,
+  TileState,
+  WorkspaceState
+} from "../shared/types";
 import { resolveCameraAddress } from "../shared/url";
 import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
 import { BrowserChrome } from "./components/BrowserChrome";
@@ -54,6 +60,38 @@ function findTileForAuthRequest(
   return (
     workspace.tiles.find((tile) => normalizeCredentialUrl(tile.url) === requestOrigin) ??
     workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ??
+    null
+  );
+}
+
+function normalizedPresetText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function urlMatchesPresetPrefix(url: string, prefix: string): boolean {
+  const normalizedPrefix = normalizedPresetText(prefix);
+  if (!normalizedPrefix) {
+    return false;
+  }
+
+  const normalizedUrl = normalizedPresetText(url);
+  const normalizedOrigin = normalizedPresetText(normalizeCredentialUrl(url));
+  return normalizedUrl.startsWith(normalizedPrefix) || normalizedOrigin === normalizedPrefix;
+}
+
+function findMatchingCredentialPreset(
+  presets: CredentialPreset[],
+  authUrl: string,
+  camera: CameraEntry | null
+): CredentialPreset | null {
+  return (
+    presets.find((preset) => urlMatchesPresetPrefix(authUrl, preset.urlPrefix)) ??
+    presets.find(
+      (preset) =>
+        !!preset.cameraType &&
+        !!camera?.cameraType &&
+        normalizedPresetText(preset.cameraType) === normalizedPresetText(camera.cameraType)
+    ) ??
     null
   );
 }
@@ -161,6 +199,12 @@ export function App(): ReactElement {
       const currentWorkspace = workspaceRef.current;
       const authUrl = authUrlFromRequest(request);
       const tile = findTileForAuthRequest(currentWorkspace, request);
+      const activeList = currentWorkspace.cameraLists.find(
+        (list) => list.id === currentWorkspace.activeCameraListId
+      );
+      const camera = tile?.cameraId
+        ? activeList?.cameras.find((candidate) => candidate.id === tile.cameraId) ?? null
+        : null;
       const record =
         currentWorkspace.activeJobId && currentWorkspace.activeCameraListId
           ? findCredentialRecord(currentWorkspace.passwordRecords, {
@@ -179,12 +223,17 @@ export function App(): ReactElement {
         return;
       }
 
+      const preset = findMatchingCredentialPreset(
+        currentWorkspace.credentialPresets,
+        authUrl,
+        camera
+      );
       setHttpAuthPrompt({
         request,
         tileId: tile?.id ?? currentWorkspace.selectedTileId,
         cameraLabel: tile?.title || authUrl,
-        username: "",
-        password: "",
+        username: preset?.username ?? "",
+        password: preset?.password ?? "",
         save: true
       });
     });
@@ -318,9 +367,12 @@ export function App(): ReactElement {
     []
   );
 
-  const addCredentialPreset = useCallback((username: string, password: string): void => {
-    dispatch({ type: "addCredentialPreset", username, password });
-  }, []);
+  const addCredentialPreset = useCallback(
+    (username: string, password: string, urlPrefix?: string, cameraType?: string): void => {
+      dispatch({ type: "addCredentialPreset", username, password, urlPrefix, cameraType });
+    },
+    []
+  );
 
   const deleteCredentialPreset = useCallback((presetId: string): void => {
     dispatch({ type: "deleteCredentialPreset", presetId });

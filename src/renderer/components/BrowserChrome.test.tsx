@@ -305,7 +305,15 @@ describe("BrowserChrome", () => {
     render(
       <BrowserChrome
         {...baseProps}
-        credentialPresets={[{ id: "preset-1", username: "admin", password: "ABCD1234" }]}
+        credentialPresets={[
+          {
+            id: "preset-1",
+            username: "admin",
+            password: "ABCD1234",
+            urlPrefix: "http://10.20.100.",
+            cameraType: "VENICE 2"
+          }
+        ]}
         onAddCredentialPreset={onAddCredentialPreset}
         onDeleteCredentialPreset={onDeleteCredentialPreset}
       />
@@ -316,9 +324,20 @@ describe("BrowserChrome", () => {
 
     fireEvent.change(screen.getByLabelText("Preset username"), { target: { value: "operator" } });
     fireEvent.change(screen.getByLabelText("Preset password"), { target: { value: "secret" } });
+    fireEvent.change(screen.getByLabelText("Preset URL prefix"), {
+      target: { value: "http://10.20.100." }
+    });
+    fireEvent.change(screen.getByLabelText("Preset model match"), {
+      target: { value: "VENICE 2" }
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
-    expect(onAddCredentialPreset).toHaveBeenCalledWith("operator", "secret");
+    expect(onAddCredentialPreset).toHaveBeenCalledWith(
+      "operator",
+      "secret",
+      "http://10.20.100.",
+      "VENICE 2"
+    );
 
     fireEvent.click(screen.getByLabelText("Saved credential presets").querySelector("button")!);
 
