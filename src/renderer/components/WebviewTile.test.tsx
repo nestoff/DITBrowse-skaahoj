@@ -194,6 +194,38 @@ describe("WebviewTile", () => {
     expect(webview).toHaveAttribute("src", "http://192.168.1.42");
   });
 
+  it("does not commit the dark placeholder page as the camera URL", () => {
+    vi.useFakeTimers();
+    const onUrlCommitted = vi.fn();
+    render(
+      <WebviewTile
+        tile={tile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={onUrlCommitted}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+        loadDelayMs={350}
+      />
+    );
+
+    const webview = document.querySelector("webview") as HTMLElement;
+    const placeholderUrl = webview.getAttribute("src") ?? "";
+    const event = new Event("did-navigate") as Event & { url: string; isMainFrame: boolean };
+    event.url = placeholderUrl;
+    event.isMainFrame = true;
+    fireEvent(webview, event);
+
+    expect(onUrlCommitted).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(webview).toHaveAttribute("src", "http://192.168.1.42");
+  });
+
   it("uses a dark blank page instead of a white about:blank page for empty tiles", () => {
     render(
       <WebviewTile

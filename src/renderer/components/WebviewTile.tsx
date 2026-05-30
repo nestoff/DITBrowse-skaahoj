@@ -15,6 +15,10 @@ const BLANK_WEBVIEW_URL = `data:text/html;charset=utf-8,${encodeURIComponent(
   '<!doctype html><html><head><meta name="color-scheme" content="dark"><style>html,body{margin:0;width:100%;height:100%;background:#1b1d1f;}</style></head><body></body></html>'
 )}`;
 
+function isBlankWebviewUrl(url: string): boolean {
+  return url === BLANK_WEBVIEW_URL;
+}
+
 function safeSendToWebview(
   webview: Electron.WebviewTag,
   channel: string,
@@ -237,7 +241,7 @@ function WebviewTileComponent({
         typeof navigationEvent.url === "string" && navigationEvent.url
           ? navigationEvent.url
           : webview.getURL();
-      if (url) {
+      if (url && !isBlankWebviewUrl(url)) {
         committedNavigationRef.current = normalizeCameraUrl(url) || BLANK_WEBVIEW_URL;
         setFailed(false);
         onUrlCommitted(tile.id, url);
