@@ -18,6 +18,20 @@ export interface CredentialFill {
   password: string;
 }
 
+function findLastMatchingRecord(
+  records: PasswordRecord[],
+  predicate: (record: PasswordRecord) => boolean
+): PasswordRecord | null {
+  for (let index = records.length - 1; index >= 0; index -= 1) {
+    const record = records[index];
+    if (predicate(record)) {
+      return record;
+    }
+  }
+
+  return null;
+}
+
 export function normalizeCredentialUrl(url: string): string {
   try {
     return new URL(url).origin;
@@ -32,14 +46,16 @@ export function findCredentialRecord(
 ): PasswordRecord | null {
   const normalizedUrl = normalizeCredentialUrl(lookup.url);
   return (
-    records.find(
+    findLastMatchingRecord(
+      records,
       (record) =>
         record.jobId === lookup.jobId &&
         record.cameraListId === lookup.cameraListId &&
-        lookup.cameraId &&
+        !!lookup.cameraId &&
         record.cameraId === lookup.cameraId
     ) ??
-    records.find(
+    findLastMatchingRecord(
+      records,
       (record) =>
         record.jobId === lookup.jobId &&
         record.cameraListId === lookup.cameraListId &&

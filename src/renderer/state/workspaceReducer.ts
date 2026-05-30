@@ -71,6 +71,7 @@ export type WorkspaceAction =
       username: string;
       password: string;
     }
+  | { type: "discardTileCredential"; tileId: string }
   | { type: "addCameraEntry" }
   | { type: "closeTile"; tileId: string }
   | { type: "moveTile"; tileId: string; direction: "left" | "right" }
@@ -1072,13 +1073,13 @@ export function workspaceReducer(
       }
 
       const url = normalizeCredentialUrl(action.url || tile.url);
-      const existingRecord = state.passwordRecords.find(
-        (record) =>
-          record.jobId === state.activeJobId &&
-          record.cameraListId === state.activeCameraListId &&
-          ((tile.cameraId && record.cameraId === tile.cameraId) ||
-            normalizeCredentialUrl(record.url) === url)
-      );
+      const matchesCredential = (record: PasswordRecord): boolean =>
+        record.jobId === state.activeJobId &&
+        record.cameraListId === state.activeCameraListId &&
+        ((!!tile.cameraId && record.cameraId === tile.cameraId) ||
+          normalizeCredentialUrl(record.url) === url);
+      const existingRecord = [...state.passwordRecords].reverse().find(matchesCredential);
+      const retainedRecords = state.passwordRecords.filter((record) => !matchesCredential(record));
       const nextRecord: PasswordRecord = {
         id: existingRecord?.id ?? `password-${crypto.randomUUID()}`,
         jobId: state.activeJobId,
@@ -1091,11 +1092,25 @@ export function workspaceReducer(
 
       return {
         ...state,
-        passwordRecords: existingRecord
-          ? state.passwordRecords.map((record) =>
-              record.id === existingRecord.id ? nextRecord : record
-            )
-          : [...state.passwordRecords, nextRecord]
+        passwordRecords: [...retainedRecords, nextRecord]
+      };
+    }
+    case "discardTileCredential": {
+      const tile = state.tiles.find((candidate) => candidate.id === action.tileId);
+      if (!tile || !state.activeJobId || !state.activeCameraListId) {
+        return state;
+      }
+
+      const url = normalizeCredentialUrl(tile.url);
+      const shouldDiscard = (record: PasswordRecord): boolean =>
+        record.jobId === state.activeJobId &&
+        record.cameraListId === state.activeCameraListId &&
+        ((!!tile.cameraId && record.cameraId === tile.cameraId) ||
+          normalizeCredentialUrl(record.url) === url);
+
+      return {
+        ...state,
+        passwordRecords: state.passwordRecords.filter((record) => !shouldDiscard(record))
       };
     }
     case "addCameraEntry": {

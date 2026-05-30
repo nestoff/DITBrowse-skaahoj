@@ -722,6 +722,48 @@ describe("WebviewTile", () => {
     expect(webview.reload).toHaveBeenCalledTimes(1);
   });
 
+  it("drops stale saved credentials and retries after too many auth attempts", () => {
+    vi.useFakeTimers();
+    const onCredentialRejected = vi.fn();
+    const view = render(
+      <WebviewTile
+        tile={tile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        onCredentialRejected={onCredentialRejected}
+        savedCredential={{ username: "admin", password: "old" }}
+        webviewPreloadPath={null}
+      />
+    );
+
+    const webview = document.querySelector("webview") as HTMLElement & { reload: () => void };
+    webview.reload = vi.fn();
+    fireEvent(webview, createLoadFailureEvent({ errorCode: -375 }));
+
+    expect(onCredentialRejected).toHaveBeenCalledWith("tile-42");
+    expect(screen.queryByText("Failed to load")).not.toBeInTheDocument();
+
+    view.rerender(
+      <WebviewTile
+        tile={tile}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        onCredentialRejected={onCredentialRejected}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    expect(webview.reload).toHaveBeenCalledTimes(1);
+  });
+
   it("clears the retry overlay after the page finishes loading", () => {
     render(
       <WebviewTile

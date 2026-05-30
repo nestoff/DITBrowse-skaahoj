@@ -166,6 +166,7 @@ interface WebviewTileProps {
   onSelectTile: (tileId: string) => void;
   onUrlCommitted: (tileId: string, url: string) => void;
   onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
+  onCredentialRejected?: (tileId: string) => void;
   savedCredential: CredentialFill | null;
   webviewPreloadPath: string | null;
   loadDelayMs?: number;
@@ -178,6 +179,7 @@ function WebviewTileComponent({
   onSelectTile,
   onUrlCommitted,
   onCredentialCaptured,
+  onCredentialRejected,
   savedCredential,
   webviewPreloadPath,
   loadDelayMs = 0
@@ -191,6 +193,7 @@ function WebviewTileComponent({
     loadDelayMs <= 0 ? normalizeCameraUrl(tile.url) || BLANK_WEBVIEW_URL : BLANK_WEBVIEW_URL
   );
   const [temporaryView, setTemporaryView] = useState(DEFAULT_TEMPORARY_VIEW);
+  const [retryAfterCredentialDrop, setRetryAfterCredentialDrop] = useState(false);
   const temporaryViewRef = useRef(DEFAULT_TEMPORARY_VIEW);
   const committedNavigationRef = useRef<string | null>(null);
 
@@ -280,6 +283,13 @@ function WebviewTileComponent({
         return;
       }
 
+      if (failureEvent.errorCode === -375 && savedCredential) {
+        setFailed(false);
+        onCredentialRejected?.(tile.id);
+        setRetryAfterCredentialDrop(true);
+        return;
+      }
+
       setFailed(true);
     };
     const selectTile = (): void => onSelectTile(tile.id);
@@ -355,6 +365,7 @@ function WebviewTileComponent({
   }, [
     applyTemporaryGesture,
     onCredentialCaptured,
+    onCredentialRejected,
     onSelectTile,
     onUrlCommitted,
     savedCredential,
@@ -446,6 +457,19 @@ function WebviewTileComponent({
     window.addEventListener("keydown", resetTemporaryView);
     return () => window.removeEventListener("keydown", resetTemporaryView);
   }, [selected]);
+
+  useEffect(() => {
+    if (!retryAfterCredentialDrop || savedCredential) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setRetryAfterCredentialDrop(false);
+      webviewRef.current?.reload();
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [retryAfterCredentialDrop, savedCredential]);
 
   useEffect(() => {
     const element = containerRef.current;

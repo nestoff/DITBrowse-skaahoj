@@ -890,6 +890,76 @@ describe("workspaceReducer", () => {
     ]);
   });
 
+  it("replaces duplicate saved credentials for the same camera when a new password is saved", () => {
+    const withDuplicates = {
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-old-camera",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.41",
+          username: "admin",
+          password: "old"
+        },
+        {
+          id: "password-old-origin",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: null,
+          url: "http://192.168.1.41",
+          username: "admin",
+          password: "older"
+        }
+      ]
+    };
+
+    const state = workspaceReducer(withDuplicates, {
+      type: "saveCapturedCredential",
+      tileId: "tile-41",
+      url: "http://192.168.1.41/login.html",
+      username: "admin",
+      password: "new"
+    });
+
+    expect(state.passwordRecords).toEqual([
+      {
+        id: "password-old-origin",
+        jobId: "job-sample",
+        cameraListId: "list-sample",
+        cameraId: "camera-41",
+        url: "http://192.168.1.41",
+        username: "admin",
+        password: "new"
+      }
+    ]);
+  });
+
+  it("discards stale saved credentials for a camera after auth retry failure", () => {
+    const withPassword = {
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-stale",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.41",
+          username: "admin",
+          password: "old"
+        }
+      ]
+    };
+
+    const state = workspaceReducer(withPassword, {
+      type: "discardTileCredential",
+      tileId: "tile-41"
+    });
+
+    expect(state.passwordRecords).toEqual([]);
+  });
+
   it("adds a camera row to the active list and grid", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "addCameraEntry"

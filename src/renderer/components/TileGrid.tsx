@@ -14,6 +14,7 @@ interface TileGridProps {
   onSelectTile: (tileId: string) => void;
   onUrlCommitted: (tileId: string, url: string) => void;
   onCredentialCaptured: (tileId: string, credential: CapturedCredential) => void;
+  onCredentialRejected?: (tileId: string) => void;
   credentialsByTileId: Map<string, CredentialFill>;
   webviewPreloadPath: string | null;
   focusMode?: boolean;
@@ -26,6 +27,7 @@ function TileGridComponent({
   onSelectTile,
   onUrlCommitted,
   onCredentialCaptured,
+  onCredentialRejected,
   credentialsByTileId,
   webviewPreloadPath,
   focusMode = false
@@ -57,6 +59,7 @@ function TileGridComponent({
             onSelectTile={onSelectTile}
             onUrlCommitted={onUrlCommitted}
             onCredentialCaptured={onCredentialCaptured}
+            onCredentialRejected={onCredentialRejected}
             savedCredential={credentialsByTileId.get(tile.id) ?? null}
             webviewPreloadPath={webviewPreloadPath}
             loadDelayMs={slot.index * WEBVIEW_LOAD_STAGGER_MS}

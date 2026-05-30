@@ -318,6 +318,11 @@ export function App(): ReactElement {
     []
   );
 
+  const discardTileCredential = useCallback((tileId: string): void => {
+    window.ditbrowse?.clearHttpAuthCache?.();
+    dispatch({ type: "discardTileCredential", tileId });
+  }, []);
+
   const cancelHttpAuth = useCallback((): void => {
     if (!httpAuthPrompt) {
       return;
@@ -476,6 +481,7 @@ export function App(): ReactElement {
         onSelectTile={selectTile}
         onUrlCommitted={commitTileNavigationUrl}
         onCredentialCaptured={saveCapturedCredential}
+        onCredentialRejected={discardTileCredential}
         credentialsByTileId={credentialsByTileId}
         webviewPreloadPath={webviewPreloadPath}
       />
