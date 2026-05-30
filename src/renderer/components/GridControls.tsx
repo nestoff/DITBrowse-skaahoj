@@ -1,5 +1,5 @@
-import type { ReactElement, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ViewportSize } from "../../shared/types";
 import {
   DEFAULT_ASPECT_RATIO_PRESETS,
@@ -128,15 +128,33 @@ export function GridControls({
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
+  const zoomButtonRef = useRef<HTMLButtonElement | null>(null);
+  const viewportButtonRef = useRef<HTMLButtonElement | null>(null);
   const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
   const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
   const [relativeZoom, setRelativeZoom] = useState(1);
+  const [zoomPopoverStyle, setZoomPopoverStyle] = useState<CSSProperties>({});
+  const [viewportPopoverStyle, setViewportPopoverStyle] = useState<CSSProperties>({});
   const relativeZoomPercent = Math.round(relativeZoom * 100);
+
+  const popoverStyleFor = (button: HTMLButtonElement | null, width: number): CSSProperties => {
+    const rect = button?.getBoundingClientRect();
+    if (!rect) {
+      return {};
+    }
+
+    return {
+      top: `${rect.bottom + 7}px`,
+      left: `${Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))}px`
+    };
+  };
+
   const toggleGlobalZoom = (): void => {
     setGlobalZoomOpen((open) => {
       const nextOpen = !open;
       if (nextOpen) {
         setRelativeZoom(1);
+        setZoomPopoverStyle(popoverStyleFor(zoomButtonRef.current, 260));
         onRelativeGlobalZoomStart();
       }
       return nextOpen;
@@ -184,6 +202,7 @@ export function GridControls({
         />
         <button
           type="button"
+          ref={zoomButtonRef}
           className="global-zoom-trigger"
           aria-label="Global zoom controls"
           aria-expanded={globalZoomOpen}
@@ -192,7 +211,11 @@ export function GridControls({
           All
         </button>
         {globalZoomOpen && (
-          <div className="zoom-popover" aria-label="Global zoom controls panel">
+          <div
+            className="zoom-popover"
+            aria-label="Global zoom controls panel"
+            style={zoomPopoverStyle}
+          >
             <label className="zoom-slider">
               <span>All relative {relativeZoomPercent}%</span>
               <input
@@ -245,15 +268,28 @@ export function GridControls({
       <div className="grid-control viewport-control">
         <button
           type="button"
+          ref={viewportButtonRef}
           className="global-viewport-trigger"
           aria-label="All viewport controls"
           aria-expanded={globalViewportOpen}
-          onClick={() => setGlobalViewportOpen((open) => !open)}
+          onClick={() =>
+            setGlobalViewportOpen((open) => {
+              const nextOpen = !open;
+              if (nextOpen) {
+                setViewportPopoverStyle(popoverStyleFor(viewportButtonRef.current, 180));
+              }
+              return nextOpen;
+            })
+          }
         >
           All
         </button>
         {globalViewportOpen && (
-          <div className="viewport-popover" aria-label="All viewport controls panel">
+          <div
+            className="viewport-popover"
+            aria-label="All viewport controls panel"
+            style={viewportPopoverStyle}
+          >
             <label className="viewport-select">
               <span>All View</span>
               <select

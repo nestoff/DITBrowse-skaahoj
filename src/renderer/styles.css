@@ -529,24 +529,22 @@ textarea::selection {
 }
 
 .zoom-popover {
-  position: absolute;
-  top: 31px;
-  right: 0;
-  z-index: 35;
+  position: fixed;
+  z-index: 90;
   display: grid;
   gap: 10px;
   width: 260px;
+  max-width: calc(100vw - 16px);
   padding: 12px;
 }
 
 .viewport-popover {
-  position: absolute;
-  top: 31px;
-  right: 0;
-  z-index: 35;
+  position: fixed;
+  z-index: 90;
   display: grid;
   gap: 8px;
   width: 180px;
+  max-width: calc(100vw - 16px);
   padding: 10px;
 }
 
