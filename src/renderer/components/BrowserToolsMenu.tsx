@@ -23,7 +23,6 @@ interface BrowserToolsMenuProps {
   onAddCredentialPreset: (
     username: string,
     password: string,
-    urlPrefix?: string,
     cameraType?: string
   ) => void;
   onDeleteCredentialPreset: (presetId: string) => void;
@@ -61,7 +60,6 @@ export function BrowserToolsMenu({
   const [portError, setPortError] = useState("");
   const [presetUsername, setPresetUsername] = useState("");
   const [presetPassword, setPresetPassword] = useState("");
-  const [presetUrlPrefix, setPresetUrlPrefix] = useState("");
   const [presetCameraType, setPresetCameraType] = useState("");
 
   useEffect(() => {
@@ -92,10 +90,9 @@ export function BrowserToolsMenu({
 
   const addPreset = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    onAddCredentialPreset(presetUsername, presetPassword, presetUrlPrefix, presetCameraType);
+    onAddCredentialPreset(presetUsername, presetPassword, presetCameraType);
     setPresetUsername("");
     setPresetPassword("");
-    setPresetUrlPrefix("");
     setPresetCameraType("");
   };
 
@@ -170,15 +167,6 @@ export function BrowserToolsMenu({
             />
           </label>
           <label className="job-inline-field">
-            <span>URL prefix</span>
-            <input
-              aria-label="Preset URL prefix"
-              placeholder="http://10.20.100."
-              value={presetUrlPrefix}
-              onChange={(event) => setPresetUrlPrefix(event.target.value)}
-            />
-          </label>
-          <label className="job-inline-field">
             <span>Camera type</span>
             <input
               aria-label="Preset model match"
@@ -196,7 +184,7 @@ export function BrowserToolsMenu({
             {credentialPresets.map((preset) => (
               <div key={preset.id} className="credential-preset-row">
                 <span>{preset.username}</span>
-                <small>{preset.urlPrefix || preset.cameraType || "Manual"}</small>
+                <small>{preset.cameraType || "Manual"}</small>
                 <code>{"•".repeat(Math.min(10, Math.max(4, preset.password.length)))}</code>
                 <button type="button" onClick={() => onDeleteCredentialPreset(preset.id)}>
                   Delete

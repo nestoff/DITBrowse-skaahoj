@@ -45,7 +45,6 @@ interface BrowserChromeProps {
   onAddCredentialPreset: (
     username: string,
     password: string,
-    urlPrefix?: string,
     cameraType?: string
   ) => void;
   onDeleteCredentialPreset: (presetId: string) => void;

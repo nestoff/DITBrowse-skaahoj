@@ -212,7 +212,6 @@ describe("App control API commands", () => {
           id: "preset-1",
           username: "admin",
           password: "ABCD1234",
-          urlPrefix: "",
           cameraType: ""
         }
       ]
@@ -240,16 +239,25 @@ describe("App control API commands", () => {
     expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
   });
 
-  it("auto-fills the camera sign-in form from a matching URL prefix preset", async () => {
-    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+  it("auto-fills the camera sign-in form from a matching camera type preset", async () => {
+    const cameraTypedWorkspace = {
       ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) => ({
+        ...list,
+        cameras: list.cameras.map((camera) =>
+          camera.id === "camera-41" ? { ...camera, cameraType: "VENICE 2" } : camera
+        )
+      }))
+    };
+
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...cameraTypedWorkspace,
       credentialPresets: [
         {
           id: "preset-1",
           username: "admin",
           password: "ABCD1234",
-          urlPrefix: "http://192.168.1.",
-          cameraType: ""
+          cameraType: "VENICE 2"
         }
       ]
     }));

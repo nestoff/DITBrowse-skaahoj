@@ -77,7 +77,6 @@ export type WorkspaceAction =
       type: "addCredentialPreset";
       username: string;
       password: string;
-      urlPrefix?: string;
       cameraType?: string;
     }
   | { type: "deleteCredentialPreset"; presetId: string }
@@ -342,7 +341,6 @@ function normalizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
     globalZoom: normalizeZoom(workspace.globalZoom ?? 1),
     credentialPresets: (workspace.credentialPresets ?? []).map((preset) => ({
       ...preset,
-      urlPrefix: preset.urlPrefix ?? "",
       cameraType: preset.cameraType ?? ""
     })),
     defaultViewport,
@@ -1137,7 +1135,6 @@ export function workspaceReducer(
     case "addCredentialPreset": {
       const username = action.username.trim();
       const password = action.password;
-      const urlPrefix = action.urlPrefix?.trim() ?? "";
       const cameraType = action.cameraType?.trim() ?? "";
       if (!username || !password) {
         return state;
@@ -1147,7 +1144,6 @@ export function workspaceReducer(
         (preset) =>
           preset.username === username &&
           preset.password === password &&
-          preset.urlPrefix === urlPrefix &&
           preset.cameraType === cameraType
       );
       if (duplicate) {
@@ -1162,7 +1158,6 @@ export function workspaceReducer(
             id: `credential-preset-${crypto.randomUUID()}`,
             username,
             password,
-            urlPrefix,
             cameraType
           }
         ]

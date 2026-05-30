@@ -68,31 +68,17 @@ function normalizedPresetText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function urlMatchesPresetPrefix(url: string, prefix: string): boolean {
-  const normalizedPrefix = normalizedPresetText(prefix);
-  if (!normalizedPrefix) {
-    return false;
-  }
-
-  const normalizedUrl = normalizedPresetText(url);
-  const normalizedOrigin = normalizedPresetText(normalizeCredentialUrl(url));
-  return normalizedUrl.startsWith(normalizedPrefix) || normalizedOrigin === normalizedPrefix;
-}
-
 function findMatchingCredentialPreset(
   presets: CredentialPreset[],
-  authUrl: string,
   camera: CameraEntry | null
 ): CredentialPreset | null {
   return (
-    presets.find((preset) => urlMatchesPresetPrefix(authUrl, preset.urlPrefix)) ??
     presets.find(
       (preset) =>
         !!preset.cameraType &&
         !!camera?.cameraType &&
         normalizedPresetText(preset.cameraType) === normalizedPresetText(camera.cameraType)
-    ) ??
-    null
+    ) ?? null
   );
 }
 
@@ -223,11 +209,7 @@ export function App(): ReactElement {
         return;
       }
 
-      const preset = findMatchingCredentialPreset(
-        currentWorkspace.credentialPresets,
-        authUrl,
-        camera
-      );
+      const preset = findMatchingCredentialPreset(currentWorkspace.credentialPresets, camera);
       setHttpAuthPrompt({
         request,
         tileId: tile?.id ?? currentWorkspace.selectedTileId,
@@ -368,8 +350,8 @@ export function App(): ReactElement {
   );
 
   const addCredentialPreset = useCallback(
-    (username: string, password: string, urlPrefix?: string, cameraType?: string): void => {
-      dispatch({ type: "addCredentialPreset", username, password, urlPrefix, cameraType });
+    (username: string, password: string, cameraType?: string): void => {
+      dispatch({ type: "addCredentialPreset", username, password, cameraType });
     },
     []
   );

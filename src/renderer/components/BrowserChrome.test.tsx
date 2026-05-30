@@ -310,7 +310,6 @@ describe("BrowserChrome", () => {
             id: "preset-1",
             username: "admin",
             password: "ABCD1234",
-            urlPrefix: "http://10.20.100.",
             cameraType: "VENICE 2"
           }
         ]}
@@ -324,9 +323,6 @@ describe("BrowserChrome", () => {
 
     fireEvent.change(screen.getByLabelText("Preset username"), { target: { value: "operator" } });
     fireEvent.change(screen.getByLabelText("Preset password"), { target: { value: "secret" } });
-    fireEvent.change(screen.getByLabelText("Preset URL prefix"), {
-      target: { value: "http://10.20.100." }
-    });
     fireEvent.change(screen.getByLabelText("Preset model match"), {
       target: { value: "VENICE 2" }
     });
@@ -335,7 +331,6 @@ describe("BrowserChrome", () => {
     expect(onAddCredentialPreset).toHaveBeenCalledWith(
       "operator",
       "secret",
-      "http://10.20.100.",
       "VENICE 2"
     );
 

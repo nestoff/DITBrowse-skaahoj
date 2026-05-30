@@ -923,7 +923,6 @@ describe("workspaceReducer", () => {
       type: "addCredentialPreset",
       username: " admin ",
       password: "ABCD1234",
-      urlPrefix: " http://10.20.100. ",
       cameraType: " VENICE 2 "
     });
 
@@ -932,7 +931,6 @@ describe("workspaceReducer", () => {
         id: "credential-preset-new-tile",
         username: "admin",
         password: "ABCD1234",
-        urlPrefix: "http://10.20.100.",
         cameraType: "VENICE 2"
       }
     ]);
@@ -941,7 +939,6 @@ describe("workspaceReducer", () => {
       type: "addCredentialPreset",
       username: "admin",
       password: "ABCD1234",
-      urlPrefix: "http://10.20.100.",
       cameraType: "VENICE 2"
     });
 

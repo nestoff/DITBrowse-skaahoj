@@ -719,11 +719,6 @@ textarea::selection {
   align-items: end;
 }
 
-.credential-preset-form .job-inline-field:nth-child(3),
-.credential-preset-form .job-inline-field:nth-child(4) {
-  grid-column: span 1;
-}
-
 .credential-preset-form button,
 .credential-preset-row button {
   height: 30px;
