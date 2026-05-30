@@ -1,6 +1,6 @@
 export type SelectedTileCommand = "back" | "forward" | "reload";
 
-const RELOAD_ALL_STAGGER_MS = 175;
+const RELOAD_ALL_STAGGER_MS = 750;
 
 function findWebviewForTile(tileId: string | null): Electron.WebviewTag | null {
   if (!tileId) {

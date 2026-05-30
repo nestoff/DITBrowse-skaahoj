@@ -54,7 +54,7 @@ describe("runSelectedTileCommand", () => {
     expect(first.reload).toHaveBeenCalledTimes(1);
     expect(second.reload).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(175);
+    vi.advanceTimersByTime(750);
     expect(second.reload).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
@@ -844,6 +844,35 @@ describe("WebviewTile", () => {
     fireEvent(webview, event);
 
     expect(onUrlCommitted).toHaveBeenCalledWith("tile-42", "https://192.168.1.42/login");
+  });
+
+  it("redirects Sony blank root pages to the camera GUI page", async () => {
+    const onUrlCommitted = vi.fn();
+    render(
+      <WebviewTile
+        tile={{ ...tile, url: "http://10.20.100.104" }}
+        selected={true}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={onUrlCommitted}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    const webview = document.querySelector("webview") as Electron.WebviewTag;
+    webview.getURL = vi.fn(() => "http://10.20.100.104/");
+    webview.executeJavaScript = vi.fn(async () => "http://10.20.100.104/rmt.html");
+
+    fireEvent(webview, new Event("did-finish-load"));
+
+    await waitFor(() => {
+      expect(webview.executeJavaScript).toHaveBeenCalled();
+    });
+    expect(onUrlCommitted).toHaveBeenCalledWith(
+      "tile-42",
+      "http://10.20.100.104/rmt.html"
+    );
   });
 
   it("does not rewrite src after the webview commits its own navigation", () => {

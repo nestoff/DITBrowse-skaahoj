@@ -5,7 +5,7 @@ import type { CapturedCredential, CredentialFill } from "../../shared/credential
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
 
-const WEBVIEW_LOAD_STAGGER_MS = 175;
+const WEBVIEW_LOAD_STAGGER_MS = 750;
 
 interface TileGridProps {
   tiles: TileState[];

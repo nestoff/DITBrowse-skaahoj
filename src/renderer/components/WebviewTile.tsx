@@ -19,6 +19,37 @@ function isBlankWebviewUrl(url: string): boolean {
   return url === BLANK_WEBVIEW_URL;
 }
 
+function isHttpRootUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      parsed.pathname === "/" &&
+      !parsed.search &&
+      !parsed.hash
+    );
+  } catch {
+    return false;
+  }
+}
+
+const SONY_ROOT_REDIRECT_SCRIPT = `(() => {
+  const scripts = Array.from(document.scripts || []);
+  const hasSonyRootScript = scripts.some((script) =>
+    /(?:^|\\/)Common\\/javascript\\/Config\\/rm_main\\.js(?:$|[?#])/.test(script.getAttribute("src") || "")
+  );
+  const bodyText = document.body ? document.body.innerText.trim() : "";
+  if (document.title.trim() !== "Remote Controller" || bodyText || !hasSonyRootScript) {
+    return null;
+  }
+
+  const nextUrl = new URL("rmt.html", location.href).href;
+  if (location.href !== nextUrl) {
+    location.replace(nextUrl);
+  }
+  return nextUrl;
+})()`;
+
 function safeSendToWebview(
   webview: Electron.WebviewTag,
   channel: string,
@@ -29,6 +60,25 @@ function safeSendToWebview(
   } catch {
     // Electron webviews reject IPC before the guest page is ready. The next state change will retry.
   }
+}
+
+function redirectSonyRootPage(
+  webview: Electron.WebviewTag,
+  onRedirect: (url: string) => void
+): void {
+  const currentUrl = typeof webview.getURL === "function" ? webview.getURL() : "";
+  if (!isHttpRootUrl(currentUrl) || typeof webview.executeJavaScript !== "function") {
+    return;
+  }
+
+  void webview
+    .executeJavaScript(SONY_ROOT_REDIRECT_SCRIPT, true)
+    .then((redirectUrl) => {
+      if (typeof redirectUrl === "string" && redirectUrl) {
+        onRedirect(redirectUrl);
+      }
+    })
+    .catch(() => undefined);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -146,6 +196,14 @@ function WebviewTileComponent({
 
   temporaryViewRef.current = temporaryView;
 
+  const commitSonyRootRedirect = useCallback(
+    (url: string): void => {
+      committedNavigationRef.current = normalizeCameraUrl(url) || BLANK_WEBVIEW_URL;
+      onUrlCommitted(tile.id, url);
+    },
+    [onUrlCommitted, tile.id]
+  );
+
   useEffect(() => {
     const element = containerRef.current;
     if (!element) {
@@ -230,6 +288,8 @@ function WebviewTileComponent({
       if (savedCredential) {
         safeSendToWebview(webview, "ditbrowse:credential-fill", savedCredential);
       }
+
+      redirectSonyRootPage(webview, commitSonyRootRedirect);
     };
     const commitNavigationUrl = (event: Event): void => {
       const navigationEvent = event as Event & { url?: string; isMainFrame?: boolean };
@@ -298,8 +358,33 @@ function WebviewTileComponent({
     onSelectTile,
     onUrlCommitted,
     savedCredential,
-    tile.id
+    tile.id,
+    commitSonyRootRedirect
   ]);
+
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview || !isHttpRootUrl(webviewUrl)) {
+      return;
+    }
+
+    let redirected = false;
+    const commitRedirectOnce = (url: string): void => {
+      if (redirected) {
+        return;
+      }
+      redirected = true;
+      commitSonyRootRedirect(url);
+    };
+    const timeouts = [250, 1000, 2500].map((delay) =>
+      window.setTimeout(() => redirectSonyRootPage(webview, commitRedirectOnce), delay)
+    );
+
+    return () => {
+      redirected = true;
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [commitSonyRootRedirect, webviewUrl]);
 
   useEffect(() => {
     if (!selected) {
