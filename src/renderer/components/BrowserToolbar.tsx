@@ -114,7 +114,6 @@ export function BrowserToolbar({
         </span>
         <GridControls
           columns={columns}
-          globalZoom={defaultZoom}
           defaultViewport={defaultViewport}
           selectedZoom={selectedTile?.zoom ?? defaultZoom}
           selectedViewport={selectedTile?.viewport ?? defaultViewport}

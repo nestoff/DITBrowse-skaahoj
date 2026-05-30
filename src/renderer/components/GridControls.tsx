@@ -101,7 +101,6 @@ function ZoomPercentInput({
 
 interface GridControlsProps {
   columns: number;
-  globalZoom: number;
   defaultViewport: ViewportSize;
   selectedZoom: number;
   selectedViewport: ViewportSize | null;
@@ -116,7 +115,6 @@ interface GridControlsProps {
 
 export function GridControls({
   columns,
-  globalZoom,
   defaultViewport,
   selectedZoom,
   selectedViewport,
@@ -128,10 +126,6 @@ export function GridControls({
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
-  const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
-  const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
-  const globalZoomPercent = Math.round(globalZoom * 100);
-
   return (
     <div className="grid-controls">
       {icon && <span className="grid-controls-icon">{icon}</span>}
@@ -170,34 +164,11 @@ export function GridControls({
         <button
           type="button"
           className="global-zoom-trigger"
-          aria-label="Global zoom controls"
-          aria-expanded={globalZoomOpen}
-          onClick={() => setGlobalZoomOpen((open) => !open)}
+          aria-label="Apply selected zoom to all tiles"
+          onClick={() => onGlobalZoomChange(selectedZoom)}
         >
           All
         </button>
-        {globalZoomOpen && (
-          <div className="zoom-popover" aria-label="Global zoom controls panel">
-            <label className="zoom-slider">
-              <span>Global {globalZoomPercent}%</span>
-              <input
-                type="range"
-                min="0.25"
-                max="3"
-                step="0.01"
-                value={globalZoom}
-                onChange={(event) => onGlobalZoomChange(Number(event.target.value))}
-                aria-label="Global zoom"
-              />
-            </label>
-            <ZoomPercentInput
-              value={globalZoom}
-              ariaLabel="All tiles zoom percent"
-              resetAriaLabel="Reset all tiles zoom to 100 percent"
-              onCommit={onGlobalZoomChange}
-            />
-          </div>
-        )}
       </div>
       <label className="grid-control">
         <span>Default</span>
@@ -231,30 +202,11 @@ export function GridControls({
         <button
           type="button"
           className="global-viewport-trigger"
-          aria-label="All viewport controls"
-          aria-expanded={globalViewportOpen}
-          onClick={() => setGlobalViewportOpen((open) => !open)}
+          aria-label="Apply selected viewport to all tiles"
+          onClick={() => onGlobalViewportChange(selectedViewport ?? defaultViewport)}
         >
           All
         </button>
-        {globalViewportOpen && (
-          <div className="viewport-popover" aria-label="All viewport controls panel">
-            <label className="viewport-select">
-              <span>All View</span>
-              <select
-                value={viewportToValue(defaultViewport)}
-                onChange={(event) => onGlobalViewportChange(viewportFromValue(event.target.value))}
-                aria-label="All tiles viewport"
-              >
-                {VIEWPORT_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>
-                    {preset.value}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
       </div>
     </div>
   );

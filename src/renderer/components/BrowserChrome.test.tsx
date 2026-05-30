@@ -139,10 +139,10 @@ describe("BrowserChrome", () => {
     expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent("GET /api/grid");
   });
 
-  it("opens variable zoom controls for global and selected tile zoom", () => {
+  it("applies the selected zoom to every tile from the All button", () => {
     const onGlobalZoomChange = vi.fn();
     const onZoomChange = vi.fn();
-    render(
+    const { rerender } = render(
       <BrowserChrome
         {...baseProps}
         onGlobalZoomChange={onGlobalZoomChange}
@@ -162,23 +162,18 @@ describe("BrowserChrome", () => {
 
     expect(onZoomChange).toHaveBeenCalledWith(1.37);
 
-    expect(screen.queryByLabelText("Global zoom controls panel")).not.toBeInTheDocument();
+    rerender(
+      <BrowserChrome
+        {...baseProps}
+        selectedTile={selectedTile ? { ...selectedTile, zoom: 1.37 } : null}
+        onGlobalZoomChange={onGlobalZoomChange}
+        onZoomChange={onZoomChange}
+      />
+    );
 
-    fireEvent.click(screen.getByLabelText("Global zoom controls"));
-
-    expect(screen.getByLabelText("Global zoom controls panel")).toBeVisible();
-
-    fireEvent.change(screen.getByLabelText("Global zoom"), { target: { value: "1.37" } });
+    fireEvent.click(screen.getByLabelText("Apply selected zoom to all tiles"));
 
     expect(onGlobalZoomChange).toHaveBeenCalledWith(1.37);
-
-    const globalZoomPercent = screen.getByLabelText("All tiles zoom percent");
-    expect(globalZoomPercent).toHaveValue(100);
-
-    fireEvent.change(globalZoomPercent, { target: { value: "142" } });
-    fireEvent.blur(globalZoomPercent);
-
-    expect(onGlobalZoomChange).toHaveBeenCalledWith(1.42);
   });
 
   it("toggles selected-page focus mode from the toolbar", () => {
@@ -202,7 +197,7 @@ describe("BrowserChrome", () => {
     expect(screen.getByLabelText("Show all pages")).toBeVisible();
   });
 
-  it("resets selected and global zoom when the percent marker is double-clicked", () => {
+  it("resets selected zoom when the percent marker is double-clicked", () => {
     const onGlobalZoomChange = vi.fn();
     const onZoomChange = vi.fn();
     render(
@@ -216,11 +211,7 @@ describe("BrowserChrome", () => {
     fireEvent.doubleClick(screen.getByLabelText("Reset selected zoom to 100 percent"));
 
     expect(onZoomChange).toHaveBeenCalledWith(1);
-
-    fireEvent.click(screen.getByLabelText("Global zoom controls"));
-    fireEvent.doubleClick(screen.getByLabelText("Reset all tiles zoom to 100 percent"));
-
-    expect(onGlobalZoomChange).toHaveBeenCalledWith(1);
+    expect(onGlobalZoomChange).not.toHaveBeenCalled();
   });
 
   it("sets the saved default aspect ratio separately from the selected tile viewport", () => {
@@ -242,21 +233,20 @@ describe("BrowserChrome", () => {
     expect(onViewportChange).not.toHaveBeenCalled();
   });
 
-  it("applies an all-tiles viewport from the View All control", () => {
+  it("applies the selected viewport to every tile from the All button", () => {
     const onGlobalViewportChange = vi.fn();
+    const selectedViewport = { width: 1280, height: 720 };
     render(
       <BrowserChrome
         {...baseProps}
+        selectedTile={selectedTile ? { ...selectedTile, viewport: selectedViewport } : null}
         onGlobalViewportChange={onGlobalViewportChange}
       />
     );
 
-    fireEvent.click(screen.getByLabelText("All viewport controls"));
-    fireEvent.change(screen.getByLabelText("All tiles viewport"), {
-      target: { value: "1280x720" }
-    });
+    fireEvent.click(screen.getByLabelText("Apply selected viewport to all tiles"));
 
-    expect(onGlobalViewportChange).toHaveBeenCalledWith({ width: 1280, height: 720 });
+    expect(onGlobalViewportChange).toHaveBeenCalledWith(selectedViewport);
   });
 
   it("drags tabs to reorder them", () => {
