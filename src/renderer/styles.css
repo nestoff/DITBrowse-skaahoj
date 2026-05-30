@@ -720,7 +720,9 @@ textarea::selection {
 }
 
 .credential-preset-form button,
-.credential-preset-row button {
+.credential-preset-row button,
+.saved-password-clear-selected,
+.saved-password-row button {
   height: 30px;
   border: 1px solid #303640;
   border-radius: 8px;
@@ -735,12 +737,24 @@ textarea::selection {
   opacity: 0.45;
 }
 
+.saved-password-clear-selected:disabled {
+  opacity: 0.45;
+}
+
 .credential-preset-list {
   display: grid;
   gap: 6px;
 }
 
-.credential-preset-row {
+.saved-password-list {
+  display: grid;
+  gap: 6px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.credential-preset-row,
+.saved-password-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
   gap: 8px;
@@ -755,13 +769,19 @@ textarea::selection {
   font-weight: 720;
 }
 
-.credential-preset-row span {
+.saved-password-row {
+  grid-template-columns: minmax(130px, 1.2fr) minmax(90px, 0.8fr) auto auto auto;
+}
+
+.credential-preset-row span,
+.saved-password-row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.credential-preset-row small {
+.credential-preset-row small,
+.saved-password-row small {
   min-width: 0;
   overflow: hidden;
   color: var(--muted);
@@ -769,7 +789,8 @@ textarea::selection {
   white-space: nowrap;
 }
 
-.credential-preset-row code {
+.credential-preset-row code,
+.saved-password-row code {
   color: var(--muted);
   font-size: 11px;
 }

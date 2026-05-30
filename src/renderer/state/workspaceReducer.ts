@@ -80,6 +80,7 @@ export type WorkspaceAction =
       cameraType?: string;
     }
   | { type: "deleteCredentialPreset"; presetId: string }
+  | { type: "deletePasswordRecord"; passwordRecordId: string }
   | { type: "addCameraEntry" }
   | { type: "closeTile"; tileId: string }
   | { type: "moveTile"; tileId: string; direction: "left" | "right" }
@@ -1168,6 +1169,14 @@ export function workspaceReducer(
         ...state,
         credentialPresets: state.credentialPresets.filter(
           (preset) => preset.id !== action.presetId
+        )
+      };
+    }
+    case "deletePasswordRecord": {
+      return {
+        ...state,
+        passwordRecords: state.passwordRecords.filter(
+          (record) => record.id !== action.passwordRecordId
         )
       };
     }

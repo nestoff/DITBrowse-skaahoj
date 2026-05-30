@@ -998,6 +998,30 @@ describe("workspaceReducer", () => {
     ]);
   });
 
+  it("deletes a saved password record by id", () => {
+    const withPassword = {
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-camera-41",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.41",
+          username: "admin",
+          password: "secret"
+        }
+      ]
+    };
+
+    const state = workspaceReducer(withPassword, {
+      type: "deletePasswordRecord",
+      passwordRecordId: "password-camera-41"
+    });
+
+    expect(state.passwordRecords).toEqual([]);
+  });
+
   it("discards stale saved credentials for a camera after auth retry failure", () => {
     const withPassword = {
       ...sampleWorkspace,

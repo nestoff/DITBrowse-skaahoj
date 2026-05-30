@@ -5,6 +5,7 @@ import type { ControlApiInfo } from "../../shared/controlApi";
 import type {
   CameraList,
   CredentialPreset,
+  PasswordRecord,
   TileState,
   ViewportSize,
   WorkspaceState
@@ -42,12 +43,15 @@ interface BrowserChromeProps {
   onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
   credentialPresets: CredentialPreset[];
+  passwordRecords: PasswordRecord[];
   onAddCredentialPreset: (
     username: string,
     password: string,
     cameraType?: string
   ) => void;
   onDeleteCredentialPreset: (presetId: string) => void;
+  onDeletePasswordRecord: (passwordRecordId: string) => void;
+  onDeleteSelectedTilePassword: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
   onClearSelectedCookies: (partition: string, url: string) => void;
@@ -86,8 +90,11 @@ export function BrowserChrome({
   onDeleteJob,
   onEditList,
   credentialPresets,
+  passwordRecords,
   onAddCredentialPreset,
   onDeleteCredentialPreset,
+  onDeletePasswordRecord,
+  onDeleteSelectedTilePassword,
   onResetSelectedScale,
   onResetGridOrder,
   onClearSelectedCookies,
@@ -159,8 +166,11 @@ export function BrowserChrome({
           onDeleteJob={onDeleteJob}
           onEditList={onEditList}
           credentialPresets={credentialPresets}
+          passwordRecords={passwordRecords}
           onAddCredentialPreset={onAddCredentialPreset}
           onDeleteCredentialPreset={onDeleteCredentialPreset}
+          onDeletePasswordRecord={onDeletePasswordRecord}
+          onDeleteSelectedTilePassword={onDeleteSelectedTilePassword}
           onResetSelectedScale={onResetSelectedScale}
           onResetGridOrder={onResetGridOrder}
           onClearSelectedCookies={onClearSelectedCookies}

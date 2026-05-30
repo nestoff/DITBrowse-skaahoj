@@ -37,8 +37,11 @@ const baseProps = {
   onDeleteJob: vi.fn(),
   onEditList: vi.fn(),
   credentialPresets: [],
+  passwordRecords: [],
   onAddCredentialPreset: vi.fn(),
   onDeleteCredentialPreset: vi.fn(),
+  onDeletePasswordRecord: vi.fn(),
+  onDeleteSelectedTilePassword: vi.fn(),
   onResetSelectedScale: vi.fn(),
   onResetGridOrder: vi.fn(),
   onClearSelectedCookies: vi.fn(),
@@ -337,6 +340,41 @@ describe("BrowserChrome", () => {
     fireEvent.click(screen.getByLabelText("Saved credential presets").querySelector("button")!);
 
     expect(onDeleteCredentialPreset).toHaveBeenCalledWith("preset-1");
+  });
+
+  it("shows saved camera passwords and deletes selected or specific records", () => {
+    const onDeletePasswordRecord = vi.fn();
+    const onDeleteSelectedTilePassword = vi.fn();
+    render(
+      <BrowserChrome
+        {...baseProps}
+        passwordRecords={[
+          {
+            id: "password-1",
+            jobId: "job-sample",
+            cameraListId: "list-sample",
+            cameraId: "camera-41",
+            url: "http://192.168.1.41",
+            username: "admin",
+            password: "ABCD1234"
+          }
+        ]}
+        onDeletePasswordRecord={onDeletePasswordRecord}
+        onDeleteSelectedTilePassword={onDeleteSelectedTilePassword}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent(
+      "http://192.168.1.41"
+    );
+    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent("ABCD1234");
+
+    fireEvent.click(screen.getByRole("button", { name: "Forget Selected Tile Password" }));
+    expect(onDeleteSelectedTilePassword).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByLabelText("Saved camera passwords").querySelector("button")!);
+    expect(onDeletePasswordRecord).toHaveBeenCalledWith("password-1");
   });
 
   it("offers to return a manually overridden selected camera to prefix and suffix style", () => {

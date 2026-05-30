@@ -360,6 +360,11 @@ export function App(): ReactElement {
     dispatch({ type: "deleteCredentialPreset", presetId });
   }, []);
 
+  const deletePasswordRecord = useCallback((passwordRecordId: string): void => {
+    window.ditbrowse?.clearHttpAuthCache?.();
+    dispatch({ type: "deletePasswordRecord", passwordRecordId });
+  }, []);
+
   const fillHttpAuthUsername = useCallback((username: string): void => {
     setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, username } : prompt));
   }, []);
@@ -372,6 +377,13 @@ export function App(): ReactElement {
     window.ditbrowse?.clearHttpAuthCache?.();
     dispatch({ type: "discardTileCredential", tileId });
   }, []);
+
+  const deleteSelectedTilePassword = useCallback((): void => {
+    const tileId = selectedTileIdRef.current;
+    if (tileId) {
+      discardTileCredential(tileId);
+    }
+  }, [discardTileCredential]);
 
   const cancelHttpAuth = useCallback((): void => {
     if (!httpAuthPrompt) {
@@ -515,8 +527,11 @@ export function App(): ReactElement {
         onDeleteJob={deleteJob}
         onEditList={() => setEditorOpen(true)}
         credentialPresets={workspace.credentialPresets}
+        passwordRecords={workspace.passwordRecords}
         onAddCredentialPreset={addCredentialPreset}
         onDeleteCredentialPreset={deleteCredentialPreset}
+        onDeletePasswordRecord={deletePasswordRecord}
+        onDeleteSelectedTilePassword={deleteSelectedTilePassword}
         onResetSelectedScale={resetSelectedScale}
         onResetGridOrder={resetGridOrder}
         onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}

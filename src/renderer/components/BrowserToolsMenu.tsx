@@ -2,7 +2,13 @@ import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { ListRestart, Maximize2, PencilLine } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
-import type { CameraList, CredentialPreset, Job, TileState } from "../../shared/types";
+import type {
+  CameraList,
+  CredentialPreset,
+  Job,
+  PasswordRecord,
+  TileState
+} from "../../shared/types";
 import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
 import { PillButton } from "./ui/PillButton";
@@ -20,12 +26,15 @@ interface BrowserToolsMenuProps {
   onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
   credentialPresets: CredentialPreset[];
+  passwordRecords: PasswordRecord[];
   onAddCredentialPreset: (
     username: string,
     password: string,
     cameraType?: string
   ) => void;
   onDeleteCredentialPreset: (presetId: string) => void;
+  onDeletePasswordRecord: (passwordRecordId: string) => void;
+  onDeleteSelectedTilePassword: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
   onClearSelectedCookies: (partition: string, url: string) => void;
@@ -47,8 +56,11 @@ export function BrowserToolsMenu({
   onDeleteJob,
   onEditList,
   credentialPresets,
+  passwordRecords,
   onAddCredentialPreset,
   onDeleteCredentialPreset,
+  onDeletePasswordRecord,
+  onDeleteSelectedTilePassword,
   onResetSelectedScale,
   onResetGridOrder,
   onClearSelectedCookies,
@@ -187,6 +199,35 @@ export function BrowserToolsMenu({
                 <small>{preset.cameraType || "Manual"}</small>
                 <code>{"•".repeat(Math.min(10, Math.max(4, preset.password.length)))}</code>
                 <button type="button" onClick={() => onDeleteCredentialPreset(preset.id)}>
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="tools-section saved-password-section">
+        <div className="tools-section-header">
+          <span>Saved camera passwords</span>
+          <strong>{passwordRecords.length}</strong>
+        </div>
+        <button
+          type="button"
+          className="saved-password-clear-selected"
+          disabled={!selectedTile}
+          onClick={onDeleteSelectedTilePassword}
+        >
+          Forget Selected Tile Password
+        </button>
+        {passwordRecords.length > 0 && (
+          <div className="saved-password-list" aria-label="Saved camera passwords">
+            {passwordRecords.map((record) => (
+              <div key={record.id} className="saved-password-row">
+                <span>{record.url}</span>
+                <small>{record.cameraId ?? "Web address"}</small>
+                <code>{record.username}</code>
+                <code>{record.password}</code>
+                <button type="button" onClick={() => onDeletePasswordRecord(record.id)}>
                   Delete
                 </button>
               </div>
