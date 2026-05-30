@@ -67,5 +67,6 @@ export const sampleWorkspace: WorkspaceState = {
   activeCameraListId: "list-sample",
   gridColumns: 4,
   defaultViewport: DEFAULT_VIEWPORT,
-  defaultZoom: 1
+  defaultZoom: 1,
+  globalZoom: 1
 };

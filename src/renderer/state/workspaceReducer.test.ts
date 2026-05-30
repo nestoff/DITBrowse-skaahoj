@@ -305,24 +305,32 @@ describe("workspaceReducer", () => {
     ).toBe(true);
   });
 
-  it("updates every tile zoom relative to the zooms captured when All was opened", () => {
+  it("stores all-tiles zoom as a multiplier without changing individual tile zooms", () => {
+    const customTile = workspaceReducer(sampleWorkspace, {
+      type: "setSelectedTileZoom",
+      zoom: 1.05
+    });
+
     const state = workspaceReducer(sampleWorkspace, {
       type: "setGlobalZoomRelative",
-      factor: 1.25,
-      baselineZooms: {
-        "tile-41": 0.8,
-        "tile-42": 1.5
-      }
+      factor: 1.25
     });
 
     expect(state.defaultZoom).toBe(1);
-    expect(state.tiles.find((tile) => tile.id === "tile-41")?.zoom).toBe(1);
-    expect(state.tiles.find((tile) => tile.id === "tile-42")?.zoom).toBe(1.88);
-    expect(state.tiles.find((tile) => tile.id === "tile-43")?.zoom).toBe(1.25);
-    expect(state.cameraLists[0].cameras.find((camera) => camera.id === "camera-41")?.zoomOverride)
-      .toBe(1);
-    expect(state.cameraLists[0].cameras.find((camera) => camera.id === "camera-42")?.zoomOverride)
-      .toBe(1.88);
+    expect(state.globalZoom).toBe(1.25);
+    expect(customTile.tiles.find((tile) => tile.id === "tile-41")?.zoom).toBe(1.05);
+    expect(
+      workspaceReducer(customTile, {
+        type: "setGlobalZoomRelative",
+        factor: 1.25
+      }).tiles.find((tile) => tile.id === "tile-41")?.zoom
+    ).toBe(1.05);
+    expect(state.tiles.every((tile) => tile.zoom === 1)).toBe(true);
+    expect(
+      state.cameraLists.every((list) =>
+        list.cameras.every((camera) => camera.zoomOverride === null)
+      )
+    ).toBe(true);
   });
 
   it("updates selected tile viewport", () => {

@@ -26,7 +26,6 @@ const baseProps = {
   onReload: vi.fn(),
   onReloadAll: vi.fn(),
   onColumnsChange: vi.fn(),
-  onRelativeGlobalZoomStart: vi.fn(),
   onRelativeGlobalZoomChange: vi.fn(),
   onGlobalViewportChange: vi.fn(),
   onZoomChange: vi.fn(),
@@ -141,15 +140,14 @@ describe("BrowserChrome", () => {
   });
 
   it("opens relative all-tiles zoom controls", () => {
-    const onRelativeGlobalZoomStart = vi.fn();
     const onRelativeGlobalZoomChange = vi.fn();
     const onZoomChange = vi.fn();
     render(
       <BrowserChrome
         {...baseProps}
-        onRelativeGlobalZoomStart={onRelativeGlobalZoomStart}
         onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
         onZoomChange={onZoomChange}
+        workspace={{ ...sampleWorkspace, globalZoom: 1.08 }}
       />
     );
 
@@ -168,7 +166,6 @@ describe("BrowserChrome", () => {
     expect(screen.queryByLabelText("Global zoom controls panel")).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Global zoom controls"));
     expect(screen.getByLabelText("Global zoom controls panel")).toBeVisible();
-    expect(onRelativeGlobalZoomStart).toHaveBeenCalledOnce();
 
     fireEvent.change(screen.getByLabelText("All tiles relative zoom"), {
       target: { value: "1.2" }
@@ -176,7 +173,7 @@ describe("BrowserChrome", () => {
     expect(onRelativeGlobalZoomChange).toHaveBeenCalledWith(1.2);
 
     const relativeZoomPercent = screen.getByLabelText("All tiles relative zoom percent");
-    expect(relativeZoomPercent).toHaveValue(120);
+    expect(relativeZoomPercent).toHaveValue(108);
 
     fireEvent.change(relativeZoomPercent, { target: { value: "142" } });
     fireEvent.blur(relativeZoomPercent);

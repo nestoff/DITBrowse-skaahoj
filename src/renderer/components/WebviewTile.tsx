@@ -161,6 +161,7 @@ function safeForwardActivationClick(
 
 interface WebviewTileProps {
   tile: TileState;
+  globalZoom?: number;
   selected: boolean;
   focused?: boolean;
   onSelectTile: (tileId: string) => void;
@@ -174,6 +175,7 @@ interface WebviewTileProps {
 
 function WebviewTileComponent({
   tile,
+  globalZoom = 1,
   selected,
   focused = false,
   onSelectTile,
@@ -258,7 +260,7 @@ function WebviewTileComponent({
     tileHeight: frame.height,
     viewportWidth: tile.viewport.width,
     viewportHeight: tile.viewport.height,
-    manualZoom: tile.zoom
+    manualZoom: tile.zoom * globalZoom
   });
 
   const applyTemporaryGesture = useCallback(

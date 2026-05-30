@@ -20,6 +20,7 @@ interface BrowserToolbarProps {
   selectedTile: TileState | null;
   columns: number;
   defaultZoom: number;
+  globalZoom: number;
   defaultViewport: ViewportSize;
   onNavigate: (input: string, target: "selected" | "new") => void;
   showReturnToPrefix: boolean;
@@ -29,7 +30,6 @@ interface BrowserToolbarProps {
   onReload: () => void;
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
-  onRelativeGlobalZoomStart: () => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
   onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
@@ -43,6 +43,7 @@ export function BrowserToolbar({
   selectedTile,
   columns,
   defaultZoom,
+  globalZoom,
   defaultViewport,
   onNavigate,
   showReturnToPrefix,
@@ -52,7 +53,6 @@ export function BrowserToolbar({
   onReload,
   onReloadAll,
   onColumnsChange,
-  onRelativeGlobalZoomStart,
   onRelativeGlobalZoomChange,
   onDefaultViewportChange,
   onGlobalViewportChange,
@@ -118,9 +118,9 @@ export function BrowserToolbar({
           columns={columns}
           defaultViewport={defaultViewport}
           selectedZoom={selectedTile?.zoom ?? defaultZoom}
+          globalZoom={globalZoom}
           selectedViewport={selectedTile?.viewport ?? defaultViewport}
           onColumnsChange={onColumnsChange}
-          onRelativeGlobalZoomStart={onRelativeGlobalZoomStart}
           onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
           onDefaultViewportChange={onDefaultViewportChange}
           onGlobalViewportChange={onGlobalViewportChange}

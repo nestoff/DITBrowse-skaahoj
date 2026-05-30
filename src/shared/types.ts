@@ -63,4 +63,5 @@ export interface WorkspaceState {
   gridColumns: number;
   defaultViewport: ViewportSize;
   defaultZoom: number;
+  globalZoom: number;
 }

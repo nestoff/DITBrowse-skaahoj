@@ -322,6 +322,27 @@ describe("WebviewTile", () => {
     });
   });
 
+  it("layers all-tiles zoom on top of the individual tile zoom", () => {
+    render(
+      <WebviewTile
+        tile={{ ...tile, zoom: 1.05 }}
+        globalZoom={1.2}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    resizeTile(1024, 792);
+
+    expect(document.querySelector("webview")).toHaveStyle({
+      transform: "scale(1.26)"
+    });
+  });
+
   it("selects the tile when the webview reports interaction from inside the page", () => {
     const onSelectTile = vi.fn();
     render(

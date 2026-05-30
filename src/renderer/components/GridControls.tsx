@@ -103,9 +103,9 @@ interface GridControlsProps {
   columns: number;
   defaultViewport: ViewportSize;
   selectedZoom: number;
+  globalZoom: number;
   selectedViewport: ViewportSize | null;
   onColumnsChange: (columns: number) => void;
-  onRelativeGlobalZoomStart: () => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
   onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
@@ -118,9 +118,9 @@ export function GridControls({
   columns,
   defaultViewport,
   selectedZoom,
+  globalZoom,
   selectedViewport,
   onColumnsChange,
-  onRelativeGlobalZoomStart,
   onRelativeGlobalZoomChange,
   onDefaultViewportChange,
   onGlobalViewportChange,
@@ -132,10 +132,9 @@ export function GridControls({
   const viewportButtonRef = useRef<HTMLButtonElement | null>(null);
   const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
   const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
-  const [relativeZoom, setRelativeZoom] = useState(1);
   const [zoomPopoverStyle, setZoomPopoverStyle] = useState<CSSProperties>({});
   const [viewportPopoverStyle, setViewportPopoverStyle] = useState<CSSProperties>({});
-  const relativeZoomPercent = Math.round(relativeZoom * 100);
+  const relativeZoomPercent = Math.round(globalZoom * 100);
 
   const popoverStyleFor = (button: HTMLButtonElement | null, width: number): CSSProperties => {
     const rect = button?.getBoundingClientRect();
@@ -153,15 +152,12 @@ export function GridControls({
     setGlobalZoomOpen((open) => {
       const nextOpen = !open;
       if (nextOpen) {
-        setRelativeZoom(1);
         setZoomPopoverStyle(popoverStyleFor(zoomButtonRef.current, 260));
-        onRelativeGlobalZoomStart();
       }
       return nextOpen;
     });
   };
   const changeRelativeZoom = (factor: number): void => {
-    setRelativeZoom(factor);
     onRelativeGlobalZoomChange(factor);
   };
 
@@ -223,13 +219,13 @@ export function GridControls({
                 min="0.25"
                 max="3"
                 step="0.01"
-                value={relativeZoom}
+                value={globalZoom}
                 onChange={(event) => changeRelativeZoom(Number(event.target.value))}
                 aria-label="All tiles relative zoom"
               />
             </label>
             <ZoomPercentInput
-              value={relativeZoom}
+              value={globalZoom}
               ariaLabel="All tiles relative zoom percent"
               resetAriaLabel="Reset all relative zoom to 100 percent"
               onCommit={changeRelativeZoom}

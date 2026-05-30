@@ -9,6 +9,7 @@ const WEBVIEW_LOAD_STAGGER_MS = 750;
 
 interface TileGridProps {
   tiles: TileState[];
+  globalZoom: number;
   columns: number;
   selectedTileId: string | null;
   onSelectTile: (tileId: string) => void;
@@ -22,6 +23,7 @@ interface TileGridProps {
 
 function TileGridComponent({
   tiles,
+  globalZoom,
   columns,
   selectedTileId,
   onSelectTile,
@@ -54,6 +56,7 @@ function TileGridComponent({
           <WebviewTile
             key={tile.id}
             tile={tile}
+            globalZoom={globalZoom}
             selected={tile.id === selectedTileId}
             focused={focusMode && tile.id === selectedTileId}
             onSelectTile={onSelectTile}

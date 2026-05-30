@@ -21,7 +21,6 @@ import type {
   CameraEntry,
   CameraList,
   PasswordRecord,
-  TileState,
   ViewportSize,
   WorkspaceState
 } from "../../shared/types";
@@ -53,7 +52,7 @@ export type WorkspaceAction =
   | { type: "openNewTile"; url: string }
   | { type: "replaceActiveListFromCsv"; rows: CameraCsvRow[] }
   | { type: "setGlobalZoom"; zoom: number }
-  | { type: "setGlobalZoomRelative"; factor: number; baselineZooms: Record<string, number> }
+  | { type: "setGlobalZoomRelative"; factor: number }
   | { type: "setSelectedTileZoom"; zoom: number }
   | { type: "setDefaultViewport"; width: number; height: number }
   | { type: "setGlobalViewport"; width: number; height: number }
@@ -332,6 +331,7 @@ function normalizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
 
   return {
     ...workspace,
+    globalZoom: normalizeZoom(workspace.globalZoom ?? 1),
     defaultViewport,
     cameraLists,
     passwordRecords,
@@ -728,25 +728,9 @@ export function workspaceReducer(
       };
     }
     case "setGlobalZoomRelative": {
-      const factor = normalizeZoom(action.factor);
-      const zoomForTile = (tile: TileState): number =>
-        normalizeZoom((action.baselineZooms[tile.id] ?? tile.zoom) * factor);
-      const zoomByCameraId = new Map(
-        state.tiles
-          .filter((tile) => tile.cameraId)
-          .map((tile) => [tile.cameraId as string, zoomForTile(tile)])
-      );
-
       return {
         ...state,
-        cameraLists: state.cameraLists.map((list) => ({
-          ...list,
-          cameras: list.cameras.map((camera) => ({
-            ...camera,
-            zoomOverride: zoomByCameraId.get(camera.id) ?? camera.zoomOverride
-          }))
-        })),
-        tiles: state.tiles.map((tile) => ({ ...tile, zoom: zoomForTile(tile) }))
+        globalZoom: normalizeZoom(action.factor)
       };
     }
     case "setSelectedTileZoom": {

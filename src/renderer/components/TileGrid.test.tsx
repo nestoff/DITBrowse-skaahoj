@@ -12,6 +12,7 @@ vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 const baseProps = {
   tiles: sampleWorkspace.tiles.slice(0, 4),
+  globalZoom: 1,
   columns: 2,
   selectedTileId: "tile-42",
   onSelectTile: vi.fn(),
