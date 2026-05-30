@@ -360,8 +360,12 @@ export function App(): ReactElement {
     dispatch({ type: "deleteCredentialPreset", presetId });
   }, []);
 
-  const fillHttpAuthPreset = useCallback((username: string, password: string): void => {
-    setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, username, password } : prompt));
+  const fillHttpAuthUsername = useCallback((username: string): void => {
+    setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, username } : prompt));
+  }, []);
+
+  const fillHttpAuthPassword = useCallback((password: string): void => {
+    setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, password } : prompt));
   }, []);
 
   const discardTileCredential = useCallback((tileId: string): void => {
@@ -557,16 +561,34 @@ export function App(): ReactElement {
             </div>
             {workspace.credentialPresets.length > 0 && (
               <div className="http-auth-presets" aria-label="Saved credential suggestions">
-                {workspace.credentialPresets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => fillHttpAuthPreset(preset.username, preset.password)}
-                  >
-                    <span>{preset.username}</span>
-                    <code>{"•".repeat(Math.min(10, Math.max(4, preset.password.length)))}</code>
-                  </button>
-                ))}
+                <div className="http-auth-preset-group" aria-label="Saved usernames">
+                  <span>Usernames</span>
+                  <div>
+                    {workspace.credentialPresets.map((preset) => (
+                      <button
+                        key={`username-${preset.id}`}
+                        type="button"
+                        onClick={() => fillHttpAuthUsername(preset.username)}
+                      >
+                        {preset.username}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="http-auth-preset-group" aria-label="Saved passwords">
+                  <span>Passwords</span>
+                  <div>
+                    {workspace.credentialPresets.map((preset) => (
+                      <button
+                        key={`password-${preset.id}`}
+                        type="button"
+                        onClick={() => fillHttpAuthPassword(preset.password)}
+                      >
+                        {preset.password}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             <label className="http-auth-field">
@@ -584,7 +606,7 @@ export function App(): ReactElement {
             <label className="http-auth-field">
               <span>Password</span>
               <input
-                type="password"
+                type="text"
                 value={httpAuthPrompt.password}
                 onChange={(event) =>
                   setHttpAuthPrompt((prompt) =>

@@ -204,7 +204,7 @@ describe("App control API commands", () => {
     });
   });
 
-  it("fills the camera sign-in form from a global credential preset", async () => {
+  it("fills the camera sign-in form from separate saved username and password buttons", async () => {
     window.ditbrowse.loadWorkspace = vi.fn(async () => ({
       ...sampleWorkspace,
       credentialPresets: [
@@ -212,6 +212,12 @@ describe("App control API commands", () => {
           id: "preset-1",
           username: "admin",
           password: "ABCD1234",
+          cameraType: ""
+        },
+        {
+          id: "preset-2",
+          username: "operator",
+          password: "EFGH5678",
           cameraType: ""
         }
       ]
@@ -233,10 +239,12 @@ describe("App control API commands", () => {
     });
 
     expect(await screen.findByLabelText("Saved credential suggestions")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /admin/ }));
+    fireEvent.click(screen.getByRole("button", { name: "operator" }));
+    fireEvent.click(screen.getByRole("button", { name: "ABCD1234" }));
 
-    expect(screen.getByLabelText("Username")).toHaveValue("admin");
+    expect(screen.getByLabelText("Username")).toHaveValue("operator");
     expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
   });
 
   it("auto-fills the camera sign-in form from a matching camera type preset", async () => {
