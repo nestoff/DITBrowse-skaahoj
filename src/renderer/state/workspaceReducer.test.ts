@@ -918,6 +918,37 @@ describe("workspaceReducer", () => {
     ]);
   });
 
+  it("saves and deletes global credential presets", () => {
+    const withPreset = workspaceReducer(sampleWorkspace, {
+      type: "addCredentialPreset",
+      username: " admin ",
+      password: "ABCD1234"
+    });
+
+    expect(withPreset.credentialPresets).toEqual([
+      {
+        id: "credential-preset-new-tile",
+        username: "admin",
+        password: "ABCD1234"
+      }
+    ]);
+
+    const duplicate = workspaceReducer(withPreset, {
+      type: "addCredentialPreset",
+      username: "admin",
+      password: "ABCD1234"
+    });
+
+    expect(duplicate.credentialPresets).toHaveLength(1);
+
+    const deleted = workspaceReducer(duplicate, {
+      type: "deleteCredentialPreset",
+      presetId: "credential-preset-new-tile"
+    });
+
+    expect(deleted.credentialPresets).toEqual([]);
+  });
+
   it("replaces duplicate saved credentials for the same camera when a new password is saved", () => {
     const withDuplicates = {
       ...sampleWorkspace,

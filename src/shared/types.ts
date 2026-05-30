@@ -52,10 +52,17 @@ export interface PasswordRecord {
   password: string;
 }
 
+export interface CredentialPreset {
+  id: string;
+  username: string;
+  password: string;
+}
+
 export interface WorkspaceState {
   jobs: Job[];
   cameraLists: CameraList[];
   passwordRecords: PasswordRecord[];
+  credentialPresets: CredentialPreset[];
   tiles: TileState[];
   selectedTileId: string | null;
   activeJobId: string | null;

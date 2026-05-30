@@ -712,6 +712,60 @@ textarea::selection {
   font-weight: 660;
 }
 
+.credential-preset-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.credential-preset-form button,
+.credential-preset-row button {
+  height: 30px;
+  border: 1px solid #303640;
+  border-radius: 8px;
+  background: #15181d;
+  color: #dce0e6;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.credential-preset-form button:disabled {
+  opacity: 0.45;
+}
+
+.credential-preset-list {
+  display: grid;
+  gap: 6px;
+}
+
+.credential-preset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid #20242a;
+  border-radius: 8px;
+  background: #0a0c0e;
+  padding: 0 7px 0 10px;
+  color: #d9dde4;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.credential-preset-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.credential-preset-row code {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .job-inline-form,
 .new-job-form {
   display: grid;
@@ -1346,6 +1400,43 @@ textarea::selection {
 
 .http-auth-details strong {
   color: #d9dce2;
+}
+
+.http-auth-presets {
+  display: grid;
+  gap: 6px;
+}
+
+.http-auth-presets button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  border: 1px solid #2b3037;
+  border-radius: 8px;
+  background: #0b0d0f;
+  color: #d9dde4;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.http-auth-presets button:hover {
+  border-color: #3b424c;
+  background: #15181d;
+}
+
+.http-auth-presets span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.http-auth-presets code {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .http-auth-field {

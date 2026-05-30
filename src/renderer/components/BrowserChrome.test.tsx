@@ -36,6 +36,9 @@ const baseProps = {
   onUpdateJobName: vi.fn(),
   onDeleteJob: vi.fn(),
   onEditList: vi.fn(),
+  credentialPresets: [],
+  onAddCredentialPreset: vi.fn(),
+  onDeleteCredentialPreset: vi.fn(),
   onResetSelectedScale: vi.fn(),
   onResetGridOrder: vi.fn(),
   onClearSelectedCookies: vi.fn(),
@@ -294,6 +297,32 @@ describe("BrowserChrome", () => {
     expect(onDeleteJob).toHaveBeenCalledWith("job-sample");
 
     confirm.mockRestore();
+  });
+
+  it("manages global credential presets from workspace tools", () => {
+    const onAddCredentialPreset = vi.fn();
+    const onDeleteCredentialPreset = vi.fn();
+    render(
+      <BrowserChrome
+        {...baseProps}
+        credentialPresets={[{ id: "preset-1", username: "admin", password: "ABCD1234" }]}
+        onAddCredentialPreset={onAddCredentialPreset}
+        onDeleteCredentialPreset={onDeleteCredentialPreset}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+    expect(screen.getByLabelText("Saved credential presets")).toHaveTextContent("admin");
+
+    fireEvent.change(screen.getByLabelText("Preset username"), { target: { value: "operator" } });
+    fireEvent.change(screen.getByLabelText("Preset password"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(onAddCredentialPreset).toHaveBeenCalledWith("operator", "secret");
+
+    fireEvent.click(screen.getByLabelText("Saved credential presets").querySelector("button")!);
+
+    expect(onDeleteCredentialPreset).toHaveBeenCalledWith("preset-1");
   });
 
   it("offers to return a manually overridden selected camera to prefix and suffix style", () => {

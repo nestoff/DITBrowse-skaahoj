@@ -318,6 +318,18 @@ export function App(): ReactElement {
     []
   );
 
+  const addCredentialPreset = useCallback((username: string, password: string): void => {
+    dispatch({ type: "addCredentialPreset", username, password });
+  }, []);
+
+  const deleteCredentialPreset = useCallback((presetId: string): void => {
+    dispatch({ type: "deleteCredentialPreset", presetId });
+  }, []);
+
+  const fillHttpAuthPreset = useCallback((username: string, password: string): void => {
+    setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, username, password } : prompt));
+  }, []);
+
   const discardTileCredential = useCallback((tileId: string): void => {
     window.ditbrowse?.clearHttpAuthCache?.();
     dispatch({ type: "discardTileCredential", tileId });
@@ -464,6 +476,9 @@ export function App(): ReactElement {
         onUpdateJobName={updateJobName}
         onDeleteJob={deleteJob}
         onEditList={() => setEditorOpen(true)}
+        credentialPresets={workspace.credentialPresets}
+        onAddCredentialPreset={addCredentialPreset}
+        onDeleteCredentialPreset={deleteCredentialPreset}
         onResetSelectedScale={resetSelectedScale}
         onResetGridOrder={resetGridOrder}
         onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}
@@ -506,6 +521,20 @@ export function App(): ReactElement {
               <strong>{httpAuthPrompt.cameraLabel}</strong>
               <span>{httpAuthPrompt.request.realm || httpAuthPrompt.request.host}</span>
             </div>
+            {workspace.credentialPresets.length > 0 && (
+              <div className="http-auth-presets" aria-label="Saved credential suggestions">
+                {workspace.credentialPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => fillHttpAuthPreset(preset.username, preset.password)}
+                  >
+                    <span>{preset.username}</span>
+                    <code>{"•".repeat(Math.min(10, Math.max(4, preset.password.length)))}</code>
+                  </button>
+                ))}
+              </div>
+            )}
             <label className="http-auth-field">
               <span>Username</span>
               <input

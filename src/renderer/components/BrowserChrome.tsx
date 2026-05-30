@@ -2,7 +2,13 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
-import type { CameraList, TileState, ViewportSize, WorkspaceState } from "../../shared/types";
+import type {
+  CameraList,
+  CredentialPreset,
+  TileState,
+  ViewportSize,
+  WorkspaceState
+} from "../../shared/types";
 import { BrowserToolbar } from "./BrowserToolbar";
 import { BrowserToolsMenu } from "./BrowserToolsMenu";
 import { TabStrip } from "./TabStrip";
@@ -35,6 +41,9 @@ interface BrowserChromeProps {
   onUpdateJobName: (jobName: string) => void;
   onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
+  credentialPresets: CredentialPreset[];
+  onAddCredentialPreset: (username: string, password: string) => void;
+  onDeleteCredentialPreset: (presetId: string) => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
   onClearSelectedCookies: (partition: string, url: string) => void;
@@ -72,6 +81,9 @@ export function BrowserChrome({
   onUpdateJobName,
   onDeleteJob,
   onEditList,
+  credentialPresets,
+  onAddCredentialPreset,
+  onDeleteCredentialPreset,
   onResetSelectedScale,
   onResetGridOrder,
   onClearSelectedCookies,
@@ -142,6 +154,9 @@ export function BrowserChrome({
           onUpdateJobName={onUpdateJobName}
           onDeleteJob={onDeleteJob}
           onEditList={onEditList}
+          credentialPresets={credentialPresets}
+          onAddCredentialPreset={onAddCredentialPreset}
+          onDeleteCredentialPreset={onDeleteCredentialPreset}
           onResetSelectedScale={onResetSelectedScale}
           onResetGridOrder={onResetGridOrder}
           onClearSelectedCookies={onClearSelectedCookies}

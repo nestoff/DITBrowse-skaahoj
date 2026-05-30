@@ -35,6 +35,7 @@ export const sampleWorkspace: WorkspaceState = {
     }
   ],
   passwordRecords: [],
+  credentialPresets: [],
   tiles: Array.from({ length: 12 }, (_, index) => {
     const { index: cameraIndex, suffix } = cameraDefaultsFromNumber(index + 1);
     const idSuffix = String(41 + index);

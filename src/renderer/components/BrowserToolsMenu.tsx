@@ -2,7 +2,7 @@ import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { ListRestart, Maximize2, PencilLine } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
-import type { CameraList, Job, TileState } from "../../shared/types";
+import type { CameraList, CredentialPreset, Job, TileState } from "../../shared/types";
 import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
 import { PillButton } from "./ui/PillButton";
@@ -19,6 +19,9 @@ interface BrowserToolsMenuProps {
   onUpdateJobName: (jobName: string) => void;
   onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
+  credentialPresets: CredentialPreset[];
+  onAddCredentialPreset: (username: string, password: string) => void;
+  onDeleteCredentialPreset: (presetId: string) => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
   onClearSelectedCookies: (partition: string, url: string) => void;
@@ -39,6 +42,9 @@ export function BrowserToolsMenu({
   onUpdateJobName,
   onDeleteJob,
   onEditList,
+  credentialPresets,
+  onAddCredentialPreset,
+  onDeleteCredentialPreset,
   onResetSelectedScale,
   onResetGridOrder,
   onClearSelectedCookies,
@@ -48,6 +54,8 @@ export function BrowserToolsMenu({
 }: BrowserToolsMenuProps): ReactElement {
   const [portDraft, setPortDraft] = useState("");
   const [portError, setPortError] = useState("");
+  const [presetUsername, setPresetUsername] = useState("");
+  const [presetPassword, setPresetPassword] = useState("");
 
   useEffect(() => {
     setPortDraft(controlApiInfo?.configuredPort ? String(controlApiInfo.configuredPort) : "");
@@ -73,6 +81,13 @@ export function BrowserToolsMenu({
     } catch (error) {
       setPortError(error instanceof Error ? error.message : "Could not set API port.");
     }
+  };
+
+  const addPreset = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    onAddCredentialPreset(presetUsername, presetPassword);
+    setPresetUsername("");
+    setPresetPassword("");
   };
 
   return (
@@ -122,6 +137,47 @@ export function BrowserToolsMenu({
         onClearSelected={onClearSelectedCookies}
         onClearList={onClearListCookies}
       />
+      <div className="tools-section credential-preset-section">
+        <div className="tools-section-header">
+          <span>Password presets</span>
+          <strong>{credentialPresets.length}</strong>
+        </div>
+        <form className="credential-preset-form" onSubmit={addPreset}>
+          <label className="job-inline-field">
+            <span>Username</span>
+            <input
+              aria-label="Preset username"
+              value={presetUsername}
+              onChange={(event) => setPresetUsername(event.target.value)}
+            />
+          </label>
+          <label className="job-inline-field">
+            <span>Password</span>
+            <input
+              aria-label="Preset password"
+              type="password"
+              value={presetPassword}
+              onChange={(event) => setPresetPassword(event.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={!presetUsername.trim() || !presetPassword}>
+            Add
+          </button>
+        </form>
+        {credentialPresets.length > 0 && (
+          <div className="credential-preset-list" aria-label="Saved credential presets">
+            {credentialPresets.map((preset) => (
+              <div key={preset.id} className="credential-preset-row">
+                <span>{preset.username}</span>
+                <code>{"•".repeat(Math.min(10, Math.max(4, preset.password.length)))}</code>
+                <button type="button" onClick={() => onDeleteCredentialPreset(preset.id)}>
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="tools-section control-api-section">
         <div className="tools-section-header">
           <span>Local API</span>
