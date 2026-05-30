@@ -26,7 +26,8 @@ const baseProps = {
   onReload: vi.fn(),
   onReloadAll: vi.fn(),
   onColumnsChange: vi.fn(),
-  onGlobalZoomChange: vi.fn(),
+  onRelativeGlobalZoomStart: vi.fn(),
+  onRelativeGlobalZoomChange: vi.fn(),
   onGlobalViewportChange: vi.fn(),
   onZoomChange: vi.fn(),
   onDefaultViewportChange: vi.fn(),
@@ -139,13 +140,15 @@ describe("BrowserChrome", () => {
     expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent("GET /api/grid");
   });
 
-  it("applies the selected zoom to every tile from the All button", () => {
-    const onGlobalZoomChange = vi.fn();
+  it("opens relative all-tiles zoom controls", () => {
+    const onRelativeGlobalZoomStart = vi.fn();
+    const onRelativeGlobalZoomChange = vi.fn();
     const onZoomChange = vi.fn();
-    const { rerender } = render(
+    render(
       <BrowserChrome
         {...baseProps}
-        onGlobalZoomChange={onGlobalZoomChange}
+        onRelativeGlobalZoomStart={onRelativeGlobalZoomStart}
+        onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
         onZoomChange={onZoomChange}
       />
     );
@@ -162,18 +165,23 @@ describe("BrowserChrome", () => {
 
     expect(onZoomChange).toHaveBeenCalledWith(1.37);
 
-    rerender(
-      <BrowserChrome
-        {...baseProps}
-        selectedTile={selectedTile ? { ...selectedTile, zoom: 1.37 } : null}
-        onGlobalZoomChange={onGlobalZoomChange}
-        onZoomChange={onZoomChange}
-      />
-    );
+    expect(screen.queryByLabelText("Global zoom controls panel")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Global zoom controls"));
+    expect(screen.getByLabelText("Global zoom controls panel")).toBeVisible();
+    expect(onRelativeGlobalZoomStart).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByLabelText("Apply selected zoom to all tiles"));
+    fireEvent.change(screen.getByLabelText("All tiles relative zoom"), {
+      target: { value: "1.2" }
+    });
+    expect(onRelativeGlobalZoomChange).toHaveBeenCalledWith(1.2);
 
-    expect(onGlobalZoomChange).toHaveBeenCalledWith(1.37);
+    const relativeZoomPercent = screen.getByLabelText("All tiles relative zoom percent");
+    expect(relativeZoomPercent).toHaveValue(120);
+
+    fireEvent.change(relativeZoomPercent, { target: { value: "142" } });
+    fireEvent.blur(relativeZoomPercent);
+
+    expect(onRelativeGlobalZoomChange).toHaveBeenCalledWith(1.42);
   });
 
   it("toggles selected-page focus mode from the toolbar", () => {
@@ -198,12 +206,10 @@ describe("BrowserChrome", () => {
   });
 
   it("resets selected zoom when the percent marker is double-clicked", () => {
-    const onGlobalZoomChange = vi.fn();
     const onZoomChange = vi.fn();
     render(
       <BrowserChrome
         {...baseProps}
-        onGlobalZoomChange={onGlobalZoomChange}
         onZoomChange={onZoomChange}
       />
     );
@@ -211,7 +217,6 @@ describe("BrowserChrome", () => {
     fireEvent.doubleClick(screen.getByLabelText("Reset selected zoom to 100 percent"));
 
     expect(onZoomChange).toHaveBeenCalledWith(1);
-    expect(onGlobalZoomChange).not.toHaveBeenCalled();
   });
 
   it("sets the saved default aspect ratio separately from the selected tile viewport", () => {
@@ -233,7 +238,7 @@ describe("BrowserChrome", () => {
     expect(onViewportChange).not.toHaveBeenCalled();
   });
 
-  it("applies the selected viewport to every tile from the All button", () => {
+  it("opens all-tiles viewport controls", () => {
     const onGlobalViewportChange = vi.fn();
     const selectedViewport = { width: 1280, height: 720 };
     render(
@@ -244,9 +249,13 @@ describe("BrowserChrome", () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText("Apply selected viewport to all tiles"));
+    fireEvent.click(screen.getByLabelText("All viewport controls"));
+    expect(screen.getByLabelText("All viewport controls panel")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("All tiles viewport"), {
+      target: { value: "1920x1080" }
+    });
 
-    expect(onGlobalViewportChange).toHaveBeenCalledWith(selectedViewport);
+    expect(onGlobalViewportChange).toHaveBeenCalledWith({ width: 1920, height: 1080 });
   });
 
   it("drags tabs to reorder them", () => {

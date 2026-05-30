@@ -105,7 +105,8 @@ interface GridControlsProps {
   selectedZoom: number;
   selectedViewport: ViewportSize | null;
   onColumnsChange: (columns: number) => void;
-  onGlobalZoomChange: (zoom: number) => void;
+  onRelativeGlobalZoomStart: () => void;
+  onRelativeGlobalZoomChange: (factor: number) => void;
   onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
@@ -119,13 +120,33 @@ export function GridControls({
   selectedZoom,
   selectedViewport,
   onColumnsChange,
-  onGlobalZoomChange,
+  onRelativeGlobalZoomStart,
+  onRelativeGlobalZoomChange,
   onDefaultViewportChange,
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
+  const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
+  const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
+  const [relativeZoom, setRelativeZoom] = useState(1);
+  const relativeZoomPercent = Math.round(relativeZoom * 100);
+  const toggleGlobalZoom = (): void => {
+    setGlobalZoomOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) {
+        setRelativeZoom(1);
+        onRelativeGlobalZoomStart();
+      }
+      return nextOpen;
+    });
+  };
+  const changeRelativeZoom = (factor: number): void => {
+    setRelativeZoom(factor);
+    onRelativeGlobalZoomChange(factor);
+  };
+
   return (
     <div className="grid-controls">
       {icon && <span className="grid-controls-icon">{icon}</span>}
@@ -164,11 +185,34 @@ export function GridControls({
         <button
           type="button"
           className="global-zoom-trigger"
-          aria-label="Apply selected zoom to all tiles"
-          onClick={() => onGlobalZoomChange(selectedZoom)}
+          aria-label="Global zoom controls"
+          aria-expanded={globalZoomOpen}
+          onClick={toggleGlobalZoom}
         >
           All
         </button>
+        {globalZoomOpen && (
+          <div className="zoom-popover" aria-label="Global zoom controls panel">
+            <label className="zoom-slider">
+              <span>All relative {relativeZoomPercent}%</span>
+              <input
+                type="range"
+                min="0.25"
+                max="3"
+                step="0.01"
+                value={relativeZoom}
+                onChange={(event) => changeRelativeZoom(Number(event.target.value))}
+                aria-label="All tiles relative zoom"
+              />
+            </label>
+            <ZoomPercentInput
+              value={relativeZoom}
+              ariaLabel="All tiles relative zoom percent"
+              resetAriaLabel="Reset all relative zoom to 100 percent"
+              onCommit={changeRelativeZoom}
+            />
+          </div>
+        )}
       </div>
       <label className="grid-control">
         <span>Default</span>
@@ -202,11 +246,30 @@ export function GridControls({
         <button
           type="button"
           className="global-viewport-trigger"
-          aria-label="Apply selected viewport to all tiles"
-          onClick={() => onGlobalViewportChange(selectedViewport ?? defaultViewport)}
+          aria-label="All viewport controls"
+          aria-expanded={globalViewportOpen}
+          onClick={() => setGlobalViewportOpen((open) => !open)}
         >
           All
         </button>
+        {globalViewportOpen && (
+          <div className="viewport-popover" aria-label="All viewport controls panel">
+            <label className="viewport-select">
+              <span>All View</span>
+              <select
+                value={viewportToValue(selectedViewport ?? defaultViewport)}
+                onChange={(event) => onGlobalViewportChange(viewportFromValue(event.target.value))}
+                aria-label="All tiles viewport"
+              >
+                {VIEWPORT_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>
+                    {preset.value}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -25,7 +25,8 @@ interface BrowserChromeProps {
   onReload: () => void;
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
-  onGlobalZoomChange: (zoom: number) => void;
+  onRelativeGlobalZoomStart: () => void;
+  onRelativeGlobalZoomChange: (factor: number) => void;
   onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
@@ -62,7 +63,8 @@ export function BrowserChrome({
   onReload,
   onReloadAll,
   onColumnsChange,
-  onGlobalZoomChange,
+  onRelativeGlobalZoomStart,
+  onRelativeGlobalZoomChange,
   onDefaultViewportChange,
   onGlobalViewportChange,
   onZoomChange,
@@ -120,7 +122,8 @@ export function BrowserChrome({
         onReload={onReload}
         onReloadAll={onReloadAll}
         onColumnsChange={onColumnsChange}
-        onGlobalZoomChange={onGlobalZoomChange}
+        onRelativeGlobalZoomStart={onRelativeGlobalZoomStart}
+        onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
         onDefaultViewportChange={onDefaultViewportChange}
         onGlobalViewportChange={onGlobalViewportChange}
         onZoomChange={onZoomChange}

@@ -67,6 +67,7 @@ export function App(): ReactElement {
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
   const selectedTileIdRef = useRef(workspace.selectedTileId);
   const workspaceRef = useRef(workspace);
+  const globalZoomBaselineRef = useRef<Record<string, number> | null>(null);
   const effectiveFocusMode = focusMode && !!workspace.selectedTileId;
   const focusModeRef = useRef(effectiveFocusMode);
 
@@ -242,8 +243,18 @@ export function App(): ReactElement {
     dispatch({ type: "setGridColumns", columns });
   }, []);
 
-  const setGlobalZoom = useCallback((zoom: number): void => {
-    dispatch({ type: "setGlobalZoom", zoom });
+  const beginRelativeGlobalZoom = useCallback((): void => {
+    globalZoomBaselineRef.current = Object.fromEntries(
+      workspaceRef.current.tiles.map((tile) => [tile.id, tile.zoom])
+    );
+  }, []);
+
+  const setRelativeGlobalZoom = useCallback((factor: number): void => {
+    const baselineZooms =
+      globalZoomBaselineRef.current ??
+      Object.fromEntries(workspaceRef.current.tiles.map((tile) => [tile.id, tile.zoom]));
+    globalZoomBaselineRef.current = baselineZooms;
+    dispatch({ type: "setGlobalZoomRelative", factor, baselineZooms });
   }, []);
 
   const setDefaultViewport = useCallback((viewport: { width: number; height: number }): void => {
@@ -454,7 +465,8 @@ export function App(): ReactElement {
         onReload={() => runSelectedTileCommand(selectedTileIdRef.current, "reload")}
         onReloadAll={() => runAllTileCommand("reload")}
         onColumnsChange={setColumns}
-        onGlobalZoomChange={setGlobalZoom}
+        onRelativeGlobalZoomStart={beginRelativeGlobalZoom}
+        onRelativeGlobalZoomChange={setRelativeGlobalZoom}
         onDefaultViewportChange={setDefaultViewport}
         onGlobalViewportChange={setGlobalViewport}
         onZoomChange={setSelectedZoom}

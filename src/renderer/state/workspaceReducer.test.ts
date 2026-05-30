@@ -305,6 +305,26 @@ describe("workspaceReducer", () => {
     ).toBe(true);
   });
 
+  it("updates every tile zoom relative to the zooms captured when All was opened", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "setGlobalZoomRelative",
+      factor: 1.25,
+      baselineZooms: {
+        "tile-41": 0.8,
+        "tile-42": 1.5
+      }
+    });
+
+    expect(state.defaultZoom).toBe(1);
+    expect(state.tiles.find((tile) => tile.id === "tile-41")?.zoom).toBe(1);
+    expect(state.tiles.find((tile) => tile.id === "tile-42")?.zoom).toBe(1.88);
+    expect(state.tiles.find((tile) => tile.id === "tile-43")?.zoom).toBe(1.25);
+    expect(state.cameraLists[0].cameras.find((camera) => camera.id === "camera-41")?.zoomOverride)
+      .toBe(1);
+    expect(state.cameraLists[0].cameras.find((camera) => camera.id === "camera-42")?.zoomOverride)
+      .toBe(1.88);
+  });
+
   it("updates selected tile viewport", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "setSelectedTileViewport",
