@@ -18,6 +18,7 @@ import {
 } from "./httpAuthCache.js";
 import { installProcessStreamGuards } from "./processStreamGuards.js";
 import { getMainPreloadPath } from "./preloadPaths.js";
+import { installSonyCameraWebviewPatch } from "./sonyCameraPatch.js";
 import { createJsonStorage } from "./storage.js";
 import { loadWindowState, saveWindowState, toBrowserWindowOptions } from "./windowState.js";
 import { lockWebContentsZoom } from "./zoomGuard.js";
@@ -34,6 +35,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 installProcessStreamGuards(process);
+installSonyCameraWebviewPatch(app);
 
 const pendingControlResponses = new Map<
   string,
