@@ -137,7 +137,7 @@ describe("App control API commands", () => {
       reloadSelectedTileHandler?.();
     });
 
-    expect(selectedWebview.loadURL).toHaveBeenCalledWith("http://192.168.1.1");
+    expect(selectedWebview.loadURL).toHaveBeenCalledWith("http://192.168.1.01");
     expect(selectedWebview.reload).not.toHaveBeenCalled();
     expect(otherWebview.loadURL).not.toHaveBeenCalled();
     expect(otherWebview.reload).not.toHaveBeenCalled();

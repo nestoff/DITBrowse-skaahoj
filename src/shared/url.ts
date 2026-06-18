@@ -3,7 +3,8 @@ const SPECIAL_SCHEME_PATTERN = /^(about|data|file|mailto|javascript):/i;
 const BARE_IPV4_PATTERN = /^(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?(?:[/?#].*)?$/;
 const BARE_HOSTNAME_PATTERN = /^(?:localhost|(?:[a-z0-9-]+\.)+[a-z0-9-]+)(?::\d+)?(?:[/?#].*)?$/i;
 const BARE_IPV4_PREFIX_PATTERN = /^(?:\d{1,3}\.){1,3}$/;
-const STABLE_CAMERA_GUI_PATHS = new Set(["/rmt.html"]);
+const HTTP_ORIGIN_PATTERN = /^(https?:\/\/[^/?#]+)(?=[/?#]|$)/i;
+const STABLE_CAMERA_GUI_PATHS = new Set(["/rmt.html", "/index", "/index.htm", "/index.html"]);
 
 function hasScheme(input: string): boolean {
   return ABSOLUTE_URL_PATTERN.test(input) || SPECIAL_SCHEME_PATTERN.test(input);
@@ -20,6 +21,10 @@ function isLoginPath(pathname: string): boolean {
 
 function isStableCameraGuiPath(pathname: string): boolean {
   return STABLE_CAMERA_GUI_PATHS.has(pathname.toLowerCase());
+}
+
+function httpOriginPreservingHostText(input: string): string | null {
+  return input.match(HTTP_ORIGIN_PATTERN)?.[1] ?? null;
 }
 
 export function normalizeCameraUrl(input: string): string {
@@ -89,11 +94,12 @@ export function resolveCameraAddressWithStablePath(
 
 export function cameraRootFromUrl(input: string): string {
   const normalized = normalizeCameraUrl(input);
+  const origin = httpOriginPreservingHostText(normalized);
 
   try {
     const parsed = new URL(normalized);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.origin;
+    if ((parsed.protocol === "http:" || parsed.protocol === "https:") && origin) {
+      return origin;
     }
   } catch {
     return normalized;
@@ -104,23 +110,24 @@ export function cameraRootFromUrl(input: string): string {
 
 export function cameraBaseFromCommittedUrl(input: string): string {
   const normalized = normalizeCameraUrl(input);
+  const origin = httpOriginPreservingHostText(normalized);
 
   try {
     const parsed = new URL(normalized);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       if (parsed.pathname === "/" && !parsed.search && !parsed.hash) {
-        return parsed.origin;
+        return origin ?? parsed.origin;
       }
 
       if (isLoginPath(parsed.pathname)) {
-        return parsed.origin;
+        return origin ?? parsed.origin;
       }
 
       if (isStableCameraGuiPath(parsed.pathname)) {
-        return parsed.href;
+        return `${origin ?? parsed.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
       }
 
-      return parsed.origin;
+      return origin ?? parsed.origin;
     }
   } catch {
     return normalized;

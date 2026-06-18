@@ -814,7 +814,7 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "https://192.168.1.1",
+      url: "https://192.168.1.01",
       usesListPrefix: true
     });
   });
@@ -828,12 +828,30 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "http://192.168.1.1/rmt.html",
+      url: "http://192.168.1.01/rmt.html",
       usesListPrefix: true
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.1/rmt.html"
+      url: "http://192.168.1.01/rmt.html"
+    });
+  });
+
+  it("keeps camera index landing pages instead of forcing the root URL", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-41",
+      url: "http://10.20.100.107/index.html"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "http://10.20.100.107/index.html",
+      usesListPrefix: true
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.107/index.html"
     });
   });
 
@@ -869,12 +887,12 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "http://192.168.1.1",
+      url: "http://192.168.1.01",
       usesListPrefix: true
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://192.168.1.1"
+      url: "http://192.168.1.01"
     });
   });
 

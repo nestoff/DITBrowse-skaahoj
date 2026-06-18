@@ -76,6 +76,24 @@ describe("cameraBaseFromCommittedUrl", () => {
     );
   });
 
+  it("keeps camera index landing pages as stable page URLs", () => {
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.107/index")).toBe(
+      "http://10.20.100.107/index"
+    );
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.107/index.html")).toBe(
+      "http://10.20.100.107/index.html"
+    );
+  });
+
+  it("preserves the host text instead of shortening two-digit camera addresses", () => {
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.05/rmt.html")).toBe(
+      "http://10.20.100.05/rmt.html"
+    );
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.05/text")).toBe(
+      "http://10.20.100.05"
+    );
+  });
+
   it("drops unknown camera helper paths back to the camera origin", () => {
     expect(cameraBaseFromCommittedUrl("http://10.20.100.105/text")).toBe(
       "http://10.20.100.105"
@@ -94,6 +112,9 @@ describe("stableCameraGuiPathFromUrl", () => {
   it("returns known stable camera GUI paths", () => {
     expect(stableCameraGuiPathFromUrl("http://10.20.100.105/rmt.html?view=main")).toBe(
       "/rmt.html?view=main"
+    );
+    expect(stableCameraGuiPathFromUrl("http://10.20.100.107/index.html")).toBe(
+      "/index.html"
     );
   });
 
@@ -122,6 +143,16 @@ describe("resolveCameraAddressWithStablePath", () => {
       )
     ).toBe("http://10.10.20.05");
   });
+
+  it("keeps camera index landing pages when changing the prefix", () => {
+    expect(
+      resolveCameraAddressWithStablePath(
+        "http://10.10.20.",
+        "07",
+        "http://10.20.100.107/index.html"
+      )
+    ).toBe("http://10.10.20.07/index.html");
+  });
 });
 
 describe("cameraRootFromUrl", () => {
@@ -134,5 +165,9 @@ describe("cameraRootFromUrl", () => {
 
   it("keeps non-http URLs unchanged", () => {
     expect(cameraRootFromUrl("about:blank")).toBe("about:blank");
+  });
+
+  it("preserves the typed camera host text on reload", () => {
+    expect(cameraRootFromUrl("http://10.20.100.05/rmt.html")).toBe("http://10.20.100.05");
   });
 });

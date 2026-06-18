@@ -43,6 +43,16 @@ describe("runSelectedTileCommand", () => {
     expect(webview.reload).not.toHaveBeenCalled();
   });
 
+  it("reloads a typed bare camera IP from the exact root address", () => {
+    const webview = addWebview("tile-1");
+    webview.getURL = vi.fn(() => "http://10.20.100.107/rmt.html");
+
+    runSelectedTileCommand("tile-1", "reload");
+
+    expect(webview.loadURL).toHaveBeenCalledWith("http://10.20.100.107");
+    expect(webview.reload).not.toHaveBeenCalled();
+  });
+
   it("falls back to normal reload for non-http webviews", () => {
     const webview = addWebview("tile-1");
     webview.getURL = vi.fn(() => "about:blank");
