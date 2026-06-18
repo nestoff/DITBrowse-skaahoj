@@ -26,6 +26,7 @@ interface BrowserChromeProps {
   onAddTile: () => void;
   onMoveTileToIndex: (tileId: string, toIndex: number) => void;
   onNavigate: (input: string, target: "selected" | "new") => void;
+  onSaveSelectedUrl: () => void;
   onReturnSelectedCameraToPrefix: () => void;
   onBack: () => void;
   onForward: () => void;
@@ -73,6 +74,7 @@ export function BrowserChrome({
   onAddTile,
   onMoveTileToIndex,
   onNavigate,
+  onSaveSelectedUrl,
   onReturnSelectedCameraToPrefix,
   onBack,
   onForward,
@@ -109,6 +111,8 @@ export function BrowserChrome({
     ? activeList?.cameras.find((camera) => camera.id === selectedTile.cameraId) ?? null
     : null;
   const showReturnToPrefix = !!selectedCamera && selectedCamera.usesListPrefix === false;
+  const canSaveSelectedUrl =
+    !!selectedCamera && !!selectedTile?.url && selectedTile.url !== selectedCamera.url;
 
   return (
     <div className="browser-shell">
@@ -137,6 +141,8 @@ export function BrowserChrome({
         globalZoom={workspace.globalZoom}
         defaultViewport={workspace.defaultViewport}
         onNavigate={onNavigate}
+        canSaveSelectedUrl={canSaveSelectedUrl}
+        onSaveSelectedUrl={onSaveSelectedUrl}
         showReturnToPrefix={showReturnToPrefix}
         onReturnSelectedCameraToPrefix={onReturnSelectedCameraToPrefix}
         onBack={onBack}

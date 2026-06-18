@@ -143,6 +143,39 @@ describe("App control API commands", () => {
     expect(otherWebview.reload).not.toHaveBeenCalled();
   });
 
+  it("saves the selected live URL to the selected camera only when requested", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const saveButton = screen.getByRole("button", { name: "Save current URL to camera list" });
+    expect(saveButton).toBeDisabled();
+
+    const selectedWebview = document.querySelector(
+      'webview[data-tile-id="tile-41"]'
+    ) as Electron.WebviewTag;
+    fireEvent(
+      selectedWebview,
+      Object.assign(new Event("did-navigate"), {
+        url: "http://10.20.100.107/index.html",
+        isMainFrame: true
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Address" })).toHaveValue(
+        "http://10.20.100.107/index.html"
+      );
+    });
+    expect(saveButton).toBeEnabled();
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(saveButton).toBeDisabled();
+    });
+  });
+
   it("answers camera HTTP auth challenges with saved credentials", async () => {
     window.ditbrowse.loadWorkspace = vi.fn(async () => ({
       ...sampleWorkspace,

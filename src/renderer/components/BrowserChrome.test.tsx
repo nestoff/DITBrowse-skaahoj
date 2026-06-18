@@ -20,6 +20,7 @@ const baseProps = {
   onCloseTile: vi.fn(),
   onAddTile: vi.fn(),
   onNavigate: vi.fn(),
+  onSaveSelectedUrl: vi.fn(),
   onReturnSelectedCameraToPrefix: vi.fn(),
   onBack: vi.fn(),
   onForward: vi.fn(),
@@ -423,5 +424,34 @@ describe("BrowserChrome", () => {
     expect(
       screen.queryByRole("button", { name: "Go back to prefix and suffix style" })
     ).not.toBeInTheDocument();
+  });
+
+  it("saves the selected live tile URL to the camera list on request", () => {
+    const onSaveSelectedUrl = vi.fn();
+    const liveWorkspace = {
+      ...sampleWorkspace,
+      tiles: sampleWorkspace.tiles.map((tile) =>
+        tile.id === "tile-41" ? { ...tile, url: "http://10.20.100.107/index.html" } : tile
+      )
+    };
+
+    render(
+      <BrowserChrome
+        {...baseProps}
+        workspace={liveWorkspace}
+        selectedTile={liveWorkspace.tiles[0]}
+        onSaveSelectedUrl={onSaveSelectedUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save current URL to camera list" }));
+
+    expect(onSaveSelectedUrl).toHaveBeenCalledOnce();
+  });
+
+  it("disables saving the selected URL when it already matches the camera list", () => {
+    render(<BrowserChrome {...baseProps} />);
+
+    expect(screen.getByRole("button", { name: "Save current URL to camera list" })).toBeDisabled();
   });
 });

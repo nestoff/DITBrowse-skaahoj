@@ -269,6 +269,18 @@ export function App(): ReactElement {
     dispatch({ type: "returnSelectedCameraToPrefix" });
   }, []);
 
+  const saveSelectedTileUrlToCamera = useCallback((): void => {
+    if (!selectedTile?.cameraId || !selectedTile.url) {
+      return;
+    }
+
+    dispatch({
+      type: "updateCameraEntry",
+      cameraId: selectedTile.cameraId,
+      patch: { url: selectedTile.url }
+    });
+  }, [selectedTile?.cameraId, selectedTile?.url]);
+
   const setColumns = useCallback((columns: number): void => {
     dispatch({ type: "setGridColumns", columns });
   }, []);
@@ -510,6 +522,7 @@ export function App(): ReactElement {
         onCloseTile={closeTile}
         onAddTile={addBlankTile}
         onNavigate={navigate}
+        onSaveSelectedUrl={saveSelectedTileUrlToCamera}
         onReturnSelectedCameraToPrefix={returnSelectedCameraToPrefix}
         onBack={() => runSelectedTileCommand(selectedTileIdRef.current, "back")}
         onForward={() => runSelectedTileCommand(selectedTileIdRef.current, "forward")}

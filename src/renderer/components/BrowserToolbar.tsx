@@ -8,6 +8,7 @@ import {
   RotateCw,
   Rows3,
   RotateCcw,
+  Save,
   SquareStack
 } from "lucide-react";
 import type { TileState, ViewportSize } from "../../shared/types";
@@ -23,6 +24,8 @@ interface BrowserToolbarProps {
   globalZoom: number;
   defaultViewport: ViewportSize;
   onNavigate: (input: string, target: "selected" | "new") => void;
+  canSaveSelectedUrl: boolean;
+  onSaveSelectedUrl: () => void;
   showReturnToPrefix: boolean;
   onReturnSelectedCameraToPrefix: () => void;
   onBack: () => void;
@@ -46,6 +49,8 @@ export function BrowserToolbar({
   globalZoom,
   defaultViewport,
   onNavigate,
+  canSaveSelectedUrl,
+  onSaveSelectedUrl,
   showReturnToPrefix,
   onReturnSelectedCameraToPrefix,
   onBack,
@@ -85,6 +90,12 @@ export function BrowserToolbar({
       </div>
       <div className="browser-toolbar-main">
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={onNavigate} />
+        <IconButton
+          label="Save current URL to camera list"
+          icon={<Save size={14} strokeWidth={2.2} />}
+          disabled={!canSaveSelectedUrl}
+          onClick={onSaveSelectedUrl}
+        />
         {showReturnToPrefix && (
           <PillButton
             className="return-prefix-button"
