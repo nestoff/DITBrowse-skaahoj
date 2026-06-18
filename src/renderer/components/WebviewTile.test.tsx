@@ -734,13 +734,20 @@ describe("WebviewTile", () => {
       />
     );
 
-    const webview = document.querySelector("webview") as HTMLElement & { reload: () => void };
+    const webview = document.querySelector("webview") as HTMLElement & {
+      getURL: () => string;
+      loadURL: (url: string) => Promise<void>;
+      reload: () => void;
+    };
+    webview.getURL = vi.fn(() => "http://10.20.100.42/text");
+    webview.loadURL = vi.fn(async () => undefined);
     webview.reload = vi.fn();
     fireEvent(webview, createLoadFailureEvent());
 
     expect(screen.getByText("Failed to load")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry loading Camera 42" }));
-    expect(webview.reload).toHaveBeenCalledTimes(1);
+    expect(webview.loadURL).toHaveBeenCalledWith("http://10.20.100.42");
+    expect(webview.reload).not.toHaveBeenCalled();
   });
 
   it("drops stale saved credentials and retries after too many auth attempts", () => {
@@ -759,7 +766,13 @@ describe("WebviewTile", () => {
       />
     );
 
-    const webview = document.querySelector("webview") as HTMLElement & { reload: () => void };
+    const webview = document.querySelector("webview") as HTMLElement & {
+      getURL: () => string;
+      loadURL: (url: string) => Promise<void>;
+      reload: () => void;
+    };
+    webview.getURL = vi.fn(() => "http://10.20.100.42/rmt.html");
+    webview.loadURL = vi.fn(async () => undefined);
     webview.reload = vi.fn();
     fireEvent(webview, createLoadFailureEvent({ errorCode: -375 }));
 
@@ -782,7 +795,8 @@ describe("WebviewTile", () => {
     act(() => {
       vi.advanceTimersByTime(250);
     });
-    expect(webview.reload).toHaveBeenCalledTimes(1);
+    expect(webview.loadURL).toHaveBeenCalledWith("http://10.20.100.42");
+    expect(webview.reload).not.toHaveBeenCalled();
   });
 
   it("clears the retry overlay after the page finishes loading", () => {

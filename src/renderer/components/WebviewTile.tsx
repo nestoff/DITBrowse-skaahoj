@@ -9,6 +9,7 @@ import {
   DEFAULT_TEMPORARY_VIEW,
   type TemporaryViewGesture
 } from "../../shared/temporaryView";
+import { reloadWebviewFromCameraRoot } from "../browserControls";
 
 const TILE_LABEL_HEIGHT = 24;
 const BLANK_WEBVIEW_URL = `data:text/html;charset=utf-8,${encodeURIComponent(
@@ -467,11 +468,14 @@ function WebviewTileComponent({
 
     const timeout = window.setTimeout(() => {
       setRetryAfterCredentialDrop(false);
-      webviewRef.current?.reload();
+      const webview = webviewRef.current;
+      if (webview) {
+        reloadWebviewFromCameraRoot(webview, tile.url);
+      }
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [retryAfterCredentialDrop, savedCredential]);
+  }, [retryAfterCredentialDrop, savedCredential, tile.url]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -553,7 +557,12 @@ function WebviewTileComponent({
           <button
             type="button"
             aria-label={`Retry loading ${tile.title || tile.url || "tile"}`}
-            onClick={() => webviewRef.current?.reload()}
+            onClick={() => {
+              const webview = webviewRef.current;
+              if (webview) {
+                reloadWebviewFromCameraRoot(webview, tile.url);
+              }
+            }}
           >
             Retry
           </button>

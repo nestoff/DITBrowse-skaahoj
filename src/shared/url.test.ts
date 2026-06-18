@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cameraBaseFromCommittedUrl,
+  cameraRootFromUrl,
   resolveCameraAddress,
   resolveCameraAddressWithStablePath,
   stableCameraGuiPathFromUrl
@@ -120,5 +121,18 @@ describe("resolveCameraAddressWithStablePath", () => {
         "http://192.168.1.05/text"
       )
     ).toBe("http://10.10.20.05");
+  });
+});
+
+describe("cameraRootFromUrl", () => {
+  it("returns the origin for HTTP camera page URLs", () => {
+    expect(cameraRootFromUrl("http://10.20.100.105/rmt.html")).toBe("http://10.20.100.105");
+    expect(cameraRootFromUrl("https://10.20.100.105/index.html?mode=setup")).toBe(
+      "https://10.20.100.105"
+    );
+  });
+
+  it("keeps non-http URLs unchanged", () => {
+    expect(cameraRootFromUrl("about:blank")).toBe("about:blank");
   });
 });

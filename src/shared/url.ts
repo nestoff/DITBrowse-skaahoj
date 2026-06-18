@@ -87,6 +87,21 @@ export function resolveCameraAddressWithStablePath(
   return `${baseUrl}${separator}${stablePath}`;
 }
 
+export function cameraRootFromUrl(input: string): string {
+  const normalized = normalizeCameraUrl(input);
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.origin;
+    }
+  } catch {
+    return normalized;
+  }
+
+  return normalized;
+}
+
 export function cameraBaseFromCommittedUrl(input: string): string {
   const normalized = normalizeCameraUrl(input);
 

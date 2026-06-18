@@ -127,13 +127,19 @@ describe("App control API commands", () => {
       'webview[data-tile-id="tile-42"]'
     ) as Electron.WebviewTag;
     selectedWebview.reload = vi.fn();
+    selectedWebview.loadURL = vi.fn(async () => undefined);
+    selectedWebview.getURL = vi.fn(() => "http://192.168.1.01/rmt.html");
     otherWebview.reload = vi.fn();
+    otherWebview.loadURL = vi.fn(async () => undefined);
+    otherWebview.getURL = vi.fn(() => "http://192.168.1.02/index.html");
 
     act(() => {
       reloadSelectedTileHandler?.();
     });
 
-    expect(selectedWebview.reload).toHaveBeenCalledTimes(1);
+    expect(selectedWebview.loadURL).toHaveBeenCalledWith("http://192.168.1.1");
+    expect(selectedWebview.reload).not.toHaveBeenCalled();
+    expect(otherWebview.loadURL).not.toHaveBeenCalled();
     expect(otherWebview.reload).not.toHaveBeenCalled();
   });
 

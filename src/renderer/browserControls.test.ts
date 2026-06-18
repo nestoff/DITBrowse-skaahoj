@@ -9,6 +9,8 @@ function addWebview(tileId: string): Electron.WebviewTag {
   webview.goBack = vi.fn();
   webview.goForward = vi.fn();
   webview.reload = vi.fn();
+  webview.loadURL = vi.fn(async () => undefined);
+  webview.getURL = vi.fn(() => "http://10.20.100.105/rmt.html");
   document.body.append(webview);
   return webview;
 }
@@ -32,29 +34,41 @@ describe("runSelectedTileCommand", () => {
     expect(second.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it("reloads the selected webview", () => {
+  it("reloads the selected webview from the camera root", () => {
     const webview = addWebview("tile-1");
 
     runSelectedTileCommand("tile-1", "reload");
 
+    expect(webview.loadURL).toHaveBeenCalledWith("http://10.20.100.105");
+    expect(webview.reload).not.toHaveBeenCalled();
+  });
+
+  it("falls back to normal reload for non-http webviews", () => {
+    const webview = addWebview("tile-1");
+    webview.getURL = vi.fn(() => "about:blank");
+
+    runSelectedTileCommand("tile-1", "reload");
+
+    expect(webview.loadURL).not.toHaveBeenCalled();
     expect(webview.reload).toHaveBeenCalledTimes(1);
   });
 
-  it("reloads all webviews", () => {
+  it("reloads all webviews from their camera roots", () => {
     vi.useFakeTimers();
     const first = addWebview("tile-1");
     const second = addWebview("tile-2");
+    second.getURL = vi.fn(() => "http://10.20.100.106/index.html");
 
     runAllTileCommand("reload");
 
-    expect(first.reload).not.toHaveBeenCalled();
-    expect(second.reload).not.toHaveBeenCalled();
+    expect(first.loadURL).not.toHaveBeenCalled();
+    expect(second.loadURL).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(1);
-    expect(first.reload).toHaveBeenCalledTimes(1);
-    expect(second.reload).not.toHaveBeenCalled();
+    expect(first.loadURL).toHaveBeenCalledWith("http://10.20.100.105");
+    expect(second.loadURL).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(750);
-    expect(second.reload).toHaveBeenCalledTimes(1);
+    expect(second.loadURL).toHaveBeenCalledWith("http://10.20.100.106");
   });
 });
