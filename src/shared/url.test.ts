@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cameraBaseFromCommittedUrl, resolveCameraAddress } from "./url";
+import {
+  cameraBaseFromCommittedUrl,
+  resolveCameraAddress,
+  resolveCameraAddressWithStablePath,
+  stableCameraGuiPathFromUrl
+} from "./url";
 
 describe("resolveCameraAddress", () => {
   it("keeps full http URLs unchanged", () => {
@@ -70,7 +75,50 @@ describe("cameraBaseFromCommittedUrl", () => {
     );
   });
 
+  it("drops unknown camera helper paths back to the camera origin", () => {
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.105/text")).toBe(
+      "http://10.20.100.105"
+    );
+    expect(cameraBaseFromCommittedUrl("http://10.20.100.105/slash")).toBe(
+      "http://10.20.100.105"
+    );
+  });
+
   it("preserves non-http browser URLs unchanged", () => {
     expect(cameraBaseFromCommittedUrl("about:blank")).toBe("about:blank");
+  });
+});
+
+describe("stableCameraGuiPathFromUrl", () => {
+  it("returns known stable camera GUI paths", () => {
+    expect(stableCameraGuiPathFromUrl("http://10.20.100.105/rmt.html?view=main")).toBe(
+      "/rmt.html?view=main"
+    );
+  });
+
+  it("ignores unknown camera paths", () => {
+    expect(stableCameraGuiPathFromUrl("http://10.20.100.105/text")).toBe("");
+  });
+});
+
+describe("resolveCameraAddressWithStablePath", () => {
+  it("keeps stable camera GUI paths when changing the prefix", () => {
+    expect(
+      resolveCameraAddressWithStablePath(
+        "http://10.10.20.",
+        "05",
+        "http://192.168.1.05/rmt.html"
+      )
+    ).toBe("http://10.10.20.05/rmt.html");
+  });
+
+  it("does not carry temporary camera paths when changing the prefix", () => {
+    expect(
+      resolveCameraAddressWithStablePath(
+        "http://10.10.20.",
+        "05",
+        "http://192.168.1.05/text"
+      )
+    ).toBe("http://10.10.20.05");
   });
 });

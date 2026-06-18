@@ -10,7 +10,8 @@ import { normalizeCredentialUrl } from "../../shared/credentials";
 import {
   cameraBaseFromCommittedUrl,
   normalizeCameraPrefix,
-  normalizeCameraUrl
+  normalizeCameraUrl,
+  resolveCameraAddressWithStablePath
 } from "../../shared/url";
 import {
   DEFAULT_VIEWPORT,
@@ -196,7 +197,7 @@ function cameraUsesListPrefix(camera: CameraEntry, listPrefix: string): boolean 
 function applyListPrefixUrl(camera: CameraEntry, listPrefix: string): CameraEntry {
   return {
     ...camera,
-    url: `${normalizeCameraPrefix(listPrefix)}${camera.suffix}`,
+    url: resolveCameraAddressWithStablePath(listPrefix, camera.suffix, camera.url),
     usesListPrefix: true
   };
 }

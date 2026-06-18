@@ -837,6 +837,89 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("keeps stable camera GUI paths when a prefix-following camera changes IP range", () => {
+    const veniceState = workspaceReducer(sampleWorkspace, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-41",
+      url: "http://192.168.1.01/rmt.html"
+    });
+
+    const state = workspaceReducer(veniceState, {
+      type: "updateActiveListPrefix",
+      defaultPrefix: "http://10.20.100."
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "http://10.20.100.01/rmt.html",
+      usesListPrefix: true
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.01/rmt.html"
+    });
+  });
+
+  it("does not save transient camera helper paths as the camera URL", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "commitTileNavigationUrl",
+      tileId: "tile-41",
+      url: "http://192.168.1.01/text"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "http://192.168.1.1",
+      usesListPrefix: true
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://192.168.1.1"
+    });
+  });
+
+  it("does not carry transient camera helper paths when a prefix-following camera changes IP range", () => {
+    const transientPathState = workspaceReducer(
+      {
+        ...sampleWorkspace,
+        cameraLists: [
+          {
+            ...sampleWorkspace.cameraLists[0],
+            cameras: [
+              {
+                ...sampleWorkspace.cameraLists[0].cameras[0],
+                url: "http://192.168.1.01/text",
+                usesListPrefix: true
+              },
+              ...sampleWorkspace.cameraLists[0].cameras.slice(1)
+            ]
+          }
+        ],
+        tiles: [
+          {
+            ...sampleWorkspace.tiles[0],
+            url: "http://192.168.1.01/text"
+          },
+          ...sampleWorkspace.tiles.slice(1)
+        ]
+      },
+      {
+        type: "updateActiveListPrefix",
+        defaultPrefix: "http://10.20.100."
+      }
+    );
+
+    expect(transientPathState.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "http://10.20.100.01",
+      usesListPrefix: true
+    });
+    expect(transientPathState.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "http://10.20.100.01"
+    });
+  });
+
   it("saves a server-corrected URL on an unlinked tile without changing the camera list", () => {
     const unlinkedWorkspace = {
       ...sampleWorkspace,
