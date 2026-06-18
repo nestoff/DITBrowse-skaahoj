@@ -12,12 +12,20 @@ export function PillButton({
   tone = "default",
   className = "",
   type = "button",
+  title,
   ...buttonProps
 }: PillButtonProps): ReactElement {
   const classes = ["pill-button", `pill-button-${tone}`, className].filter(Boolean).join(" ");
+  const tooltip = title ?? (typeof children === "string" ? children : undefined);
 
   return (
-    <button {...buttonProps} type={type} className={classes}>
+    <button
+      {...buttonProps}
+      type={type}
+      title={title}
+      data-tooltip={tooltip}
+      className={classes}
+    >
       {icon && <span className="pill-button-icon">{icon}</span>}
       <span className="pill-button-label">{children}</span>
     </button>

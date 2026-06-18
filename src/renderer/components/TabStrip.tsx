@@ -61,6 +61,8 @@ export function TabStrip({
               className="tab-move"
               disabled={index === 0}
               aria-label={`Move ${label} left`}
+              title={`Move ${label} left`}
+              data-tooltip={`Move ${label} left`}
               onClick={() => onMoveTile(tile.id, "left")}
             >
               <ChevronLeft size={12} strokeWidth={2.4} />
@@ -70,6 +72,8 @@ export function TabStrip({
               className="tab-move"
               disabled={index === tiles.length - 1}
               aria-label={`Move ${label} right`}
+              title={`Move ${label} right`}
+              data-tooltip={`Move ${label} right`}
               onClick={() => onMoveTile(tile.id, "right")}
             >
               <ChevronRight size={12} strokeWidth={2.4} />
@@ -79,6 +83,7 @@ export function TabStrip({
               className="tab-close"
               aria-label={`Close ${label}`}
               title={`Close ${label}`}
+              data-tooltip={`Close ${label}`}
               onClick={() => onCloseTile(tile.id)}
             >
               <X size={12} strokeWidth={2.4} />

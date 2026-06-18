@@ -27,13 +27,19 @@ export function AddressBar({ value, onNavigate }: AddressBarProps): ReactElement
         onChange={(event) => setDraft(event.target.value)}
         onFocus={() => setDraft(value)}
       />
-      <button type="submit" aria-label="Open address" title="Open address">
+      <button
+        type="submit"
+        aria-label="Open address"
+        title="Open address"
+        data-tooltip="Open address"
+      >
         <CornerDownLeft size={16} strokeWidth={2.2} />
       </button>
       <button
         type="button"
         aria-label="Open address in new tile"
         title="Open address in new tile"
+        data-tooltip="Open address in new tile"
         onClick={() => onNavigate(draft, "new")}
       >
         <PanelTopOpen size={16} strokeWidth={2.2} />

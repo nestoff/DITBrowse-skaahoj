@@ -17,7 +17,14 @@ export function IconButton({
   const classes = ["icon-button", active ? "active" : "", className].filter(Boolean).join(" ");
 
   return (
-    <button {...buttonProps} type={type} aria-label={label} title={label} className={classes}>
+    <button
+      {...buttonProps}
+      type={type}
+      aria-label={label}
+      title={label}
+      data-tooltip={label}
+      className={classes}
+    >
       {icon}
     </button>
   );
