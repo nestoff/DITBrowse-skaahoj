@@ -202,30 +202,6 @@ function applyListPrefixUrl(camera: CameraEntry, listPrefix: string): CameraEntr
   };
 }
 
-function cameraUrlMatchesListPrefix(camera: CameraEntry, listPrefix: string, url: string): boolean {
-  const normalizedListPrefix = normalizeCameraPrefix(listPrefix);
-  return (
-    url === `${normalizedListPrefix}${camera.suffix}` ||
-    (!camera.suffix && url === normalizedListPrefix)
-  );
-}
-
-function committedUrlCanKeepFollowingPrefix(
-  camera: CameraEntry,
-  listPrefix: string,
-  url: string
-): boolean {
-  if (!cameraUsesListPrefix(camera, listPrefix)) {
-    return false;
-  }
-
-  return (
-    cameraUrlMatchesListPrefix(camera, listPrefix, url) ||
-    urlHostEndsWithSuffix(url, camera.suffix) ||
-    (!!camera.suffix && /^\d+$/.test(camera.suffix) && urlLooksLikePrivateIpv4Camera(url))
-  );
-}
-
 function updateDerivedCameraUrlForPrefix(
   camera: CameraEntry,
   previousPrefix: string,
@@ -579,37 +555,16 @@ export function workspaceReducer(
         return state;
       }
 
-      const committedCamera: CameraEntry = {
-        ...camera,
-        url: committedUrl,
-        usesListPrefix: committedUrlCanKeepFollowingPrefix(
-          camera,
-          listWithCamera.defaultPrefix,
-          committedUrl
-        )
-      };
-      const committedList = {
-        ...listWithCamera,
-        cameras: listWithCamera.cameras.map((candidate) =>
-          candidate.id === committedCamera.id ? committedCamera : candidate
-        )
-      };
-      const cameraLists = state.cameraLists.map((list) =>
-        list.id === committedList.id ? committedList : list
-      );
-
       return {
         ...state,
-        cameraLists,
-        passwordRecords: syncListPasswordRecords(state, committedList),
         tiles: state.tiles.map((tile) =>
-          tile.id === action.tileId || tile.cameraId === committedCamera.id
+          tile.id === action.tileId
             ? {
                 ...tile,
-                url: committedCamera.url,
-                title: formatCameraLabel(committedCamera),
-                viewport: committedCamera.viewportOverride ?? state.defaultViewport,
-                zoom: committedCamera.zoomOverride ?? state.defaultZoom
+                url: committedUrl,
+                title: formatCameraLabel(camera),
+                viewport: camera.viewportOverride ?? state.defaultViewport,
+                zoom: camera.zoomOverride ?? state.defaultZoom
               }
             : tile
         )

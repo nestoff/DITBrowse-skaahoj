@@ -217,6 +217,24 @@ describe("workspaceReducer", () => {
     });
   });
 
+  it("saves a user-typed full path exactly for the selected camera", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "navigateSelectedTile",
+      url: "http://10.20.100.107/index.html"
+    });
+
+    expect(state.cameraLists[0].cameras[0]).toMatchObject({
+      suffix: "01",
+      url: "http://10.20.100.107/index.html",
+      usesListPrefix: false
+    });
+    expect(state.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId)).toMatchObject({
+      cameraId: "camera-41",
+      title: "A",
+      url: "http://10.20.100.107/index.html"
+    });
+  });
+
   it("returns the selected manual camera to prefix and suffix URL style", () => {
     const manual = workspaceReducer(sampleWorkspace, {
       type: "navigateSelectedTile",
@@ -781,7 +799,7 @@ describe("workspaceReducer", () => {
     });
   });
 
-  it("saves a server-corrected HTTPS URL as the selected camera base", () => {
+  it("shows a server-corrected HTTPS URL live without changing the saved camera base", () => {
     const navigated = workspaceReducer(sampleWorkspace, {
       type: "navigateSelectedTile",
       url: "10.20.100.2"
@@ -795,7 +813,7 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "https://10.20.100.2",
+      url: "http://10.20.100.2",
       usesListPrefix: false
     });
     expect(state.tiles[0]).toMatchObject({
@@ -805,7 +823,7 @@ describe("workspaceReducer", () => {
     });
   });
 
-  it("keeps prefix-following cameras following after server HTTPS correction", () => {
+  it("shows prefix-following server HTTPS correction live without changing the saved camera URL", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "commitTileNavigationUrl",
       tileId: "tile-41",
@@ -814,12 +832,16 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "https://192.168.1.01",
+      url: "http://192.168.1.01",
       usesListPrefix: true
+    });
+    expect(state.tiles[0]).toMatchObject({
+      cameraId: "camera-41",
+      url: "https://192.168.1.01"
     });
   });
 
-  it("keeps camera GUI redirect paths instead of forcing the root URL", () => {
+  it("shows camera GUI redirect paths live without changing the saved camera URL", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "commitTileNavigationUrl",
       tileId: "tile-41",
@@ -828,7 +850,7 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "http://192.168.1.01/rmt.html",
+      url: "http://192.168.1.01",
       usesListPrefix: true
     });
     expect(state.tiles[0]).toMatchObject({
@@ -837,7 +859,7 @@ describe("workspaceReducer", () => {
     });
   });
 
-  it("keeps camera index landing pages instead of forcing the root URL", () => {
+  it("shows camera index landing pages live without changing the saved camera URL", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "commitTileNavigationUrl",
       tileId: "tile-41",
@@ -846,7 +868,7 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "http://10.20.100.107/index.html",
+      url: "http://192.168.1.01",
       usesListPrefix: true
     });
     expect(state.tiles[0]).toMatchObject({
@@ -855,7 +877,7 @@ describe("workspaceReducer", () => {
     });
   });
 
-  it("keeps stable camera GUI paths when a prefix-following camera changes IP range", () => {
+  it("reloads from the saved root after a camera GUI redirect when the prefix changes", () => {
     const veniceState = workspaceReducer(sampleWorkspace, {
       type: "commitTileNavigationUrl",
       tileId: "tile-41",
@@ -869,16 +891,16 @@ describe("workspaceReducer", () => {
 
     expect(state.cameraLists[0].cameras[0]).toMatchObject({
       suffix: "01",
-      url: "http://10.20.100.01/rmt.html",
+      url: "http://10.20.100.01",
       usesListPrefix: true
     });
     expect(state.tiles[0]).toMatchObject({
       cameraId: "camera-41",
-      url: "http://10.20.100.01/rmt.html"
+      url: "http://10.20.100.01"
     });
   });
 
-  it("does not save transient camera helper paths as the camera URL", () => {
+  it("shows transient camera helper paths as root live without changing the saved camera URL", () => {
     const state = workspaceReducer(sampleWorkspace, {
       type: "commitTileNavigationUrl",
       tileId: "tile-41",
