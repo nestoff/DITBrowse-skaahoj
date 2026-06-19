@@ -90,8 +90,8 @@ function ZoomPercentInput({
         type="button"
         className="zoom-percent-reset"
         aria-label={resetAriaLabel}
-        title="Double-click to reset to 100%"
-        data-tooltip="Double-click to reset to 100%"
+        title="Double-click the percent sign to reset this zoom to 100%"
+        data-tooltip="Double-click the percent sign to reset this zoom to 100%"
         onDoubleClick={resetZoom}
       >
         %
@@ -202,8 +202,8 @@ export function GridControls({
           ref={zoomButtonRef}
           className="global-zoom-trigger"
           aria-label="Global zoom controls"
-          title="Global zoom controls"
-          data-tooltip="Global zoom controls"
+          title="Open relative zoom controls for every tile"
+          data-tooltip="Open relative zoom controls for every tile"
           aria-expanded={globalZoomOpen}
           onClick={toggleGlobalZoom}
         >
@@ -270,8 +270,8 @@ export function GridControls({
           ref={viewportButtonRef}
           className="global-viewport-trigger"
           aria-label="All viewport controls"
-          title="All viewport controls"
-          data-tooltip="All viewport controls"
+          title="Open viewport size controls for every tile"
+          data-tooltip="Open viewport size controls for every tile"
           aria-expanded={globalViewportOpen}
           onClick={() =>
             setGlobalViewportOpen((open) => {

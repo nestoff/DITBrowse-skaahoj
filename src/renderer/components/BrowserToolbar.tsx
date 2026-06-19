@@ -71,19 +71,27 @@ export function BrowserToolbar({
   return (
     <header className="browser-toolbar" aria-label="Browser toolbar">
       <div className="toolbar-group browser-navigation" aria-label="Navigation controls">
-        <IconButton label="Back" icon={<ArrowLeft size={16} strokeWidth={2.2} />} onClick={onBack} />
+        <IconButton
+          label="Back"
+          tooltip="Go to the previous page in the selected tile"
+          icon={<ArrowLeft size={16} strokeWidth={2.2} />}
+          onClick={onBack}
+        />
         <IconButton
           label="Forward"
+          tooltip="Go to the next page in the selected tile"
           icon={<ArrowRight size={16} strokeWidth={2.2} />}
           onClick={onForward}
         />
         <IconButton
           label="Reload"
+          tooltip="Reload the selected tile from its saved camera address"
           icon={<RotateCw size={15} strokeWidth={2.2} />}
           onClick={onReload}
         />
         <IconButton
           label="Reload all"
+          tooltip="Reload every tile from its saved camera address"
           icon={<RotateCcw size={15} strokeWidth={2.2} />}
           onClick={onReloadAll}
         />
@@ -92,6 +100,7 @@ export function BrowserToolbar({
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={onNavigate} />
         <IconButton
           label="Save current URL to camera list"
+          tooltip="Save this tile's current live URL into its camera row"
           icon={<Save size={14} strokeWidth={2.2} />}
           disabled={!canSaveSelectedUrl}
           onClick={onSaveSelectedUrl}
@@ -101,6 +110,7 @@ export function BrowserToolbar({
             className="return-prefix-button"
             icon={<Link2 size={14} strokeWidth={2.2} />}
             title="Go back to prefix and suffix style"
+            tooltip="Restore this camera to the list prefix plus camera number"
             onClick={onReturnSelectedCameraToPrefix}
           >
             Go back to prefix and suffix style
@@ -110,6 +120,11 @@ export function BrowserToolbar({
       <div className="toolbar-group browser-layout-controls" aria-label="Layout controls">
         <IconButton
           label={focusMode ? "Show all pages" : "Focus selected page"}
+          tooltip={
+            focusMode
+              ? "Return to the full camera grid without reloading pages"
+              : "Show only the selected page without reloading it"
+          }
           icon={
             focusMode ? (
               <Minimize2 size={14} strokeWidth={2.2} />

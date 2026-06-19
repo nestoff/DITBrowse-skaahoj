@@ -4,6 +4,7 @@ interface PillButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   icon?: ReactNode;
   tone?: "default" | "primary" | "danger" | "muted";
+  tooltip?: string;
 }
 
 export function PillButton({
@@ -13,17 +14,18 @@ export function PillButton({
   className = "",
   type = "button",
   title,
+  tooltip,
   ...buttonProps
 }: PillButtonProps): ReactElement {
   const classes = ["pill-button", `pill-button-${tone}`, className].filter(Boolean).join(" ");
-  const tooltip = title ?? (typeof children === "string" ? children : undefined);
+  const tooltipText = tooltip ?? title ?? (typeof children === "string" ? children : undefined);
 
   return (
     <button
       {...buttonProps}
       type={type}
-      title={title}
-      data-tooltip={tooltip}
+      title={tooltipText}
+      data-tooltip={tooltipText}
       className={classes}
     >
       {icon && <span className="pill-button-icon">{icon}</span>}

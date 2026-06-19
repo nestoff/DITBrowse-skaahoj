@@ -30,16 +30,16 @@ export function AddressBar({ value, onNavigate }: AddressBarProps): ReactElement
       <button
         type="submit"
         aria-label="Open address"
-        title="Open address"
-        data-tooltip="Open address"
+        title="Load the typed address in the selected tile"
+        data-tooltip="Load the typed address in the selected tile"
       >
         <CornerDownLeft size={16} strokeWidth={2.2} />
       </button>
       <button
         type="button"
         aria-label="Open address in new tile"
-        title="Open address in new tile"
-        data-tooltip="Open address in new tile"
+        title="Open the typed address in a new tile"
+        data-tooltip="Open the typed address in a new tile"
         onClick={() => onNavigate(draft, "new")}
       >
         <PanelTopOpen size={16} strokeWidth={2.2} />

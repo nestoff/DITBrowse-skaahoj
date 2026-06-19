@@ -61,8 +61,8 @@ export function TabStrip({
               className="tab-move"
               disabled={index === 0}
               aria-label={`Move ${label} left`}
-              title={`Move ${label} left`}
-              data-tooltip={`Move ${label} left`}
+              title="Move this tab one position left"
+              data-tooltip="Move this tab one position left"
               onClick={() => onMoveTile(tile.id, "left")}
             >
               <ChevronLeft size={12} strokeWidth={2.4} />
@@ -72,8 +72,8 @@ export function TabStrip({
               className="tab-move"
               disabled={index === tiles.length - 1}
               aria-label={`Move ${label} right`}
-              title={`Move ${label} right`}
-              data-tooltip={`Move ${label} right`}
+              title="Move this tab one position right"
+              data-tooltip="Move this tab one position right"
               onClick={() => onMoveTile(tile.id, "right")}
             >
               <ChevronRight size={12} strokeWidth={2.4} />
@@ -82,8 +82,8 @@ export function TabStrip({
               type="button"
               className="tab-close"
               aria-label={`Close ${label}`}
-              title={`Close ${label}`}
-              data-tooltip={`Close ${label}`}
+              title="Close this tile"
+              data-tooltip="Close this tile"
               onClick={() => onCloseTile(tile.id)}
             >
               <X size={12} strokeWidth={2.4} />
@@ -94,6 +94,7 @@ export function TabStrip({
       </div>
       <IconButton
         label="Add tile"
+        tooltip="Open a new blank browser tile"
         icon={<Plus size={16} strokeWidth={2.3} />}
         className="add-tab-button"
         onClick={onAddTile}
