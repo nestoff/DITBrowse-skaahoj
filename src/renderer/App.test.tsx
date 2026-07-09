@@ -327,4 +327,35 @@ describe("App control API commands", () => {
     expect(await screen.findByLabelText("Username")).toHaveValue("admin");
     expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
   });
+
+  it("queues simultaneous HTTP auth prompts without overwriting either request", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-queue-1",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80
+      });
+      httpAuthRequestHandler?.({
+        requestId: "auth-queue-2",
+        url: "http://192.168.1.02/",
+        host: "192.168.1.02",
+        port: 80
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "admin" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "one" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenNthCalledWith(
+      1,
+      "auth-queue-1",
+      { username: "admin", password: "one" }
+    );
+    expect(await screen.findByText("192.168.1.02")).toBeVisible();
+  });
 });

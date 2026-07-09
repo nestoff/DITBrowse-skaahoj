@@ -33,15 +33,14 @@ import {
 } from "./state/workspaceStorage";
 import { workspaceReducer } from "./state/workspaceReducer";
 import { useDebouncedWorkspaceSave } from "./state/useDebouncedWorkspaceSave";
-
-interface HttpAuthPromptState {
-  request: HttpAuthRequest;
-  tileId: string | null;
-  cameraLabel: string;
-  username: string;
-  password: string;
-  save: boolean;
-}
+import {
+  OneShotManualAuthGate,
+  enqueueHttpAuthPrompt,
+  removeHttpAuthPrompts,
+  shiftHttpAuthPrompt,
+  updateCurrentHttpAuthPrompt,
+  type HttpAuthPromptState
+} from "./state/httpAuthQueue";
 
 function authUrlFromRequest(request: HttpAuthRequest): string {
   if (request.url) {
@@ -87,14 +86,18 @@ export function App(): ReactElement {
   const [loaded, setLoaded] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
-  const [httpAuthPrompt, setHttpAuthPrompt] = useState<HttpAuthPromptState | null>(null);
+  const [httpAuthQueue, setHttpAuthQueue] = useState<HttpAuthPromptState[]>([]);
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
   const selectedTileIdRef = useRef(workspace.selectedTileId);
   const workspaceRef = useRef(workspace);
+  const httpAuthQueueRef = useRef(httpAuthQueue);
+  const manualAuthGateRef = useRef(new OneShotManualAuthGate());
   const effectiveFocusMode = focusMode && !!workspace.selectedTileId;
   const focusModeRef = useRef(effectiveFocusMode);
+  const httpAuthPrompt = httpAuthQueue[0] ?? null;
 
   workspaceRef.current = workspace;
+  httpAuthQueueRef.current = httpAuthQueue;
   focusModeRef.current = effectiveFocusMode;
 
   useEffect(() => {
@@ -135,6 +138,13 @@ export function App(): ReactElement {
 
   useEffect(() => {
     window.ditbrowse?.clearHttpAuthCache?.();
+    const queued = httpAuthQueueRef.current;
+    queued.forEach((prompt) => {
+      window.ditbrowse?.sendHttpAuthResponse?.(prompt.request.requestId, {});
+    });
+    httpAuthQueueRef.current = [];
+    setHttpAuthQueue([]);
+    manualAuthGateRef.current.clear();
   }, [workspace.activeJobId, workspace.activeCameraListId]);
 
   const selectedTile = useMemo(
@@ -181,7 +191,7 @@ export function App(): ReactElement {
   ]);
 
   useEffect(() => {
-    return window.ditbrowse?.onHttpAuthRequest?.((request) => {
+    const unsubscribe = window.ditbrowse?.onHttpAuthRequest?.((request) => {
       const currentWorkspace = workspaceRef.current;
       const authUrl = authUrlFromRequest(request);
       const tile = findTileForAuthRequest(currentWorkspace, request);
@@ -200,8 +210,12 @@ export function App(): ReactElement {
               url: authUrl
             })
           : null;
+      const preset = findMatchingCredentialPreset(currentWorkspace.credentialPresets, camera);
+      const requiresManualSignIn = tile
+        ? manualAuthGateRef.current.consume(tile.id)
+        : false;
 
-      if (record) {
+      if (record && !requiresManualSignIn) {
         window.ditbrowse?.sendHttpAuthResponse?.(request.requestId, {
           username: record.username,
           password: record.password
@@ -209,16 +223,27 @@ export function App(): ReactElement {
         return;
       }
 
-      const preset = findMatchingCredentialPreset(currentWorkspace.credentialPresets, camera);
-      setHttpAuthPrompt({
-        request,
-        tileId: tile?.id ?? currentWorkspace.selectedTileId,
-        cameraLabel: tile?.title || authUrl,
-        username: preset?.username ?? "",
-        password: preset?.password ?? "",
-        save: true
+      setHttpAuthQueue((queue) => {
+        const nextQueue = enqueueHttpAuthPrompt(queue, {
+          request,
+          tileId: tile?.id ?? currentWorkspace.selectedTileId,
+          cameraLabel: tile?.title || authUrl,
+          username: record?.username ?? preset?.username ?? "",
+          password: record?.password ?? preset?.password ?? "",
+          save: true
+        });
+        httpAuthQueueRef.current = nextQueue;
+        return nextQueue;
       });
     });
+
+    return () => {
+      unsubscribe?.();
+      httpAuthQueueRef.current.forEach((prompt) => {
+        window.ditbrowse?.sendHttpAuthResponse?.(prompt.request.requestId, {});
+      });
+      httpAuthQueueRef.current = [];
+    };
   }, []);
 
   const navigate = useCallback(
@@ -258,6 +283,16 @@ export function App(): ReactElement {
   }, []);
 
   const closeTile = useCallback((tileId: string): void => {
+    const { kept, removed } = removeHttpAuthPrompts(
+      httpAuthQueueRef.current,
+      (prompt) => prompt.tileId === tileId
+    );
+    removed.forEach((prompt) => {
+      window.ditbrowse?.sendHttpAuthResponse?.(prompt.request.requestId, {});
+    });
+    httpAuthQueueRef.current = kept;
+    setHttpAuthQueue(kept);
+    manualAuthGateRef.current.clear([tileId]);
     dispatch({ type: "closeTile", tileId });
   }, []);
 
@@ -378,11 +413,19 @@ export function App(): ReactElement {
   }, []);
 
   const fillHttpAuthUsername = useCallback((username: string): void => {
-    setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, username } : prompt));
+    setHttpAuthQueue((queue) => {
+      const nextQueue = updateCurrentHttpAuthPrompt(queue, { username });
+      httpAuthQueueRef.current = nextQueue;
+      return nextQueue;
+    });
   }, []);
 
   const fillHttpAuthPassword = useCallback((password: string): void => {
-    setHttpAuthPrompt((prompt) => (prompt ? { ...prompt, password } : prompt));
+    setHttpAuthQueue((queue) => {
+      const nextQueue = updateCurrentHttpAuthPrompt(queue, { password });
+      httpAuthQueueRef.current = nextQueue;
+      return nextQueue;
+    });
   }, []);
 
   const discardTileCredential = useCallback((tileId: string): void => {
@@ -403,7 +446,11 @@ export function App(): ReactElement {
     }
 
     window.ditbrowse?.sendHttpAuthResponse?.(httpAuthPrompt.request.requestId, {});
-    setHttpAuthPrompt(null);
+    setHttpAuthQueue((queue) => {
+      const nextQueue = shiftHttpAuthPrompt(queue);
+      httpAuthQueueRef.current = nextQueue;
+      return nextQueue;
+    });
   }, [httpAuthPrompt]);
 
   const submitHttpAuth = useCallback(
@@ -429,7 +476,11 @@ export function App(): ReactElement {
         });
       }
 
-      setHttpAuthPrompt(null);
+      setHttpAuthQueue((queue) => {
+        const nextQueue = shiftHttpAuthPrompt(queue);
+        httpAuthQueueRef.current = nextQueue;
+        return nextQueue;
+      });
     },
     [httpAuthPrompt]
   );
@@ -624,11 +675,7 @@ export function App(): ReactElement {
               <input
                 autoFocus
                 value={httpAuthPrompt.username}
-                onChange={(event) =>
-                  setHttpAuthPrompt((prompt) =>
-                    prompt ? { ...prompt, username: event.target.value } : prompt
-                  )
-                }
+                onChange={(event) => fillHttpAuthUsername(event.target.value)}
               />
             </label>
             <label className="http-auth-field">
@@ -636,11 +683,7 @@ export function App(): ReactElement {
               <input
                 type="text"
                 value={httpAuthPrompt.password}
-                onChange={(event) =>
-                  setHttpAuthPrompt((prompt) =>
-                    prompt ? { ...prompt, password: event.target.value } : prompt
-                  )
-                }
+                onChange={(event) => fillHttpAuthPassword(event.target.value)}
               />
             </label>
             <label className="http-auth-save">
@@ -648,9 +691,13 @@ export function App(): ReactElement {
                 type="checkbox"
                 checked={httpAuthPrompt.save}
                 onChange={(event) =>
-                  setHttpAuthPrompt((prompt) =>
-                    prompt ? { ...prompt, save: event.target.checked } : prompt
-                  )
+                  setHttpAuthQueue((queue) => {
+                    const nextQueue = updateCurrentHttpAuthPrompt(queue, {
+                      save: event.target.checked
+                    });
+                    httpAuthQueueRef.current = nextQueue;
+                    return nextQueue;
+                  })
                 }
               />
               <span>Save for this camera</span>
