@@ -166,13 +166,52 @@ ipcMain.on("http-auth:clear-cache", (): void => {
   httpAuthCredentialCache.clear();
 });
 
+function workspaceForE2E(workspace: WorkspaceState, cameraUrl: string): WorkspaceState {
+  const job = workspace.jobs[0];
+  const list = workspace.cameraLists.find((candidate) => candidate.jobId === job?.id);
+  const camera = list?.cameras[0];
+  const tile = workspace.tiles[0];
+  if (!job || !list || !camera || !tile) {
+    return workspace;
+  }
+
+  const partition = `persist:ditbrowse-${job.id}-${list.id}`;
+  return {
+    ...workspace,
+    jobs: [{ ...job, listIds: [list.id] }],
+    cameraLists: [
+      {
+        ...list,
+        defaultPrefix: "",
+        cameras: [{ ...camera, url: cameraUrl, usesListPrefix: false }]
+      }
+    ],
+    tiles: [
+      {
+        ...tile,
+        cameraId: camera.id,
+        url: cameraUrl,
+        title: "Camera 01",
+        partition
+      }
+    ],
+    selectedTileId: tile.id,
+    activeJobId: job.id,
+    activeCameraListId: list.id
+  };
+}
+
 const createWindow = async (): Promise<void> => {
   const userDataPath = app.getPath("userData");
   const storage = createJsonStorage(userDataPath);
   const savedWindowState = await loadWindowState(userDataPath);
   const savedControlApiConfig = await loadControlApiConfig(userDataPath);
 
-  ipcMain.handle("workspace:load", () => storage.loadWorkspace());
+  ipcMain.handle("workspace:load", async () => {
+    const workspace = await storage.loadWorkspace();
+    const cameraUrl = process.env.DITBROWSE_E2E_CAMERA_URL?.trim();
+    return cameraUrl ? workspaceForE2E(workspace, cameraUrl) : workspace;
+  });
   ipcMain.handle("workspace:save", (_event, workspace: WorkspaceState) =>
     storage.saveWorkspace(workspace)
   );

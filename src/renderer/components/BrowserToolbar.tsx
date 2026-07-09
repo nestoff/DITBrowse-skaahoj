@@ -135,7 +135,7 @@ export function BrowserToolbar({
             }}
             onClick={onReturnSelectedCameraToPrefix}
           >
-            Go back to prefix and suffix style
+            Use list address
           </Button>
         )}
       </div>
