@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleWorkspace } from "../../shared/sampleData";
 import type { WorkspaceState } from "../../shared/types";
-import { loadWorkspace } from "./workspaceStorage";
+import {
+  loadWorkspace,
+  resetCameraSessionData,
+  resetListSessionData
+} from "./workspaceStorage";
 
 function cloneWorkspace(workspace: WorkspaceState): WorkspaceState {
   return JSON.parse(JSON.stringify(workspace)) as WorkspaceState;
@@ -57,5 +61,21 @@ describe("workspaceStorage", () => {
 
     expect(loadedWorkspace).toEqual(electronWorkspace);
     expect(saveWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("routes camera and list reset requests through Electron", async () => {
+    const resetCamera = vi.fn(async () => undefined);
+    const resetList = vi.fn(async () => undefined);
+    window.ditbrowse = {
+      version: "test",
+      resetCameraSessionData: resetCamera,
+      resetListSessionData: resetList
+    };
+
+    await resetCameraSessionData("persist:list", "http://10.20.100.108");
+    await resetListSessionData("persist:list");
+
+    expect(resetCamera).toHaveBeenCalledWith("persist:list", "http://10.20.100.108");
+    expect(resetList).toHaveBeenCalledWith("persist:list");
   });
 });

@@ -18,6 +18,10 @@ const api = {
     ipcRenderer.invoke("session:clearSelectedTile", partition, url) as Promise<void>,
   clearPartitionStorage: (partition: string) =>
     ipcRenderer.invoke("session:clearPartition", partition) as Promise<void>,
+  resetCameraSessionData: (partition: string, origin: string) =>
+    ipcRenderer.invoke("session:resetCamera", partition, origin) as Promise<void>,
+  resetListSessionData: (partition: string) =>
+    ipcRenderer.invoke("session:resetList", partition) as Promise<void>,
   getControlApiInfo: () => ipcRenderer.invoke("control-api:info") as Promise<ControlApiInfo>,
   setControlApiPort: (port: number | null) =>
     ipcRenderer.invoke("control-api:setPort", port) as Promise<ControlApiInfo>,

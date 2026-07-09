@@ -17,6 +17,8 @@ declare global {
       saveWorkspace?: (workspace: WorkspaceState) => Promise<void>;
       clearSelectedTileStorage?: (partition: string, url: string) => Promise<void>;
       clearPartitionStorage?: (partition: string) => Promise<void>;
+      resetCameraSessionData?: (partition: string, origin: string) => Promise<void>;
+      resetListSessionData?: (partition: string) => Promise<void>;
       onHostTemporaryViewGesture?: (
         callback: (gesture: TemporaryViewGesture) => void
       ) => () => void;
@@ -85,4 +87,15 @@ export async function clearSelectedTileStorage(partition: string, url: string): 
 
 export async function clearPartitionStorage(partition: string): Promise<void> {
   await window.ditbrowse?.clearPartitionStorage?.(partition);
+}
+
+export async function resetCameraSessionData(
+  partition: string,
+  origin: string
+): Promise<void> {
+  await window.ditbrowse?.resetCameraSessionData?.(partition, origin);
+}
+
+export async function resetListSessionData(partition: string): Promise<void> {
+  await window.ditbrowse?.resetListSessionData?.(partition);
 }

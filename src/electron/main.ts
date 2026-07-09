@@ -2,7 +2,12 @@ import { BrowserWindow, Menu, app, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
-import { clearPartitionStorage, clearSelectedTileStorage } from "./session.js";
+import {
+  clearPartitionStorage,
+  clearSelectedTileStorage,
+  resetCameraSessionData,
+  resetListSessionData
+} from "./session.js";
 import {
   loadControlApiConfig,
   normalizeControlApiPort,
@@ -181,6 +186,20 @@ const createWindow = async (): Promise<void> => {
   );
   ipcMain.handle("session:clearPartition", (_event, partition: string) =>
     clearPartitionStorage(partition)
+  );
+  ipcMain.handle(
+    "session:resetCamera",
+    async (_event, partition: string, origin: string): Promise<void> => {
+      await resetCameraSessionData(partition, origin);
+      httpAuthCredentialCache.clear();
+    }
+  );
+  ipcMain.handle(
+    "session:resetList",
+    async (_event, partition: string): Promise<void> => {
+      await resetListSessionData(partition);
+      httpAuthCredentialCache.clear();
+    }
   );
   ipcMain.handle("control-api:info", () => controlApiInfo);
 
