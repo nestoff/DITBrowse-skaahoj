@@ -88,6 +88,23 @@ describe("CameraListEditor", () => {
     );
   });
 
+  it("confirms before discarding unsaved camera-list changes", () => {
+    const { onClose } = renderEditor();
+
+    fireEvent.change(screen.getByLabelText("List Prefix"), {
+      target: { value: "http://10.20.30." }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Discard camera-list changes?" })
+    ).toBeVisible();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("updates one follow-prefix row when a row checkbox is clicked", () => {
     const { onSaveList } = renderEditor();
 

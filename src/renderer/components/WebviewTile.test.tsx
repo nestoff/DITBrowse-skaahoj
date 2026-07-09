@@ -242,7 +242,7 @@ describe("WebviewTile", () => {
     const src = document.querySelector("webview")?.getAttribute("src") ?? "";
 
     expect(src).toMatch(/^data:text\/html/);
-    expect(decodeURIComponent(src)).toContain("background:#1b1d1f");
+    expect(decodeURIComponent(src)).toContain("background:#080809");
   });
 
   it("centers scaled webview content inside the tile", () => {

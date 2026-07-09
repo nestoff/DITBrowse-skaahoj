@@ -13,7 +13,9 @@ import type { CameraEntry, CameraList } from "../../shared/types";
 import { normalizeCameraPrefix, normalizeCameraUrl } from "../../shared/url";
 import { VIEWPORT_PRESETS } from "../../shared/viewport";
 import type { CameraEntryPatch } from "../state/workspaceReducer";
-import { PillButton } from "./ui/PillButton";
+import { Button } from "./ui/Button";
+import { Dialog } from "./ui/Dialog";
+import { IconButton } from "./ui/IconButton";
 
 const CAMERA_TABLE_COLUMN_COUNT = 9;
 const CAMERA_CELL_SELECTOR = "[data-camera-list-cell='true']";
@@ -188,6 +190,7 @@ export function CameraListEditor({
   );
   const [lastFollowIndex, setLastFollowIndex] = useState<number | null>(null);
   const [draggedCameraId, setDraggedCameraId] = useState<string | null>(null);
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const allFollowCheckboxRef = useRef<HTMLInputElement | null>(null);
   const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
   const allRowsFollowPrefix =
@@ -345,6 +348,11 @@ export function CameraListEditor({
   }
 
   function discardChanges(): void {
+    if (dirty) {
+      setConfirmDiscardOpen(true);
+      return;
+    }
+
     onClose();
   }
 
@@ -433,17 +441,23 @@ export function CameraListEditor({
         <header className="panel-header">
           <h2>{draftList?.name ?? "Camera List"}</h2>
           <div className="panel-header-actions">
-            <PillButton icon={<X size={14} strokeWidth={2.2} />} onClick={discardChanges}>
+            <Button
+              icon={<X size={14} strokeWidth={2.2} />}
+              variant="ghost"
+              size="compact"
+              onClick={discardChanges}
+            >
               Discard
-            </PillButton>
-            <PillButton
+            </Button>
+            <Button
               icon={<Save size={14} strokeWidth={2.2} />}
-              tone="primary"
+              variant="primary"
+              size="compact"
               disabled={!dirty}
               onClick={saveChanges}
             >
               Save Changes
-            </PillButton>
+            </Button>
           </div>
         </header>
         {draftList && (
@@ -458,9 +472,14 @@ export function CameraListEditor({
               </label>
             </div>
             <div className="editor-list-toolbar" aria-label="Camera list controls">
-              <PillButton icon={<Plus size={14} strokeWidth={2.2} />} onClick={addCamera}>
+              <Button
+                icon={<Plus size={14} strokeWidth={2.2} />}
+                variant="subtle"
+                size="compact"
+                onClick={addCamera}
+              >
                 Add Camera Row
-              </PillButton>
+              </Button>
               <label className="editor-count-field">
                 <input
                   aria-label="Camera count"
@@ -523,25 +542,27 @@ export function CameraListEditor({
                       onDragEnd={() => setDraggedCameraId(null)}
                     >
                       <td className="camera-row-action-cell">
-                        <button
-                          type="button"
+                        <IconButton
                           className="camera-row-drag"
-                          aria-label={`Move ${camera.name}`}
-                          title={`Drag ${camera.name}`}
-                        >
-                          <GripVertical size={14} strokeWidth={2.2} />
-                        </button>
+                          label={`Move ${camera.name}`}
+                          tooltip={{
+                            title: "Move camera",
+                            description: "Drag this row to change its tab and grid position."
+                          }}
+                          icon={<GripVertical size={14} strokeWidth={2.2} />}
+                        />
                       </td>
                       <td className="camera-row-action-cell">
-                        <button
-                          type="button"
+                        <IconButton
                           className="camera-row-delete"
-                          aria-label={`Delete ${camera.name}`}
-                          title={`Delete ${camera.name}`}
+                          label={`Delete ${camera.name}`}
+                          tooltip={{
+                            title: "Delete camera",
+                            description: "Removes this camera row when the list changes are saved."
+                          }}
+                          icon={<Trash2 size={14} strokeWidth={2.2} />}
                           onClick={() => deleteCamera(camera.id)}
-                        >
-                          <Trash2 size={14} strokeWidth={2.2} />
-                        </button>
+                        />
                       </td>
                       <td>
                         <input
@@ -692,13 +713,32 @@ export function CameraListEditor({
             ))}
           </ul>
         )}
-        <PillButton
+        <Button
           icon={<Upload size={14} strokeWidth={2.2} />}
+          variant="subtle"
+          size="compact"
           disabled={parsed.validRows.length === 0}
           onClick={() => importRows(parsed.validRows)}
         >
           Import Valid Rows
-        </PillButton>
+        </Button>
+        {confirmDiscardOpen && (
+          <Dialog
+            title="Discard camera-list changes?"
+            description="Your unsaved camera rows, addresses, metadata, viewport, and zoom changes will be lost."
+            onClose={() => setConfirmDiscardOpen(false)}
+            actions={
+              <>
+                <Button variant="ghost" onClick={() => setConfirmDiscardOpen(false)}>
+                  Keep editing
+                </Button>
+                <Button variant="danger" onClick={onClose}>
+                  Discard changes
+                </Button>
+              </>
+            }
+          />
+        )}
       </section>
     </div>
   );

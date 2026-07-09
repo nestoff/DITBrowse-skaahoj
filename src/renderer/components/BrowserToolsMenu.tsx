@@ -1,6 +1,6 @@
 import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
-import { ListRestart, Maximize2, PencilLine, RotateCcw } from "lucide-react";
+import { ListRestart, Maximize2, PencilLine, RotateCcw, Trash2 } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
 import type {
   CameraList,
@@ -12,7 +12,6 @@ import type {
 import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
 import { Button } from "./ui/Button";
-import { PillButton } from "./ui/PillButton";
 
 interface BrowserToolsMenuProps {
   jobs: Job[];
@@ -143,27 +142,45 @@ export function BrowserToolsMenu({
         >
           Reload every camera
         </Button>
-        <PillButton
+        <Button
           className="tool-command"
+          variant="ghost"
+          size="compact"
           icon={<PencilLine size={15} strokeWidth={2.2} />}
+          tooltip={{
+            title: "Edit camera list",
+            description: "Opens the camera table for addresses, metadata, viewport, and zoom changes."
+          }}
           onClick={onEditList}
         >
           Edit List
-        </PillButton>
-        <PillButton
+        </Button>
+        <Button
           className="tool-command"
+          variant="ghost"
+          size="compact"
           icon={<Maximize2 size={15} strokeWidth={2.2} />}
+          tooltip={{
+            title: "Reset selected scaling",
+            description: "Returns the selected camera's saved zoom and viewport to list defaults."
+          }}
           onClick={onResetSelectedScale}
         >
           Reset Scale
-        </PillButton>
-        <PillButton
+        </Button>
+        <Button
           className="tool-command"
+          variant="ghost"
+          size="compact"
           icon={<ListRestart size={15} strokeWidth={2.2} />}
+          tooltip={{
+            title: "Reset camera order",
+            description: "Restores open tabs and grid tiles to the saved camera-list order."
+          }}
           onClick={onResetGridOrder}
         >
           Reset Order
-        </PillButton>
+        </Button>
       </div>
       <CookieCommands
         canResetSelected={!!selectedTile}
@@ -190,7 +207,7 @@ export function BrowserToolsMenu({
             <span>Password</span>
             <input
               aria-label="Preset password"
-              type="password"
+              type="text"
               value={presetPassword}
               onChange={(event) => setPresetPassword(event.target.value)}
             />
@@ -204,9 +221,14 @@ export function BrowserToolsMenu({
               onChange={(event) => setPresetCameraType(event.target.value)}
             />
           </label>
-          <button type="submit" disabled={!presetUsername.trim() || !presetPassword}>
+          <Button
+            type="submit"
+            variant="subtle"
+            size="compact"
+            disabled={!presetUsername.trim() || !presetPassword}
+          >
             Add
-          </button>
+          </Button>
         </form>
         {credentialPresets.length > 0 && (
           <div className="credential-preset-list" aria-label="Saved credential presets">
@@ -214,10 +236,15 @@ export function BrowserToolsMenu({
               <div key={preset.id} className="credential-preset-row">
                 <span>{preset.username}</span>
                 <small>{preset.cameraType || "Manual"}</small>
-                <code>{"•".repeat(Math.min(10, Math.max(4, preset.password.length)))}</code>
-                <button type="button" onClick={() => onDeleteCredentialPreset(preset.id)}>
+                <code>{preset.password}</code>
+                <Button
+                  variant="danger"
+                  size="compact"
+                  icon={<Trash2 size={13} strokeWidth={2.2} />}
+                  onClick={() => onDeleteCredentialPreset(preset.id)}
+                >
                   Delete
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -228,14 +255,15 @@ export function BrowserToolsMenu({
           <span>Saved camera passwords</span>
           <strong>{passwordRecords.length}</strong>
         </div>
-        <button
-          type="button"
+        <Button
           className="saved-password-clear-selected"
+          variant="danger"
+          size="compact"
           disabled={!selectedTile}
           onClick={onDeleteSelectedTilePassword}
         >
           Forget Selected Tile Password
-        </button>
+        </Button>
         {passwordRecords.length > 0 && (
           <div className="saved-password-list" aria-label="Saved camera passwords">
             {passwordRecords.map((record) => (
@@ -244,9 +272,14 @@ export function BrowserToolsMenu({
                 <small>{record.cameraId ?? "Web address"}</small>
                 <code>{record.username}</code>
                 <code>{record.password}</code>
-                <button type="button" onClick={() => onDeletePasswordRecord(record.id)}>
+                <Button
+                  variant="danger"
+                  size="compact"
+                  icon={<Trash2 size={13} strokeWidth={2.2} />}
+                  onClick={() => onDeletePasswordRecord(record.id)}
+                >
                   Delete
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -273,9 +306,13 @@ export function BrowserToolsMenu({
             />
           </label>
           <div className="control-api-actions">
-            <button type="submit">Save Port</button>
-            <button
+            <Button type="submit" variant="subtle" size="compact">
+              Save Port
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="compact"
               onClick={() => {
                 setPortDraft("");
                 void onSetControlApiPort(null).catch((error) => {
@@ -284,7 +321,7 @@ export function BrowserToolsMenu({
               }}
             >
               Auto
-            </button>
+            </Button>
           </div>
         </form>
         {portError && <p className="control-api-error">{portError}</p>}

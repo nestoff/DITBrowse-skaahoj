@@ -1,5 +1,6 @@
 import type { PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { RotateCw } from "lucide-react";
 import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
 import type { TileState } from "../../shared/types";
@@ -10,10 +11,11 @@ import {
   type TemporaryViewGesture
 } from "../../shared/temporaryView";
 import { reloadWebviewFromCameraRoot } from "../browserControls";
+import { Button } from "./ui/Button";
 
 const TILE_LABEL_HEIGHT = 24;
 const BLANK_WEBVIEW_URL = `data:text/html;charset=utf-8,${encodeURIComponent(
-  '<!doctype html><html><head><meta name="color-scheme" content="dark"><style>html,body{margin:0;width:100%;height:100%;background:#1b1d1f;}</style></head><body></body></html>'
+  '<!doctype html><html><head><meta name="color-scheme" content="dark"><style>html,body{margin:0;width:100%;height:100%;background:#080809;}</style></head><body></body></html>'
 )}`;
 
 function isBlankWebviewUrl(url: string): boolean {
@@ -551,12 +553,18 @@ function WebviewTileComponent({
         )}
       </div>
       {failed && (
-        <div className="tile-error">
+        <div className="tile-error" role="alert">
           <strong>Failed to load</strong>
           <span>{tile.url}</span>
-          <button
-            type="button"
+          <Button
+            variant="subtle"
+            size="compact"
+            icon={<RotateCw size={14} strokeWidth={2.2} />}
             aria-label={`Retry loading ${tile.title || tile.url || "tile"}`}
+            tooltip={{
+              title: "Retry camera",
+              description: "Loads this camera again from its base address."
+            }}
             onClick={() => {
               const webview = webviewRef.current;
               if (webview) {
@@ -565,7 +573,7 @@ function WebviewTileComponent({
             }}
           >
             Retry
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -2,7 +2,8 @@ import type { ReactElement } from "react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { CameraList, Job } from "../../shared/types";
-import { PillButton } from "./ui/PillButton";
+import { Button } from "./ui/Button";
+import { Dialog } from "./ui/Dialog";
 
 interface JobListSelectorProps {
   jobs: Job[];
@@ -26,6 +27,7 @@ export function JobListSelector({
   onDeleteJob
 }: JobListSelectorProps): ReactElement {
   const [creating, setCreating] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [newJobName, setNewJobName] = useState("New Job");
   const [newListName, setNewListName] = useState("Camera List");
   const [newDefaultPrefix, setNewDefaultPrefix] = useState(
@@ -79,12 +81,8 @@ export function JobListSelector({
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete "${activeJob.name}" and its camera lists, cookies, and saved passwords?`
-    );
-    if (confirmed) {
-      onDeleteJob(activeJob.id);
-    }
+    onDeleteJob(activeJob.id);
+    setConfirmDeleteOpen(false);
   }
 
   return (
@@ -104,20 +102,31 @@ export function JobListSelector({
             );
           })}
         </select>
-        <PillButton
+        <Button
           icon={<Plus size={14} strokeWidth={2.2} />}
+          variant="subtle"
+          size="compact"
+          tooltip={{
+            title: "New job",
+            description: "Creates a job with its first camera list and address prefix."
+          }}
           onClick={() => setCreating((open) => !open)}
         >
           New Job
-        </PillButton>
-        <PillButton
+        </Button>
+        <Button
           icon={<Trash2 size={14} strokeWidth={2.2} />}
-          tone="danger"
+          variant="danger"
+          size="compact"
           disabled={!activeJob}
-          onClick={deleteJob}
+          tooltip={{
+            title: "Delete job",
+            description: "Removes this job, its camera lists, and its saved camera passwords."
+          }}
+          onClick={() => setConfirmDeleteOpen(true)}
         >
           Delete Job
-        </PillButton>
+        </Button>
       </div>
       {activeJob && (
         <form className="job-inline-form" onSubmit={renameJob}>
@@ -129,7 +138,9 @@ export function JobListSelector({
               onChange={(event) => setJobNameDraft(event.target.value)}
             />
           </label>
-          <PillButton type="submit">Save Job Name</PillButton>
+          <Button type="submit" variant="subtle" size="compact">
+            Save Job Name
+          </Button>
         </form>
       )}
       {creating && (
@@ -159,14 +170,36 @@ export function JobListSelector({
             />
           </label>
           <div className="new-job-actions">
-            <PillButton type="submit" tone="primary">
+            <Button type="submit" variant="primary" size="compact">
               Create Job
-            </PillButton>
-            <PillButton type="button" tone="muted" onClick={() => setCreating(false)}>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="compact"
+              onClick={() => setCreating(false)}
+            >
               Cancel
-            </PillButton>
+            </Button>
           </div>
         </form>
+      )}
+      {confirmDeleteOpen && activeJob && (
+        <Dialog
+          title="Delete job"
+          description={`Delete "${activeJob.name}" and all of its camera lists and saved camera passwords? This cannot be undone.`}
+          onClose={() => setConfirmDeleteOpen(false)}
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmDeleteOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={deleteJob}>
+                Delete job
+              </Button>
+            </>
+          }
+        />
       )}
     </div>
   );

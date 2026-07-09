@@ -234,7 +234,10 @@ describe("App control API commands", () => {
       });
     });
 
-    expect(await screen.findByRole("dialog", { name: "Camera sign in" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Camera sign in" })).toHaveClass(
+      "dialog-surface"
+    );
+    expect(screen.getByRole("button", { name: "Sign In" })).toHaveClass("button-primary");
     fireEvent.change(screen.getByLabelText("Username"), { target: { value: "operator" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign In" }));

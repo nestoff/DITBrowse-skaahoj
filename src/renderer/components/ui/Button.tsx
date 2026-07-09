@@ -1,6 +1,7 @@
 import type {
   ButtonHTMLAttributes,
   FocusEvent,
+  MouseEvent,
   PointerEvent,
   ReactElement,
   ReactNode
@@ -32,6 +33,7 @@ export function Button({
   onPointerLeave,
   onFocus,
   onBlur,
+  onClick,
   ...buttonProps
 }: ButtonProps): ReactElement {
   const classes = ["button", `button-${variant}`, `button-${size}`, className]
@@ -62,6 +64,10 @@ export function Button({
       onBlur={(event: FocusEvent<HTMLButtonElement>) => {
         onBlur?.(event);
         triggerProps?.onBlur();
+      }}
+      onClick={(event: MouseEvent<HTMLButtonElement>) => {
+        triggerProps?.onClick();
+        onClick?.(event);
       }}
     >
       {busy && <span className="button-spinner" aria-hidden="true" />}

@@ -59,6 +59,26 @@ describe("descriptive tooltips", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
+
+  it("closes when the tooltip trigger is activated", () => {
+    render(
+      <IconButton
+        label="Workspace tools"
+        tooltip={{
+          title: "Workspace tools",
+          description: "Manage jobs and camera lists."
+        }}
+        icon={<span>icon</span>}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Workspace tools" });
+    fireEvent.focus(trigger);
+    expect(screen.getByRole("tooltip")).toBeVisible();
+
+    fireEvent.click(trigger);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
 });
 
 describe("Dialog", () => {

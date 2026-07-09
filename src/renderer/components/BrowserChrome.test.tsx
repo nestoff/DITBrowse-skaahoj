@@ -100,6 +100,7 @@ describe("BrowserChrome", () => {
     expect(screen.getByLabelText("Camera workspace tools")).toBeVisible();
     expect(screen.getByLabelText("Job and camera list")).toBeVisible();
     expect(screen.getByRole("button", { name: "Edit List" })).toBeVisible();
+    expect(document.querySelector(".pill-button")).not.toBeInTheDocument();
   });
 
   it("creates a new job from an inline form", () => {
@@ -310,15 +311,20 @@ describe("BrowserChrome", () => {
     expect(onCloseTile).toHaveBeenCalledWith("tile-41");
   });
 
-  it("deletes the current job from workspace tools after confirmation", () => {
+  it("uses the shared confirmation dialog for job deletion", () => {
     const onDeleteJob = vi.fn();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirm = vi.spyOn(window, "confirm");
     render(<BrowserChrome {...baseProps} onDeleteJob={onDeleteJob} />);
 
     fireEvent.click(screen.getByLabelText("Workspace tools"));
     fireEvent.click(screen.getByRole("button", { name: "Delete Job" }));
 
-    expect(confirm).toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Delete job" })).toBeVisible();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(onDeleteJob).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete job" }));
+
     expect(onDeleteJob).toHaveBeenCalledWith("job-sample");
 
     confirm.mockRestore();

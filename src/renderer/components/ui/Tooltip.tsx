@@ -26,6 +26,7 @@ export interface TooltipTriggerProps {
   onPointerLeave: () => void;
   onFocus: () => void;
   onBlur: () => void;
+  onClick: () => void;
 }
 
 interface TooltipProps extends TooltipContent {
@@ -148,7 +149,8 @@ export function Tooltip({
     onBlur: () => {
       focusedRef.current = false;
       close();
-    }
+    },
+    onClick: close
   };
 
   return (

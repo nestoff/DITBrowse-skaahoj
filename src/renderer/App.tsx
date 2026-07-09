@@ -782,14 +782,33 @@ export function App(): ReactElement {
         />
       )}
       {httpAuthPrompt && (
-        <div className="http-auth-backdrop" role="presentation">
+        <Dialog
+          title="Camera sign in"
+          description="Enter the credentials for this camera to continue."
+          className="http-auth-dialog"
+          onClose={cancelHttpAuth}
+          actions={
+            <>
+              <Button variant="ghost" onClick={cancelHttpAuth}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form="camera-sign-in-form"
+                variant="primary"
+                disabled={!httpAuthPrompt.password}
+              >
+                Sign In
+              </Button>
+            </>
+          }
+        >
           <form
-            className="http-auth-dialog"
+            id="camera-sign-in-form"
+            className="http-auth-form"
             aria-label="Camera sign in"
-            role="dialog"
             onSubmit={submitHttpAuth}
           >
-            <div className="http-auth-title">Sign in to camera</div>
             <div className="http-auth-details">
               <strong>{httpAuthPrompt.cameraLabel}</strong>
               <span>{httpAuthPrompt.request.realm || httpAuthPrompt.request.host}</span>
@@ -800,13 +819,15 @@ export function App(): ReactElement {
                   <span>Usernames</span>
                   <div>
                     {workspace.credentialPresets.map((preset) => (
-                      <button
+                      <Button
                         key={`username-${preset.id}`}
                         type="button"
+                        variant="subtle"
+                        size="compact"
                         onClick={() => fillHttpAuthUsername(preset.username)}
                       >
                         {preset.username}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -814,13 +835,15 @@ export function App(): ReactElement {
                   <span>Passwords</span>
                   <div>
                     {workspace.credentialPresets.map((preset) => (
-                      <button
+                      <Button
                         key={`password-${preset.id}`}
                         type="button"
+                        variant="subtle"
+                        size="compact"
                         onClick={() => fillHttpAuthPassword(preset.password)}
                       >
                         {preset.password}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -858,20 +881,8 @@ export function App(): ReactElement {
               />
               <span>Save for this camera</span>
             </label>
-            <div className="http-auth-actions">
-              <button type="button" className="pill-button" onClick={cancelHttpAuth}>
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="pill-button pill-button-primary"
-                disabled={!httpAuthPrompt.password}
-              >
-                Sign In
-              </button>
-            </div>
           </form>
-        </div>
+        </Dialog>
       )}
     </main>
   );
