@@ -14,10 +14,6 @@ const api = {
   loadWorkspace: () => ipcRenderer.invoke("workspace:load") as Promise<WorkspaceState>,
   saveWorkspace: (workspace: WorkspaceState) =>
     ipcRenderer.invoke("workspace:save", workspace) as Promise<void>,
-  clearSelectedTileStorage: (partition: string, url: string) =>
-    ipcRenderer.invoke("session:clearSelectedTile", partition, url) as Promise<void>,
-  clearPartitionStorage: (partition: string) =>
-    ipcRenderer.invoke("session:clearPartition", partition) as Promise<void>,
   resetCameraSessionData: (partition: string, origin: string) =>
     ipcRenderer.invoke("session:resetCamera", partition, origin) as Promise<void>,
   resetListSessionData: (partition: string) =>

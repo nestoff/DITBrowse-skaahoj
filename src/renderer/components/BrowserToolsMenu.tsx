@@ -19,7 +19,6 @@ interface BrowserToolsMenuProps {
   activeCameraListId: string | null;
   activeList: CameraList | null;
   selectedTile: TileState | null;
-  activePartition: string | null;
   onSelectCameraList: (cameraListId: string) => void;
   onCreateJob: (jobName: string, listName: string, defaultPrefix: string) => void;
   onUpdateJobName: (jobName: string) => void;
@@ -37,8 +36,9 @@ interface BrowserToolsMenuProps {
   onDeleteSelectedTilePassword: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
-  onClearSelectedCookies: (partition: string, url: string) => void;
-  onClearListCookies: (partition: string) => void;
+  resetBusy: boolean;
+  onResetSelectedCamera: () => void;
+  onRequestResetList: () => void;
   controlApiInfo: ControlApiInfo | null;
   onSetControlApiPort: (port: number | null) => Promise<void>;
 }
@@ -49,7 +49,6 @@ export function BrowserToolsMenu({
   activeCameraListId,
   activeList,
   selectedTile,
-  activePartition,
   onSelectCameraList,
   onCreateJob,
   onUpdateJobName,
@@ -63,8 +62,9 @@ export function BrowserToolsMenu({
   onDeleteSelectedTilePassword,
   onResetSelectedScale,
   onResetGridOrder,
-  onClearSelectedCookies,
-  onClearListCookies,
+  resetBusy,
+  onResetSelectedCamera,
+  onRequestResetList,
   controlApiInfo,
   onSetControlApiPort
 }: BrowserToolsMenuProps): ReactElement {
@@ -150,10 +150,11 @@ export function BrowserToolsMenu({
         </PillButton>
       </div>
       <CookieCommands
-        selectedTile={selectedTile}
-        activePartition={activePartition}
-        onClearSelected={onClearSelectedCookies}
-        onClearList={onClearListCookies}
+        canResetSelected={!!selectedTile}
+        canResetList={!!activeCameraListId && !!activeList && activeList.cameras.length > 0}
+        busy={resetBusy}
+        onResetSelected={onResetSelectedCamera}
+        onRequestResetList={onRequestResetList}
       />
       <div className="tools-section credential-preset-section">
         <div className="tools-section-header">

@@ -61,7 +61,9 @@ describe("App control API commands", () => {
         httpAuthRequestHandler = callback;
         return vi.fn();
       }),
-      sendHttpAuthResponse: vi.fn()
+      sendHttpAuthResponse: vi.fn(),
+      resetCameraSessionData: vi.fn(async () => undefined),
+      resetListSessionData: vi.fn(async () => undefined)
     };
   });
 
@@ -357,5 +359,111 @@ describe("App control API commands", () => {
       { username: "admin", password: "one" }
     );
     expect(await screen.findByText("192.168.1.02")).toBeVisible();
+  });
+
+  it("keeps the saved password but requires explicit sign in after camera reset", async () => {
+    const workspaceWithSavedCameraPassword = {
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-camera-41",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.01",
+          username: "admin",
+          password: "secret"
+        }
+      ]
+    };
+    window.ditbrowse.loadWorkspace = vi.fn(async () => workspaceWithSavedCameraPassword);
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const webview = document.querySelector(
+      'webview[data-tile-id="tile-41"]'
+    ) as Electron.WebviewTag;
+    webview.stop = vi.fn();
+    webview.executeJavaScript = vi.fn(async () => undefined);
+    webview.loadURL = vi.fn(async () => undefined);
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+    fireEvent.click(screen.getByRole("button", { name: "Clear camera data" }));
+    await waitFor(() => {
+      expect(webview.loadURL).toHaveBeenCalledWith("http://192.168.1.01/");
+    });
+
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-after-reset",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80
+      });
+    });
+
+    expect(await screen.findByRole("dialog", { name: "Camera sign in" })).toBeVisible();
+    expect(screen.getByLabelText("Username")).toHaveValue("admin");
+    expect(screen.getByLabelText("Password")).toHaveValue("secret");
+    expect(window.ditbrowse.sendHttpAuthResponse).not.toHaveBeenCalledWith(
+      "auth-after-reset",
+      expect.anything()
+    );
+  });
+
+  it("confirms a list reset and reloads each open camera from its base address", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) => ({
+        ...list,
+        cameras: list.cameras.slice(0, 2)
+      })),
+      tiles: sampleWorkspace.tiles.slice(0, 2)
+    }));
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const webviews = Array.from(document.querySelectorAll("webview")) as Electron.WebviewTag[];
+    webviews.forEach((webview) => {
+      webview.stop = vi.fn();
+      webview.executeJavaScript = vi.fn(async () => undefined);
+      webview.loadURL = vi.fn(async () => undefined);
+    });
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+    fireEvent.click(screen.getByRole("button", { name: "Clear list data" }));
+    expect(
+      screen.getByRole("dialog", { name: "Clear data for every camera?" })
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Clear and reload" }));
+
+    await waitFor(() => {
+      expect(window.ditbrowse.resetListSessionData).toHaveBeenCalledWith(
+        "persist:ditbrowse-job-sample-list-sample"
+      );
+      expect(webviews[0].loadURL).toHaveBeenCalledWith("http://192.168.1.01/");
+      expect(webviews[1].loadURL).toHaveBeenCalledWith("http://192.168.1.02/");
+    });
+  });
+
+  it("keeps the page loaded when camera session cleanup fails", async () => {
+    window.ditbrowse.resetCameraSessionData = vi.fn(async () => {
+      throw new Error("clear failed");
+    });
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const webview = document.querySelector(
+      'webview[data-tile-id="tile-41"]'
+    ) as Electron.WebviewTag;
+    webview.stop = vi.fn();
+    webview.executeJavaScript = vi.fn(async () => undefined);
+    webview.loadURL = vi.fn(async () => undefined);
+
+    fireEvent.click(screen.getByLabelText("Workspace tools"));
+    fireEvent.click(screen.getByRole("button", { name: "Clear camera data" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("clear failed");
+    expect(webview.loadURL).not.toHaveBeenCalled();
   });
 });

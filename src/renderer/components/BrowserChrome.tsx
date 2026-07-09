@@ -19,7 +19,6 @@ interface BrowserChromeProps {
   workspace: WorkspaceState;
   selectedTile: TileState | null;
   activeList: CameraList | null;
-  activePartition: string | null;
   onSelectTile: (tileId: string) => void;
   onMoveTile: (tileId: string, direction: "left" | "right") => void;
   onCloseTile: (tileId: string) => void;
@@ -55,8 +54,9 @@ interface BrowserChromeProps {
   onDeleteSelectedTilePassword: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
-  onClearSelectedCookies: (partition: string, url: string) => void;
-  onClearListCookies: (partition: string) => void;
+  resetBusy: boolean;
+  onResetSelectedCamera: () => void;
+  onRequestResetList: () => void;
   focusMode: boolean;
   onFocusModeToggle: () => void;
   controlApiInfo: ControlApiInfo | null;
@@ -67,7 +67,6 @@ export function BrowserChrome({
   workspace,
   selectedTile,
   activeList,
-  activePartition,
   onSelectTile,
   onMoveTile,
   onCloseTile,
@@ -99,8 +98,9 @@ export function BrowserChrome({
   onDeleteSelectedTilePassword,
   onResetSelectedScale,
   onResetGridOrder,
-  onClearSelectedCookies,
-  onClearListCookies,
+  resetBusy,
+  onResetSelectedCamera,
+  onRequestResetList,
   focusMode,
   onFocusModeToggle,
   controlApiInfo,
@@ -165,7 +165,6 @@ export function BrowserChrome({
           activeCameraListId={workspace.activeCameraListId}
           activeList={activeList}
           selectedTile={selectedTile}
-          activePartition={activePartition}
           onSelectCameraList={onSelectCameraList}
           onCreateJob={onCreateJob}
           onUpdateJobName={onUpdateJobName}
@@ -179,8 +178,15 @@ export function BrowserChrome({
           onDeleteSelectedTilePassword={onDeleteSelectedTilePassword}
           onResetSelectedScale={onResetSelectedScale}
           onResetGridOrder={onResetGridOrder}
-          onClearSelectedCookies={onClearSelectedCookies}
-          onClearListCookies={onClearListCookies}
+          resetBusy={resetBusy}
+          onResetSelectedCamera={() => {
+            setToolsOpen(false);
+            onResetSelectedCamera();
+          }}
+          onRequestResetList={() => {
+            setToolsOpen(false);
+            onRequestResetList();
+          }}
           controlApiInfo={controlApiInfo}
           onSetControlApiPort={onSetControlApiPort}
         />

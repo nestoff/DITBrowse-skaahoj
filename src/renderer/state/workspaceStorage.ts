@@ -15,8 +15,6 @@ declare global {
       webviewPreloadPath?: string;
       loadWorkspace?: () => Promise<WorkspaceState>;
       saveWorkspace?: (workspace: WorkspaceState) => Promise<void>;
-      clearSelectedTileStorage?: (partition: string, url: string) => Promise<void>;
-      clearPartitionStorage?: (partition: string) => Promise<void>;
       resetCameraSessionData?: (partition: string, origin: string) => Promise<void>;
       resetListSessionData?: (partition: string) => Promise<void>;
       onHostTemporaryViewGesture?: (
@@ -79,14 +77,6 @@ export async function saveWorkspace(workspace: WorkspaceState): Promise<void> {
   }
 
   window.localStorage.setItem(fallbackStorageKey, JSON.stringify(workspace));
-}
-
-export async function clearSelectedTileStorage(partition: string, url: string): Promise<void> {
-  await window.ditbrowse?.clearSelectedTileStorage?.(partition, url);
-}
-
-export async function clearPartitionStorage(partition: string): Promise<void> {
-  await window.ditbrowse?.clearPartitionStorage?.(partition);
 }
 
 export async function resetCameraSessionData(

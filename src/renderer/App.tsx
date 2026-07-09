@@ -21,14 +21,28 @@ import type {
   WorkspaceState
 } from "../shared/types";
 import { resolveCameraAddress } from "../shared/url";
-import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
+import {
+  clearTileRuntimeSession,
+  loadTileBaseAddress,
+  runAllTileCommand,
+  runSelectedTileCommand
+} from "./browserControls";
 import { BrowserChrome } from "./components/BrowserChrome";
 import { CameraListEditor } from "./components/CameraListEditor";
 import { TileGrid } from "./components/TileGrid";
+import { Button } from "./components/ui/Button";
+import { Dialog } from "./components/ui/Dialog";
+import { StatusNotice } from "./components/ui/StatusNotice";
 import {
-  clearPartitionStorage,
-  clearSelectedTileStorage,
+  resetCameraList,
+  resetSelectedCamera,
+  type SessionResetDependencies,
+  type SessionResetResult
+} from "./sessionReset";
+import {
   loadWorkspace,
+  resetCameraSessionData,
+  resetListSessionData,
   saveWorkspace
 } from "./state/workspaceStorage";
 import { workspaceReducer } from "./state/workspaceReducer";
@@ -88,10 +102,18 @@ export function App(): ReactElement {
   const [focusMode, setFocusMode] = useState(false);
   const [httpAuthQueue, setHttpAuthQueue] = useState<HttpAuthPromptState[]>([]);
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetProgressMessage, setResetProgressMessage] = useState("");
+  const [resetNotice, setResetNotice] = useState<
+    SessionResetResult | { tone: "error"; message: string } | null
+  >(null);
+  const [confirmListReset, setConfirmListReset] = useState(false);
   const selectedTileIdRef = useRef(workspace.selectedTileId);
   const workspaceRef = useRef(workspace);
   const httpAuthQueueRef = useRef(httpAuthQueue);
   const manualAuthGateRef = useRef(new OneShotManualAuthGate());
+  const resetBusyRef = useRef(false);
+  const activeWorkspaceKeyRef = useRef("");
   const effectiveFocusMode = focusMode && !!workspace.selectedTileId;
   const focusModeRef = useRef(effectiveFocusMode);
   const httpAuthPrompt = httpAuthQueue[0] ?? null;
@@ -99,6 +121,7 @@ export function App(): ReactElement {
   workspaceRef.current = workspace;
   httpAuthQueueRef.current = httpAuthQueue;
   focusModeRef.current = effectiveFocusMode;
+  activeWorkspaceKeyRef.current = `${workspace.activeJobId ?? ""}:${workspace.activeCameraListId ?? ""}`;
 
   useEffect(() => {
     let active = true;
@@ -155,11 +178,24 @@ export function App(): ReactElement {
   const activeList = workspace.cameraLists.find(
     (list) => list.id === workspace.activeCameraListId
   );
-  const activePartition =
-    workspace.activeJobId && workspace.activeCameraListId
-      ? `persist:ditbrowse-${workspace.activeJobId}-${workspace.activeCameraListId}`
-      : null;
   const webviewPreloadPath = window.ditbrowse?.webviewPreloadPath ?? null;
+
+  const sessionResetDependencies = useMemo<SessionResetDependencies>(
+    () => ({
+      clearRuntime: clearTileRuntimeSession,
+      resetCameraData: resetCameraSessionData,
+      resetListData: resetListSessionData,
+      loadBase: loadTileBaseAddress,
+      markManualAuth: (tileIds) => manualAuthGateRef.current.mark(tileIds),
+      clearManualAuth: (tileIds) => manualAuthGateRef.current.clear(tileIds),
+      isCurrent: (operationKey) => activeWorkspaceKeyRef.current === operationKey,
+      wait: (delayMs) =>
+        delayMs <= 0
+          ? Promise.resolve()
+          : new Promise((resolve) => window.setTimeout(resolve, delayMs))
+    }),
+    []
+  );
 
   const credentialsByTileId = useMemo(() => {
     const credentials = new Map<string, CredentialFill>();
@@ -440,6 +476,99 @@ export function App(): ReactElement {
     }
   }, [discardTileCredential]);
 
+  const cancelQueuedAuthForTiles = useCallback((tileIds: string[]): void => {
+    const affectedTileIds = new Set(tileIds);
+    const { kept, removed } = removeHttpAuthPrompts(
+      httpAuthQueueRef.current,
+      (prompt) => !!prompt.tileId && affectedTileIds.has(prompt.tileId)
+    );
+    removed.forEach((prompt) => {
+      window.ditbrowse?.sendHttpAuthResponse?.(prompt.request.requestId, {});
+    });
+    httpAuthQueueRef.current = kept;
+    setHttpAuthQueue(kept);
+  }, []);
+
+  const resetSelectedCameraData = useCallback(async (): Promise<void> => {
+    if (resetBusyRef.current) {
+      return;
+    }
+
+    const currentWorkspace = workspaceRef.current;
+    const tile = currentWorkspace.tiles.find(
+      (candidate) => candidate.id === currentWorkspace.selectedTileId
+    );
+    if (!tile) {
+      return;
+    }
+
+    const operationKey = `${currentWorkspace.activeJobId ?? ""}:${currentWorkspace.activeCameraListId ?? ""}`;
+    cancelQueuedAuthForTiles([tile.id]);
+    resetBusyRef.current = true;
+    setResetBusy(true);
+    setResetProgressMessage(`Clearing data for ${tile.title}...`);
+    setResetNotice(null);
+
+    try {
+      const result = await resetSelectedCamera(
+        { tile, operationKey },
+        sessionResetDependencies
+      );
+      setResetNotice(result);
+    } catch (error) {
+      setResetNotice({
+        tone: "error",
+        message:
+          error instanceof Error ? error.message : "Camera data could not be cleared."
+      });
+    } finally {
+      resetBusyRef.current = false;
+      setResetBusy(false);
+      setResetProgressMessage("");
+    }
+  }, [cancelQueuedAuthForTiles, sessionResetDependencies]);
+
+  const resetEveryCameraData = useCallback(async (): Promise<void> => {
+    if (resetBusyRef.current) {
+      return;
+    }
+
+    const currentWorkspace = workspaceRef.current;
+    if (!currentWorkspace.activeJobId || !currentWorkspace.activeCameraListId) {
+      setConfirmListReset(false);
+      setResetNotice({ tone: "error", message: "Select a camera list before clearing data." });
+      return;
+    }
+
+    const tiles = [...currentWorkspace.tiles];
+    const operationKey = `${currentWorkspace.activeJobId}:${currentWorkspace.activeCameraListId}`;
+    const partition = `persist:ditbrowse-${currentWorkspace.activeJobId}-${currentWorkspace.activeCameraListId}`;
+    setConfirmListReset(false);
+    cancelQueuedAuthForTiles(tiles.map((tile) => tile.id));
+    resetBusyRef.current = true;
+    setResetBusy(true);
+    setResetProgressMessage(`Clearing data and reloading ${tiles.length} cameras...`);
+    setResetNotice(null);
+
+    try {
+      const result = await resetCameraList(
+        { tiles, partition, operationKey },
+        sessionResetDependencies
+      );
+      setResetNotice(result);
+    } catch (error) {
+      setResetNotice({
+        tone: "error",
+        message:
+          error instanceof Error ? error.message : "Camera list data could not be cleared."
+      });
+    } finally {
+      resetBusyRef.current = false;
+      setResetBusy(false);
+      setResetProgressMessage("");
+    }
+  }, [cancelQueuedAuthForTiles, sessionResetDependencies]);
+
   const cancelHttpAuth = useCallback((): void => {
     if (!httpAuthPrompt) {
       return;
@@ -566,7 +695,6 @@ export function App(): ReactElement {
         workspace={workspace}
         selectedTile={selectedTile}
         activeList={activeList ?? null}
-        activePartition={activePartition}
         onSelectTile={selectTile}
         onMoveTile={moveTile}
         onMoveTileToIndex={moveTileToIndex}
@@ -598,13 +726,24 @@ export function App(): ReactElement {
         onDeleteSelectedTilePassword={deleteSelectedTilePassword}
         onResetSelectedScale={resetSelectedScale}
         onResetGridOrder={resetGridOrder}
-        onClearSelectedCookies={(partition, url) => void clearSelectedTileStorage(partition, url)}
-        onClearListCookies={(partition) => void clearPartitionStorage(partition)}
+        resetBusy={resetBusy}
+        onResetSelectedCamera={() => void resetSelectedCameraData()}
+        onRequestResetList={() => setConfirmListReset(true)}
         focusMode={effectiveFocusMode}
         onFocusModeToggle={toggleFocusMode}
         controlApiInfo={controlApiInfo}
         onSetControlApiPort={setControlApiPort}
       />
+      {resetBusy && (
+        <StatusNotice tone="progress" message={resetProgressMessage} />
+      )}
+      {!resetBusy && resetNotice && (
+        <StatusNotice
+          tone={resetNotice.tone}
+          message={resetNotice.message}
+          onDismiss={() => setResetNotice(null)}
+        />
+      )}
       <TileGrid
         tiles={workspace.tiles}
         globalZoom={workspace.globalZoom}
@@ -623,6 +762,23 @@ export function App(): ReactElement {
           activeList={activeList ?? null}
           onClose={() => setEditorOpen(false)}
           onSaveList={saveCameraListDraft}
+        />
+      )}
+      {confirmListReset && (
+        <Dialog
+          title="Clear data for every camera?"
+          description="This signs every camera out, clears browsing data and active authentication, then reloads each camera from its base address. Saved usernames and passwords are kept."
+          onClose={() => setConfirmListReset(false)}
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmListReset(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={() => void resetEveryCameraData()}>
+                Clear and reload
+              </Button>
+            </>
+          }
         />
       )}
       {httpAuthPrompt && (

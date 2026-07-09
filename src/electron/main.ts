@@ -2,12 +2,7 @@ import { BrowserWindow, Menu, app, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
-import {
-  clearPartitionStorage,
-  clearSelectedTileStorage,
-  resetCameraSessionData,
-  resetListSessionData
-} from "./session.js";
+import { resetCameraSessionData, resetListSessionData } from "./session.js";
 import {
   loadControlApiConfig,
   normalizeControlApiPort,
@@ -180,12 +175,6 @@ const createWindow = async (): Promise<void> => {
   ipcMain.handle("workspace:load", () => storage.loadWorkspace());
   ipcMain.handle("workspace:save", (_event, workspace: WorkspaceState) =>
     storage.saveWorkspace(workspace)
-  );
-  ipcMain.handle("session:clearSelectedTile", (_event, partition: string, url: string) =>
-    clearSelectedTileStorage(partition, url)
-  );
-  ipcMain.handle("session:clearPartition", (_event, partition: string) =>
-    clearPartitionStorage(partition)
   );
   ipcMain.handle(
     "session:resetCamera",
