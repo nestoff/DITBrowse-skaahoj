@@ -1,10 +1,12 @@
 import type { ButtonHTMLAttributes, ReactElement, ReactNode } from "react";
+import { Button } from "./Button";
+import type { TooltipContent } from "./Tooltip";
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
   icon: ReactNode;
   active?: boolean;
-  tooltip?: string;
+  tooltip?: string | TooltipContent;
 }
 
 export function IconButton({
@@ -17,18 +19,21 @@ export function IconButton({
   ...buttonProps
 }: IconButtonProps): ReactElement {
   const classes = ["icon-button", active ? "active" : "", className].filter(Boolean).join(" ");
-  const tooltipText = tooltip ?? label;
+  const tooltipContent =
+    typeof tooltip === "string"
+      ? { title: label, description: tooltip }
+      : tooltip;
 
   return (
-    <button
+    <Button
       {...buttonProps}
       type={type}
       aria-label={label}
-      title={tooltipText}
-      data-tooltip={tooltipText}
+      tooltip={tooltipContent}
+      variant="ghost"
+      size="icon"
+      icon={icon}
       className={classes}
-    >
-      {icon}
-    </button>
+    />
   );
 }
