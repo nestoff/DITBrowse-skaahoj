@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runAllTileCommand, runSelectedTileCommand } from "./browserControls";
+import {
+  clearTileRuntimeSession,
+  loadTileBaseAddress,
+  runAllTileCommand,
+  runSelectedTileCommand
+} from "./browserControls";
 
 function addWebview(tileId: string): Electron.WebviewTag {
   const webview = document.createElement("webview") as Electron.WebviewTag;
@@ -11,6 +16,8 @@ function addWebview(tileId: string): Electron.WebviewTag {
   webview.reload = vi.fn();
   webview.loadURL = vi.fn(async () => undefined);
   webview.getURL = vi.fn(() => "http://10.20.100.105/rmt.html");
+  webview.stop = vi.fn();
+  webview.executeJavaScript = vi.fn(async () => undefined);
   document.body.append(webview);
   return webview;
 }
@@ -80,5 +87,33 @@ describe("runSelectedTileCommand", () => {
 
     vi.advanceTimersByTime(750);
     expect(second.loadURL).toHaveBeenCalledWith("http://10.20.100.106");
+  });
+
+  it("clears sessionStorage and stops the selected guest", async () => {
+    const webview = addWebview("tile-1");
+
+    await expect(clearTileRuntimeSession("tile-1")).resolves.toBe(true);
+
+    expect(webview.stop).toHaveBeenCalledOnce();
+    expect(webview.executeJavaScript).toHaveBeenCalledWith("sessionStorage.clear()", true);
+  });
+
+  it("reports a guest cleanup failure without throwing", async () => {
+    const webview = addWebview("tile-1");
+    webview.executeJavaScript = vi.fn(async () => {
+      throw new Error("guest unavailable");
+    });
+
+    await expect(clearTileRuntimeSession("tile-1")).resolves.toBe(false);
+  });
+
+  it("loads an exact base address into one tile", async () => {
+    const webview = addWebview("tile-1");
+
+    await expect(
+      loadTileBaseAddress("tile-1", "http://10.20.100.108/")
+    ).resolves.toBe(true);
+
+    expect(webview.loadURL).toHaveBeenCalledWith("http://10.20.100.108/");
   });
 });

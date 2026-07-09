@@ -13,6 +13,38 @@ function findWebviewForTile(tileId: string | null): Electron.WebviewTag | null {
   return webviews.find((webview) => webview.getAttribute("data-tile-id") === tileId) ?? null;
 }
 
+export async function clearTileRuntimeSession(tileId: string): Promise<boolean> {
+  const webview = findWebviewForTile(tileId);
+  if (!webview || typeof webview.executeJavaScript !== "function") {
+    return false;
+  }
+
+  try {
+    webview.stop?.();
+    await webview.executeJavaScript("sessionStorage.clear()", true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function loadTileBaseAddress(
+  tileId: string,
+  baseUrl: string
+): Promise<boolean> {
+  const webview = findWebviewForTile(tileId);
+  if (!webview || typeof webview.loadURL !== "function") {
+    return false;
+  }
+
+  try {
+    await webview.loadURL(baseUrl);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function reloadWebviewFromCameraRoot(
   webview: Electron.WebviewTag,
   fallbackUrl?: string

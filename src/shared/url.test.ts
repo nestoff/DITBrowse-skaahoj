@@ -1,11 +1,33 @@
 import { describe, expect, it } from "vitest";
 import {
+  cameraBaseAddressFromUrl,
   cameraBaseFromCommittedUrl,
   cameraRootFromUrl,
   resolveCameraAddress,
   resolveCameraAddressWithStablePath,
   stableCameraGuiPathFromUrl
 } from "./url";
+
+describe("cameraBaseAddressFromUrl", () => {
+  it("returns an HTTP camera origin with an explicit root slash", () => {
+    expect(cameraBaseAddressFromUrl("http://10.20.100.108/rmt.html?mode=1")).toEqual({
+      origin: "http://10.20.100.108",
+      baseUrl: "http://10.20.100.108/"
+    });
+  });
+
+  it("preserves HTTPS, ports, and typed host text", () => {
+    expect(cameraBaseAddressFromUrl("https://10.20.100.05:8443/index.html")).toEqual({
+      origin: "https://10.20.100.05:8443",
+      baseUrl: "https://10.20.100.05:8443/"
+    });
+  });
+
+  it("rejects invalid and non-web URLs", () => {
+    expect(cameraBaseAddressFromUrl("about:blank")).toBeNull();
+    expect(cameraBaseAddressFromUrl("not a url")).toBeNull();
+  });
+});
 
 describe("resolveCameraAddress", () => {
   it("keeps full http URLs unchanged", () => {

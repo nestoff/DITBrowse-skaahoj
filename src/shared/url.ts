@@ -108,6 +108,27 @@ export function cameraRootFromUrl(input: string): string {
   return normalized;
 }
 
+export interface CameraBaseAddress {
+  origin: string;
+  baseUrl: string;
+}
+
+export function cameraBaseAddressFromUrl(input: string): CameraBaseAddress | null {
+  const normalized = normalizeCameraUrl(input);
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    const origin = httpOriginPreservingHostText(normalized) ?? parsed.origin;
+    return { origin, baseUrl: `${origin}/` };
+  } catch {
+    return null;
+  }
+}
+
 export function cameraBaseFromCommittedUrl(input: string): string {
   const normalized = normalizeCameraUrl(input);
   const origin = httpOriginPreservingHostText(normalized);
