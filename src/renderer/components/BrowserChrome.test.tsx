@@ -69,6 +69,27 @@ describe("BrowserChrome", () => {
     expect(screen.getAllByLabelText("Address")).toHaveLength(1);
   });
 
+  it("uses descriptive shared tooltips for browser commands", () => {
+    render(<BrowserChrome {...baseProps} />);
+
+    const reload = screen.getByRole("button", { name: "Reload" });
+    expect(reload).not.toHaveAttribute("title");
+    fireEvent.focus(reload);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Reload camera");
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Loads the selected tile again from its base address."
+    );
+    expect(screen.getByRole("tooltip")).toHaveTextContent("⌘R");
+
+    fireEvent.blur(reload);
+    const tools = screen.getByRole("button", { name: "Workspace tools" });
+    expect(tools).not.toHaveAttribute("title");
+    fireEvent.focus(tools);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Opens job, camera list, password, reset, and local API controls."
+    );
+  });
+
   it("keeps camera workspace tools behind the workspace tools button", () => {
     render(<BrowserChrome {...baseProps} />);
 

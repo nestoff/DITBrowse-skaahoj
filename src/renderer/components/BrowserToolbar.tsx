@@ -14,8 +14,8 @@ import {
 import type { TileState, ViewportSize } from "../../shared/types";
 import { AddressBar } from "./AddressBar";
 import { GridControls } from "./GridControls";
+import { Button } from "./ui/Button";
 import { IconButton } from "./ui/IconButton";
-import { PillButton } from "./ui/PillButton";
 
 interface BrowserToolbarProps {
   selectedTile: TileState | null;
@@ -73,25 +73,39 @@ export function BrowserToolbar({
       <div className="toolbar-group browser-navigation" aria-label="Navigation controls">
         <IconButton
           label="Back"
-          tooltip="Go to the previous page in the selected tile"
+          tooltip={{
+            title: "Back",
+            description: "Returns the selected camera to its previous page."
+          }}
           icon={<ArrowLeft size={16} strokeWidth={2.2} />}
           onClick={onBack}
         />
         <IconButton
           label="Forward"
-          tooltip="Go to the next page in the selected tile"
+          tooltip={{
+            title: "Forward",
+            description: "Moves the selected camera to its next page."
+          }}
           icon={<ArrowRight size={16} strokeWidth={2.2} />}
           onClick={onForward}
         />
         <IconButton
           label="Reload"
-          tooltip="Reload the selected tile from its saved camera address"
+          tooltip={{
+            title: "Reload camera",
+            description: "Loads the selected tile again from its base address.",
+            shortcut: "⌘R"
+          }}
           icon={<RotateCw size={15} strokeWidth={2.2} />}
           onClick={onReload}
         />
         <IconButton
           label="Reload all"
-          tooltip="Reload every tile from its saved camera address"
+          className="toolbar-reload-all"
+          tooltip={{
+            title: "Reload every camera",
+            description: "Loads every open tile again from its camera base address."
+          }}
           icon={<RotateCcw size={15} strokeWidth={2.2} />}
           onClick={onReloadAll}
         />
@@ -100,21 +114,29 @@ export function BrowserToolbar({
         <AddressBar value={selectedTile?.url ?? ""} onNavigate={onNavigate} />
         <IconButton
           label="Save current URL to camera list"
-          tooltip="Save this tile's current live URL into its camera row"
+          tooltip={{
+            title: "Save current URL",
+            description: "Stores this live address in the selected camera row."
+          }}
           icon={<Save size={14} strokeWidth={2.2} />}
           disabled={!canSaveSelectedUrl}
           onClick={onSaveSelectedUrl}
         />
         {showReturnToPrefix && (
-          <PillButton
+          <Button
             className="return-prefix-button"
             icon={<Link2 size={14} strokeWidth={2.2} />}
-            title="Go back to prefix and suffix style"
-            tooltip="Restore this camera to the list prefix plus camera number"
+            variant="subtle"
+            size="compact"
+            aria-label="Go back to prefix and suffix style"
+            tooltip={{
+              title: "Use list address",
+              description: "Restores this camera to the list prefix plus its camera number."
+            }}
             onClick={onReturnSelectedCameraToPrefix}
           >
             Go back to prefix and suffix style
-          </PillButton>
+          </Button>
         )}
       </div>
       <div className="toolbar-group browser-layout-controls" aria-label="Layout controls">
@@ -122,8 +144,14 @@ export function BrowserToolbar({
           label={focusMode ? "Show all pages" : "Focus selected page"}
           tooltip={
             focusMode
-              ? "Return to the full camera grid without reloading pages"
-              : "Show only the selected page without reloading it"
+              ? {
+                  title: "Show all pages",
+                  description: "Returns to the camera grid without reloading any pages."
+                }
+              : {
+                  title: "Focus selected page",
+                  description: "Shows only the selected camera without reloading any pages."
+                }
           }
           icon={
             focusMode ? (
@@ -136,7 +164,7 @@ export function BrowserToolbar({
           disabled={!selectedTile}
           onClick={onFocusModeToggle}
         />
-        <span className="selected-tile-status" title={selectedName}>
+        <span className="selected-tile-status">
           <SquareStack size={14} strokeWidth={2.2} />
           <span>{selectedName}</span>
         </span>

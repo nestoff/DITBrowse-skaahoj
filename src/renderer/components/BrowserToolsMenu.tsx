@@ -1,6 +1,6 @@
 import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
-import { ListRestart, Maximize2, PencilLine } from "lucide-react";
+import { ListRestart, Maximize2, PencilLine, RotateCcw } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
 import type {
   CameraList,
@@ -11,6 +11,7 @@ import type {
 } from "../../shared/types";
 import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
+import { Button } from "./ui/Button";
 import { PillButton } from "./ui/PillButton";
 
 interface BrowserToolsMenuProps {
@@ -24,6 +25,7 @@ interface BrowserToolsMenuProps {
   onUpdateJobName: (jobName: string) => void;
   onDeleteJob: (jobId: string) => void;
   onEditList: () => void;
+  onReloadAll: () => void;
   credentialPresets: CredentialPreset[];
   passwordRecords: PasswordRecord[];
   onAddCredentialPreset: (
@@ -54,6 +56,7 @@ export function BrowserToolsMenu({
   onUpdateJobName,
   onDeleteJob,
   onEditList,
+  onReloadAll,
   credentialPresets,
   passwordRecords,
   onAddCredentialPreset,
@@ -127,6 +130,19 @@ export function BrowserToolsMenu({
         />
       </div>
       <div className="tools-section tools-actions">
+        <Button
+          className="tool-command"
+          variant="ghost"
+          size="compact"
+          icon={<RotateCcw size={15} strokeWidth={2.2} />}
+          tooltip={{
+            title: "Reload every camera",
+            description: "Loads every open tile again from its camera base address."
+          }}
+          onClick={onReloadAll}
+        >
+          Reload every camera
+        </Button>
         <PillButton
           className="tool-command"
           icon={<PencilLine size={15} strokeWidth={2.2} />}

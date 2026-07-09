@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactElement, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ViewportSize } from "../../shared/types";
 import {
   DEFAULT_ASPECT_RATIO_PRESETS,
@@ -8,6 +8,7 @@ import {
   viewportFromValue,
   viewportToValue
 } from "../../shared/viewport";
+import { Button } from "./ui/Button";
 
 const MIN_ZOOM_PERCENT = 25;
 const MAX_ZOOM_PERCENT = 300;
@@ -86,16 +87,20 @@ function ZoomPercentInput({
           }
         }}
       />
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="compact"
         className="zoom-percent-reset"
         aria-label={resetAriaLabel}
-        title="Double-click the percent sign to reset this zoom to 100%"
-        data-tooltip="Double-click the percent sign to reset this zoom to 100%"
+        tooltip={{
+          title: "Reset zoom",
+          description: "Double-click the percent sign to return this zoom to 100%."
+        }}
         onDoubleClick={resetZoom}
       >
         %
-      </button>
+      </Button>
     </div>
   );
 }
@@ -129,8 +134,6 @@ export function GridControls({
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
-  const zoomButtonRef = useRef<HTMLButtonElement | null>(null);
-  const viewportButtonRef = useRef<HTMLButtonElement | null>(null);
   const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
   const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
   const [zoomPopoverStyle, setZoomPopoverStyle] = useState<CSSProperties>({});
@@ -149,11 +152,11 @@ export function GridControls({
     };
   };
 
-  const toggleGlobalZoom = (): void => {
+  const toggleGlobalZoom = (button: HTMLButtonElement): void => {
     setGlobalZoomOpen((open) => {
       const nextOpen = !open;
       if (nextOpen) {
-        setZoomPopoverStyle(popoverStyleFor(zoomButtonRef.current, 260));
+        setZoomPopoverStyle(popoverStyleFor(button, 260));
       }
       return nextOpen;
     });
@@ -197,18 +200,21 @@ export function GridControls({
           resetAriaLabel="Reset selected zoom to 100 percent"
           onCommit={onZoomChange}
         />
-        <button
+        <Button
           type="button"
-          ref={zoomButtonRef}
+          variant="subtle"
+          size="compact"
           className="global-zoom-trigger"
           aria-label="Global zoom controls"
-          title="Open relative zoom controls for every tile"
-          data-tooltip="Open relative zoom controls for every tile"
+          tooltip={{
+            title: "Relative zoom for all",
+            description: "Adjusts every tile relative to its own saved zoom value."
+          }}
           aria-expanded={globalZoomOpen}
-          onClick={toggleGlobalZoom}
+          onClick={(event) => toggleGlobalZoom(event.currentTarget)}
         >
           All
-        </button>
+        </Button>
         {globalZoomOpen && (
           <div
             className="zoom-popover"
@@ -265,26 +271,29 @@ export function GridControls({
         </select>
       </label>
       <div className="grid-control viewport-control">
-        <button
+        <Button
           type="button"
-          ref={viewportButtonRef}
+          variant="subtle"
+          size="compact"
           className="global-viewport-trigger"
           aria-label="All viewport controls"
-          title="Open viewport size controls for every tile"
-          data-tooltip="Open viewport size controls for every tile"
+          tooltip={{
+            title: "Viewport for all",
+            description: "Applies one viewport size to every open camera tile."
+          }}
           aria-expanded={globalViewportOpen}
-          onClick={() =>
+          onClick={(event) =>
             setGlobalViewportOpen((open) => {
               const nextOpen = !open;
               if (nextOpen) {
-                setViewportPopoverStyle(popoverStyleFor(viewportButtonRef.current, 180));
+                setViewportPopoverStyle(popoverStyleFor(event.currentTarget, 180));
               }
               return nextOpen;
             })
           }
         >
           All
-        </button>
+        </Button>
         {globalViewportOpen && (
           <div
             className="viewport-popover"

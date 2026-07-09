@@ -56,45 +56,48 @@ export function TabStrip({
               <span className="tab-index">{index + 1}</span>
               <span className="tab-title">{label}</span>
             </button>
-            <button
-              type="button"
+            <IconButton
               className="tab-move"
               disabled={index === 0}
-              aria-label={`Move ${label} left`}
-              title="Move this tab one position left"
-              data-tooltip="Move this tab one position left"
+              label={`Move ${label} left`}
+              tooltip={{
+                title: "Move tab left",
+                description: "Moves this camera one position earlier in the grid."
+              }}
+              icon={<ChevronLeft size={13} strokeWidth={2.3} />}
               onClick={() => onMoveTile(tile.id, "left")}
-            >
-              <ChevronLeft size={12} strokeWidth={2.4} />
-            </button>
-            <button
-              type="button"
+            />
+            <IconButton
               className="tab-move"
               disabled={index === tiles.length - 1}
-              aria-label={`Move ${label} right`}
-              title="Move this tab one position right"
-              data-tooltip="Move this tab one position right"
+              label={`Move ${label} right`}
+              tooltip={{
+                title: "Move tab right",
+                description: "Moves this camera one position later in the grid."
+              }}
+              icon={<ChevronRight size={13} strokeWidth={2.3} />}
               onClick={() => onMoveTile(tile.id, "right")}
-            >
-              <ChevronRight size={12} strokeWidth={2.4} />
-            </button>
-            <button
-              type="button"
+            />
+            <IconButton
               className="tab-close"
-              aria-label={`Close ${label}`}
-              title="Close this tile"
-              data-tooltip="Close this tile"
+              label={`Close ${label}`}
+              tooltip={{
+                title: "Close camera",
+                description: "Removes this camera tile from the open grid."
+              }}
+              icon={<X size={13} strokeWidth={2.3} />}
               onClick={() => onCloseTile(tile.id)}
-            >
-              <X size={12} strokeWidth={2.4} />
-            </button>
+            />
           </div>
           );
         })}
       </div>
       <IconButton
         label="Add tile"
-        tooltip="Open a new blank browser tile"
+        tooltip={{
+          title: "Add tile",
+          description: "Opens a new blank camera browser tile."
+        }}
         icon={<Plus size={16} strokeWidth={2.3} />}
         className="add-tab-button"
         onClick={onAddTile}

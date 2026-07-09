@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { FormEvent, useEffect, useState } from "react";
 import { CornerDownLeft, PanelTopOpen } from "lucide-react";
+import { IconButton } from "./ui/IconButton";
 
 interface AddressBarProps {
   value: string;
@@ -27,23 +28,25 @@ export function AddressBar({ value, onNavigate }: AddressBarProps): ReactElement
         onChange={(event) => setDraft(event.target.value)}
         onFocus={() => setDraft(value)}
       />
-      <button
+      <IconButton
         type="submit"
-        aria-label="Open address"
-        title="Load the typed address in the selected tile"
-        data-tooltip="Load the typed address in the selected tile"
-      >
-        <CornerDownLeft size={16} strokeWidth={2.2} />
-      </button>
-      <button
+        label="Open address"
+        tooltip={{
+          title: "Open address",
+          description: "Loads the typed address in the selected camera tile."
+        }}
+        icon={<CornerDownLeft size={16} strokeWidth={2.2} />}
+      />
+      <IconButton
         type="button"
-        aria-label="Open address in new tile"
-        title="Open the typed address in a new tile"
-        data-tooltip="Open the typed address in a new tile"
+        label="Open address in new tile"
+        tooltip={{
+          title: "Open in new tile",
+          description: "Creates another tile and loads the typed address there."
+        }}
+        icon={<PanelTopOpen size={16} strokeWidth={2.2} />}
         onClick={() => onNavigate(draft, "new")}
-      >
-        <PanelTopOpen size={16} strokeWidth={2.2} />
-      </button>
+      />
     </form>
   );
 }

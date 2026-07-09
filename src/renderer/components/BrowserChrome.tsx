@@ -128,6 +128,10 @@ export function BrowserChrome({
         />
         <IconButton
           label="Workspace tools"
+          tooltip={{
+            title: "Workspace tools",
+            description: "Opens job, camera list, password, reset, and local API controls."
+          }}
           icon={<SlidersHorizontal size={16} strokeWidth={2.2} />}
           active={toolsOpen}
           className="workspace-tools-button"
@@ -170,6 +174,7 @@ export function BrowserChrome({
           onUpdateJobName={onUpdateJobName}
           onDeleteJob={onDeleteJob}
           onEditList={onEditList}
+          onReloadAll={onReloadAll}
           credentialPresets={credentialPresets}
           passwordRecords={passwordRecords}
           onAddCredentialPreset={onAddCredentialPreset}

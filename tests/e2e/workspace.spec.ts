@@ -41,6 +41,23 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
 });
 
+test("toolbar stays inside the window at supported widths", async ({ page }) => {
+  await page.goto("/");
+
+  for (const width of [960, 1180, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    const toolbar = page.getByLabel("Browser toolbar");
+    const box = await toolbar.boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+    await expect(page.getByRole("textbox", { name: "Address" })).toBeVisible();
+    await expect(page.getByLabel("Focus selected page")).toBeVisible();
+    await expect(page.getByLabel("Grid columns")).toBeVisible();
+    await expect(page.getByLabel("Selected tile zoom")).toBeVisible();
+    await expect(page.getByLabel("Selected tile viewport")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  }
+});
+
 test("selected camera address overrides can return to prefix and suffix style", async ({ page }) => {
   await page.goto("/");
 
