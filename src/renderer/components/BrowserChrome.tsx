@@ -1,26 +1,21 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
-import type { ControlApiInfo } from "../../shared/controlApi";
+import { List } from "lucide-react";
 import type {
   CameraList,
-  CredentialPreset,
-  PasswordRecord,
   TileState,
   ViewportSize,
   WorkspaceState
 } from "../../shared/types";
 import { BrowserToolbar } from "./BrowserToolbar";
-import { BrowserToolsMenu } from "./BrowserToolsMenu";
 import { TabStrip } from "./TabStrip";
-import { IconButton } from "./ui/IconButton";
+import { Button } from "./ui/Button";
 
 interface BrowserChromeProps {
   workspace: WorkspaceState;
   selectedTile: TileState | null;
   activeList: CameraList | null;
+  onOpenCameraList: () => void;
   onSelectTile: (tileId: string) => void;
-  onMoveTile: (tileId: string, direction: "left" | "right") => void;
   onCloseTile: (tileId: string) => void;
   onAddTile: () => void;
   onMoveTileToIndex: (tileId: string, toIndex: number) => void;
@@ -37,38 +32,16 @@ interface BrowserChromeProps {
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
-  onSelectCameraList: (cameraListId: string) => void;
-  onCreateJob: (jobName: string, listName: string, defaultPrefix: string) => void;
-  onUpdateJobName: (jobName: string) => void;
-  onDeleteJob: (jobId: string) => void;
-  onEditList: () => void;
-  credentialPresets: CredentialPreset[];
-  passwordRecords: PasswordRecord[];
-  onAddCredentialPreset: (
-    username: string,
-    password: string,
-    cameraType?: string
-  ) => void;
-  onDeleteCredentialPreset: (presetId: string) => void;
-  onDeletePasswordRecord: (passwordRecordId: string) => void;
-  onDeleteSelectedTilePassword: () => void;
-  onResetSelectedScale: () => void;
-  onResetGridOrder: () => void;
-  resetBusy: boolean;
-  onResetSelectedCamera: () => void;
-  onRequestResetList: () => void;
   focusMode: boolean;
   onFocusModeToggle: () => void;
-  controlApiInfo: ControlApiInfo | null;
-  onSetControlApiPort: (port: number | null) => Promise<void>;
 }
 
 export function BrowserChrome({
   workspace,
   selectedTile,
   activeList,
+  onOpenCameraList,
   onSelectTile,
-  onMoveTile,
   onCloseTile,
   onAddTile,
   onMoveTileToIndex,
@@ -85,28 +58,9 @@ export function BrowserChrome({
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
-  onSelectCameraList,
-  onCreateJob,
-  onUpdateJobName,
-  onDeleteJob,
-  onEditList,
-  credentialPresets,
-  passwordRecords,
-  onAddCredentialPreset,
-  onDeleteCredentialPreset,
-  onDeletePasswordRecord,
-  onDeleteSelectedTilePassword,
-  onResetSelectedScale,
-  onResetGridOrder,
-  resetBusy,
-  onResetSelectedCamera,
-  onRequestResetList,
   focusMode,
-  onFocusModeToggle,
-  controlApiInfo,
-  onSetControlApiPort
+  onFocusModeToggle
 }: BrowserChromeProps): ReactElement {
-  const [toolsOpen, setToolsOpen] = useState(false);
   const selectedCamera = selectedTile?.cameraId
     ? activeList?.cameras.find((camera) => camera.id === selectedTile.cameraId) ?? null
     : null;
@@ -121,22 +75,24 @@ export function BrowserChrome({
           tiles={workspace.tiles}
           selectedTileId={workspace.selectedTileId}
           onSelectTile={onSelectTile}
-          onMoveTile={onMoveTile}
           onMoveTileToIndex={onMoveTileToIndex}
           onCloseTile={onCloseTile}
           onAddTile={onAddTile}
         />
-        <IconButton
-          label="Workspace tools"
+        <Button
+          variant="ghost"
+          size="compact"
+          aria-label="Camera List"
           tooltip={{
-            title: "Workspace tools",
-            description: "Opens job, camera list, password, reset, and local API controls."
+            title: "Camera List",
+            description: "Opens the editable camera table and workspace settings."
           }}
-          icon={<SlidersHorizontal size={16} strokeWidth={2.2} />}
-          active={toolsOpen}
-          className="workspace-tools-button"
-          onClick={() => setToolsOpen((open) => !open)}
-        />
+          icon={<List size={15} strokeWidth={2.2} />}
+          className="camera-list-button"
+          onClick={onOpenCameraList}
+        >
+          Camera List
+        </Button>
       </div>
       <BrowserToolbar
         selectedTile={selectedTile}
@@ -162,40 +118,6 @@ export function BrowserChrome({
         focusMode={focusMode}
         onFocusModeToggle={onFocusModeToggle}
       />
-      {toolsOpen && (
-        <BrowserToolsMenu
-          jobs={workspace.jobs}
-          cameraLists={workspace.cameraLists}
-          activeCameraListId={workspace.activeCameraListId}
-          activeList={activeList}
-          selectedTile={selectedTile}
-          onSelectCameraList={onSelectCameraList}
-          onCreateJob={onCreateJob}
-          onUpdateJobName={onUpdateJobName}
-          onDeleteJob={onDeleteJob}
-          onEditList={onEditList}
-          onReloadAll={onReloadAll}
-          credentialPresets={credentialPresets}
-          passwordRecords={passwordRecords}
-          onAddCredentialPreset={onAddCredentialPreset}
-          onDeleteCredentialPreset={onDeleteCredentialPreset}
-          onDeletePasswordRecord={onDeletePasswordRecord}
-          onDeleteSelectedTilePassword={onDeleteSelectedTilePassword}
-          onResetSelectedScale={onResetSelectedScale}
-          onResetGridOrder={onResetGridOrder}
-          resetBusy={resetBusy}
-          onResetSelectedCamera={() => {
-            setToolsOpen(false);
-            onResetSelectedCamera();
-          }}
-          onRequestResetList={() => {
-            setToolsOpen(false);
-            onRequestResetList();
-          }}
-          controlApiInfo={controlApiInfo}
-          onSetControlApiPort={onSetControlApiPort}
-        />
-      )}
     </div>
   );
 }

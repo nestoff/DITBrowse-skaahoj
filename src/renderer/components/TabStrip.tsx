@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { TileState } from "../../shared/types";
 import { IconButton } from "./ui/IconButton";
 
@@ -10,7 +10,6 @@ interface TabStripProps {
   onSelectTile: (tileId: string) => void;
   onAddTile: () => void;
   onCloseTile: (tileId: string) => void;
-  onMoveTile: (tileId: string, direction: "left" | "right") => void;
   onMoveTileToIndex: (tileId: string, toIndex: number) => void;
 }
 
@@ -20,7 +19,6 @@ export function TabStrip({
   onSelectTile,
   onAddTile,
   onCloseTile,
-  onMoveTile,
   onMoveTileToIndex
 }: TabStripProps): ReactElement {
   const [draggedTileId, setDraggedTileId] = useState<string | null>(null);
@@ -56,28 +54,6 @@ export function TabStrip({
               <span className="tab-index">{index + 1}</span>
               <span className="tab-title">{label}</span>
             </button>
-            <IconButton
-              className="tab-move"
-              disabled={index === 0}
-              label={`Move ${label} left`}
-              tooltip={{
-                title: "Move tab left",
-                description: "Moves this camera one position earlier in the grid."
-              }}
-              icon={<ChevronLeft size={13} strokeWidth={2.3} />}
-              onClick={() => onMoveTile(tile.id, "left")}
-            />
-            <IconButton
-              className="tab-move"
-              disabled={index === tiles.length - 1}
-              label={`Move ${label} right`}
-              tooltip={{
-                title: "Move tab right",
-                description: "Moves this camera one position later in the grid."
-              }}
-              icon={<ChevronRight size={13} strokeWidth={2.3} />}
-              onClick={() => onMoveTile(tile.id, "right")}
-            />
             <IconButton
               className="tab-close"
               label={`Close ${label}`}

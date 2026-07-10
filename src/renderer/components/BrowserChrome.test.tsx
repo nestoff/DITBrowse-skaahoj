@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { sampleWorkspace } from "../../shared/sampleData";
 import { BrowserChrome } from "./BrowserChrome";
@@ -13,8 +13,8 @@ const baseProps = {
   workspace: sampleWorkspace,
   selectedTile,
   activeList,
+  onOpenCameraList: vi.fn(),
   onSelectTile: vi.fn(),
-  onMoveTile: vi.fn(),
   onMoveTileToIndex: vi.fn(),
   onCloseTile: vi.fn(),
   onAddTile: vi.fn(),
@@ -31,31 +31,8 @@ const baseProps = {
   onZoomChange: vi.fn(),
   onDefaultViewportChange: vi.fn(),
   onViewportChange: vi.fn(),
-  onSelectCameraList: vi.fn(),
-  onCreateJob: vi.fn(),
-  onUpdateJobName: vi.fn(),
-  onDeleteJob: vi.fn(),
-  onEditList: vi.fn(),
-  credentialPresets: [],
-  passwordRecords: [],
-  onAddCredentialPreset: vi.fn(),
-  onDeleteCredentialPreset: vi.fn(),
-  onDeletePasswordRecord: vi.fn(),
-  onDeleteSelectedTilePassword: vi.fn(),
-  onResetSelectedScale: vi.fn(),
-  onResetGridOrder: vi.fn(),
-  resetBusy: false,
-  onResetSelectedCamera: vi.fn(),
-  onRequestResetList: vi.fn(),
   focusMode: false,
-  onFocusModeToggle: vi.fn(),
-  controlApiInfo: {
-    host: "127.0.0.1",
-    port: 54321,
-    baseUrl: "http://127.0.0.1:54321",
-    configuredPort: 54321
-  },
-  onSetControlApiPort: vi.fn(async () => undefined)
+  onFocusModeToggle: vi.fn()
 };
 
 describe("BrowserChrome", () => {
@@ -82,90 +59,30 @@ describe("BrowserChrome", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("⌘R");
 
     fireEvent.blur(reload);
-    const tools = screen.getByRole("button", { name: "Workspace tools" });
-    expect(tools).not.toHaveAttribute("title");
-    fireEvent.focus(tools);
+    const cameraList = screen.getByRole("button", { name: "Camera List" });
+    expect(cameraList).not.toHaveAttribute("title");
+    fireEvent.focus(cameraList);
     expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Opens job, camera list, password, reset, and local API controls."
+      "Opens the editable camera table and workspace settings."
     );
   });
 
-  it("keeps camera workspace tools behind the workspace tools button", () => {
-    render(<BrowserChrome {...baseProps} />);
+  it("opens the full camera list workspace directly", () => {
+    const onOpenCameraList = vi.fn();
+    render(<BrowserChrome {...baseProps} onOpenCameraList={onOpenCameraList} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+
+    expect(onOpenCameraList).toHaveBeenCalledOnce();
     expect(screen.queryByLabelText("Camera workspace tools")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-
-    expect(screen.getByLabelText("Camera workspace tools")).toBeVisible();
-    expect(screen.getByLabelText("Job and camera list")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Edit List" })).toBeVisible();
-    expect(document.querySelector(".pill-button")).not.toBeInTheDocument();
   });
 
-  it("creates a new job from an inline form", () => {
-    const onCreateJob = vi.fn();
-    render(<BrowserChrome {...baseProps} onCreateJob={onCreateJob} />);
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.click(screen.getByRole("button", { name: "New Job" }));
-    fireEvent.change(screen.getByLabelText("New job name"), {
-      target: { value: "Commercial A" }
-    });
-    fireEvent.change(screen.getByLabelText("New camera list name"), {
-      target: { value: "Main Cameras" }
-    });
-    fireEvent.change(screen.getByLabelText("New default URL prefix"), {
-      target: { value: "10.20.100." }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Create Job" }));
-
-    expect(onCreateJob).toHaveBeenCalledWith("Commercial A", "Main Cameras", "10.20.100.");
-  });
-
-  it("renames the current job from the workspace tools", () => {
-    const onUpdateJobName = vi.fn();
-    render(<BrowserChrome {...baseProps} onUpdateJobName={onUpdateJobName} />);
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.change(screen.getByLabelText("Current job name"), {
-      target: { value: "Commercial B" }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save Job Name" }));
-
-    expect(onUpdateJobName).toHaveBeenCalledWith("Commercial B");
-  });
-
-  it("sets the local control API port from workspace tools", async () => {
-    const onSetControlApiPort = vi.fn(async () => undefined);
-    render(<BrowserChrome {...baseProps} onSetControlApiPort={onSetControlApiPort} />);
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.change(screen.getByLabelText("API port"), {
-      target: { value: "54001" }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save Port" }));
-
-    await waitFor(() => {
-      expect(onSetControlApiPort).toHaveBeenCalledWith(54001);
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Auto" }));
-
-    await waitFor(() => {
-      expect(onSetControlApiPort).toHaveBeenCalledWith(null);
-    });
-  });
-
-  it("shows browser-friendly GET control API shortcuts", () => {
+  it("uses drag reorder without directional tab buttons", () => {
     render(<BrowserChrome {...baseProps} />);
 
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-
-    expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent(
-      "GET /api/focus/01"
-    );
-    expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent("GET /api/grid");
+    expect(screen.queryByRole("button", { name: /Move .* left/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Move .* right/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close A" })).toBeVisible();
   });
 
   it("opens relative all-tiles zoom controls", () => {
@@ -309,100 +226,6 @@ describe("BrowserChrome", () => {
     fireEvent.click(screen.getByLabelText("Close A"));
 
     expect(onCloseTile).toHaveBeenCalledWith("tile-41");
-  });
-
-  it("uses the shared confirmation dialog for job deletion", () => {
-    const onDeleteJob = vi.fn();
-    const confirm = vi.spyOn(window, "confirm");
-    render(<BrowserChrome {...baseProps} onDeleteJob={onDeleteJob} />);
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.click(screen.getByRole("button", { name: "Delete Job" }));
-
-    expect(screen.getByRole("dialog", { name: "Delete job" })).toBeVisible();
-    expect(confirm).not.toHaveBeenCalled();
-    expect(onDeleteJob).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete job" }));
-
-    expect(onDeleteJob).toHaveBeenCalledWith("job-sample");
-
-    confirm.mockRestore();
-  });
-
-  it("manages global credential presets from workspace tools", () => {
-    const onAddCredentialPreset = vi.fn();
-    const onDeleteCredentialPreset = vi.fn();
-    render(
-      <BrowserChrome
-        {...baseProps}
-        credentialPresets={[
-          {
-            id: "preset-1",
-            username: "admin",
-            password: "ABCD1234",
-            cameraType: "VENICE 2"
-          }
-        ]}
-        onAddCredentialPreset={onAddCredentialPreset}
-        onDeleteCredentialPreset={onDeleteCredentialPreset}
-      />
-    );
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    expect(screen.getByLabelText("Saved credential presets")).toHaveTextContent("admin");
-
-    fireEvent.change(screen.getByLabelText("Preset username"), { target: { value: "operator" } });
-    fireEvent.change(screen.getByLabelText("Preset password"), { target: { value: "secret" } });
-    fireEvent.change(screen.getByLabelText("Preset model match"), {
-      target: { value: "VENICE 2" }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-    expect(onAddCredentialPreset).toHaveBeenCalledWith(
-      "operator",
-      "secret",
-      "VENICE 2"
-    );
-
-    fireEvent.click(screen.getByLabelText("Saved credential presets").querySelector("button")!);
-
-    expect(onDeleteCredentialPreset).toHaveBeenCalledWith("preset-1");
-  });
-
-  it("shows saved camera passwords and deletes selected or specific records", () => {
-    const onDeletePasswordRecord = vi.fn();
-    const onDeleteSelectedTilePassword = vi.fn();
-    render(
-      <BrowserChrome
-        {...baseProps}
-        passwordRecords={[
-          {
-            id: "password-1",
-            jobId: "job-sample",
-            cameraListId: "list-sample",
-            cameraId: "camera-41",
-            url: "http://192.168.1.41",
-            username: "admin",
-            password: "ABCD1234"
-          }
-        ]}
-        onDeletePasswordRecord={onDeletePasswordRecord}
-        onDeleteSelectedTilePassword={onDeleteSelectedTilePassword}
-      />
-    );
-
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent(
-      "http://192.168.1.41"
-    );
-    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent("ABCD1234");
-
-    fireEvent.click(screen.getByRole("button", { name: "Forget Selected Tile Password" }));
-    expect(onDeleteSelectedTilePassword).toHaveBeenCalledOnce();
-
-    fireEvent.click(screen.getByLabelText("Saved camera passwords").querySelector("button")!);
-    expect(onDeletePasswordRecord).toHaveBeenCalledWith("password-1");
   });
 
   it("offers to return a manually overridden selected camera to prefix and suffix style", () => {

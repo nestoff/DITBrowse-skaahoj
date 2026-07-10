@@ -310,10 +310,6 @@ export function App(): ReactElement {
     }
   }, []);
 
-  const moveTile = useCallback((tileId: string, direction: "left" | "right"): void => {
-    dispatch({ type: "moveTile", tileId, direction });
-  }, []);
-
   const moveTileToIndex = useCallback((tileId: string, toIndex: number): void => {
     dispatch({ type: "moveTileToIndex", tileId, toIndex });
   }, []);
@@ -695,8 +691,8 @@ export function App(): ReactElement {
         workspace={workspace}
         selectedTile={selectedTile}
         activeList={activeList ?? null}
+        onOpenCameraList={() => setEditorOpen(true)}
         onSelectTile={selectTile}
-        onMoveTile={moveTile}
         onMoveTileToIndex={moveTileToIndex}
         onCloseTile={closeTile}
         onAddTile={addBlankTile}
@@ -713,26 +709,8 @@ export function App(): ReactElement {
         onGlobalViewportChange={setGlobalViewport}
         onZoomChange={setSelectedZoom}
         onViewportChange={setSelectedViewport}
-        onSelectCameraList={selectCameraList}
-        onCreateJob={createJob}
-        onUpdateJobName={updateJobName}
-        onDeleteJob={deleteJob}
-        onEditList={() => setEditorOpen(true)}
-        credentialPresets={workspace.credentialPresets}
-        passwordRecords={workspace.passwordRecords}
-        onAddCredentialPreset={addCredentialPreset}
-        onDeleteCredentialPreset={deleteCredentialPreset}
-        onDeletePasswordRecord={deletePasswordRecord}
-        onDeleteSelectedTilePassword={deleteSelectedTilePassword}
-        onResetSelectedScale={resetSelectedScale}
-        onResetGridOrder={resetGridOrder}
-        resetBusy={resetBusy}
-        onResetSelectedCamera={() => void resetSelectedCameraData()}
-        onRequestResetList={() => setConfirmListReset(true)}
         focusMode={effectiveFocusMode}
         onFocusModeToggle={toggleFocusMode}
-        controlApiInfo={controlApiInfo}
-        onSetControlApiPort={setControlApiPort}
       />
       {resetBusy && (
         <StatusNotice tone="progress" message={resetProgressMessage} />
