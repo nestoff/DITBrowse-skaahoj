@@ -6,8 +6,8 @@ Verified July 9, 2026:
 
 ```bash
 npm run typecheck       # passed
-npm run test            # 268 passed
-npm run test:e2e        # 6 passed
+npm run test            # 272 passed
+npm run test:e2e        # 7 passed
 npm run test:electron   # 1 passed
 npm run package:mac     # release/DITBrowse-darwin-arm64/DITBrowse.app
 APPLE_NOTARIZE_KEYCHAIN_PROFILE=DITBrowse-notary npm run package:mac:signed
@@ -15,7 +15,7 @@ APPLE_NOTARIZE_KEYCHAIN_PROFILE=DITBrowse-notary npm run package:mac:signed
 
 The Electron test uses a local mock camera with HTTP authentication, cookies,
 localStorage, sessionStorage, IndexedDB, and a base-address redirect. It verifies
-that clearing camera data removes active authentication, requests the base address
+that signing out and reloading removes active authentication, requests the base address
 again without credentials, preserves the saved username and password for explicit
 sign-in, and does not reload the camera while resizing the window.
 
@@ -37,7 +37,7 @@ GPU process, network service, renderer, and camera guest processes running.
 
 1. Open `release/DITBrowse-darwin-arm64/DITBrowse.app`.
 2. Confirm the app opens to the tiled workspace.
-3. Confirm tabs remain in one horizontal row and drag in grid order.
+3. Confirm tabs remain in one horizontal row, have no left/right arrow buttons, and drag in grid order.
 4. Load or import 10-15 camera URLs.
 5. Change the column selector and confirm every tile remains visible.
 6. Resize the app window and confirm loaded pages do not reload.
@@ -45,7 +45,8 @@ GPU process, network service, renderer, and camera guest processes running.
 8. Use the open-in-new-tile address action and confirm the URL opens in a new tile.
 9. Change selected tile zoom and viewport and confirm the camera page scales.
 10. Quit and relaunch, then confirm workspace state returns.
-11. Use **Clear camera data** and confirm only the selected camera reloads from its base address.
-12. Use **Clear list data**, confirm the warning, and verify every open camera reloads from its base address.
-13. Confirm both reset scopes keep saved passwords but require an explicit first sign-in.
-14. Hover browser, list, reset, and password controls and confirm descriptive tooltips stay inside the window.
+11. Open **Camera List** and confirm the editable camera table opens immediately with workspace settings below it.
+12. Use **Sign Out & Reload Camera** and confirm only the selected camera reloads from its base address.
+13. Use **Sign Out & Reload All**, confirm the warning, and verify every open camera reloads from its base address.
+14. Confirm both reset scopes keep saved passwords but require an explicit first sign-in.
+15. Hover browser, list, reset, and password controls and confirm descriptive tooltips stay inside the window.
