@@ -15,20 +15,28 @@ export interface ControlApiConfig {
 export type ControlApiCommand =
   | { requestId: string; type: "status" }
   | { requestId: string; type: "focusTab"; specifier: string }
-  | { requestId: string; type: "focusCamera"; cameraNumber: string }
-  | { requestId: string; type: "showGrid" };
+  | { requestId: string; type: "focusCamera"; cameraNumber: number }
+  | { requestId: string; type: "showGrid" }
+  | { requestId: string; type: "toggleExpansion" };
+
+export interface ControlApiViewState {
+  expansionEnabled: boolean;
+  focusMode: boolean;
+}
 
 export interface ControlApiStatusTab {
   index: number;
   tileId: string;
   cameraId: string | null;
-  cameraNumber: string | null;
+  cameraNumber: number | null;
   title: string;
   url: string;
 }
 
 export interface ControlApiStatus {
+  expansionEnabled: boolean;
   focusMode: boolean;
+  selectedCameraNumber: number | null;
   selectedTileId: string | null;
   selectedIndex: number | null;
   tabs: ControlApiStatusTab[];
@@ -49,22 +57,21 @@ function normalizeSpecifier(specifier: string): string {
   return specifier.trim().toLowerCase();
 }
 
-function normalizeCameraNumber(specifier: string): string | null {
-  const trimmed = specifier.trim();
-  if (!trimmed) {
+export function parsePositiveCameraNumber(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
     return null;
   }
 
-  if (/^\d+$/.test(trimmed)) {
-    const number = Number(trimmed);
-    if (!Number.isInteger(number) || number <= 0) {
-      return null;
-    }
+  return value;
+}
 
-    return String(number).padStart(2, "0");
+export function parseStoredCameraNumber(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
   }
 
-  return trimmed.toLowerCase();
+  return parsePositiveCameraNumber(Number(trimmed));
 }
 
 function parseOneBasedIndex(specifier: string): number | null {
@@ -117,12 +124,13 @@ function cameraLookupOrder(workspace: WorkspaceState): WorkspaceState["cameraLis
   ];
 }
 
-function cameraNumberById(workspace: WorkspaceState): Map<string, string> {
-  const numbers = new Map<string, string>();
+function cameraNumberById(workspace: WorkspaceState): Map<string, number> {
+  const numbers = new Map<string, number>();
   for (const list of cameraLookupOrder(workspace)) {
     for (const camera of list.cameras) {
-      if (!numbers.has(camera.id)) {
-        numbers.set(camera.id, camera.suffix);
+      const cameraNumber = parseStoredCameraNumber(camera.suffix);
+      if (!numbers.has(camera.id) && cameraNumber !== null) {
+        numbers.set(camera.id, cameraNumber);
       }
     }
   }
@@ -132,16 +140,16 @@ function cameraNumberById(workspace: WorkspaceState): Map<string, string> {
 
 export function resolveControlApiCamera(
   workspace: WorkspaceState,
-  cameraNumber: string
+  cameraNumber: number
 ): TileState | null {
-  const normalized = normalizeCameraNumber(cameraNumber);
-  if (!normalized) {
+  const normalized = parsePositiveCameraNumber(cameraNumber);
+  if (normalized === null) {
     return null;
   }
 
   for (const list of cameraLookupOrder(workspace)) {
     const camera = list.cameras.find((candidate) => {
-      return normalizeCameraNumber(candidate.suffix) === normalized;
+      return parseStoredCameraNumber(candidate.suffix) === normalized;
     });
 
     if (!camera) {
@@ -159,16 +167,24 @@ export function resolveControlApiCamera(
 
 export function buildControlApiStatus(
   workspace: WorkspaceState,
-  focusMode: boolean
+  viewState: ControlApiViewState
 ): ControlApiStatus {
   const selectedIndex = workspace.selectedTileId
     ? workspace.tiles.findIndex((tile) => tile.id === workspace.selectedTileId)
     : -1;
 
   const cameraNumbers = cameraNumberById(workspace);
+  const selectedTile = workspace.selectedTileId
+    ? workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ?? null
+    : null;
+  const selectedCameraNumber = selectedTile?.cameraId
+    ? cameraNumbers.get(selectedTile.cameraId) ?? null
+    : null;
 
   return {
-    focusMode,
+    expansionEnabled: viewState.expansionEnabled,
+    focusMode: viewState.expansionEnabled && viewState.focusMode,
+    selectedCameraNumber,
     selectedTileId: workspace.selectedTileId,
     selectedIndex: selectedIndex >= 0 ? selectedIndex + 1 : null,
     tabs: workspace.tiles.map((tile, index) => ({

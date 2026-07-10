@@ -22,24 +22,29 @@ describe("controlApi", () => {
       tiles: [cameraFour, cameraOne, cameraTwo, cameraThree, ...rest]
     };
 
-    expect(resolveControlApiCamera(reorderedWorkspace, "04")?.id).toBe("tile-44");
-    expect(resolveControlApiCamera(reorderedWorkspace, "4")?.id).toBe("tile-44");
+    expect(resolveControlApiCamera(reorderedWorkspace, 4)?.id).toBe("tile-44");
   });
 
   it("returns null for empty, zero, and missing tab specifiers", () => {
     expect(resolveControlApiTab(sampleWorkspace.tiles, "")).toBeNull();
     expect(resolveControlApiTab(sampleWorkspace.tiles, "0")).toBeNull();
     expect(resolveControlApiTab(sampleWorkspace.tiles, "not-a-tab")).toBeNull();
-    expect(resolveControlApiCamera(sampleWorkspace, "")).toBeNull();
-    expect(resolveControlApiCamera(sampleWorkspace, "0")).toBeNull();
-    expect(resolveControlApiCamera(sampleWorkspace, "99")).toBeNull();
+    expect(resolveControlApiCamera(sampleWorkspace, 0)).toBeNull();
+    expect(resolveControlApiCamera(sampleWorkspace, 1.5)).toBeNull();
+    expect(resolveControlApiCamera(sampleWorkspace, Number.MAX_SAFE_INTEGER + 1)).toBeNull();
+    expect(resolveControlApiCamera(sampleWorkspace, 99)).toBeNull();
   });
 
   it("builds status with tab metadata and the selected one-based index", () => {
-    const status = buildControlApiStatus(sampleWorkspace, true);
+    const status = buildControlApiStatus(sampleWorkspace, {
+      expansionEnabled: true,
+      focusMode: true
+    });
 
     expect(status).toMatchObject({
+      expansionEnabled: true,
       focusMode: true,
+      selectedCameraNumber: 1,
       selectedTileId: "tile-41",
       selectedIndex: 1
     });
@@ -47,8 +52,28 @@ describe("controlApi", () => {
       index: 2,
       tileId: "tile-42",
       cameraId: "camera-42",
-      cameraNumber: "02",
+      cameraNumber: 2,
       title: "B"
     });
+  });
+
+  it("omits invalid stored camera suffixes from numeric control status", () => {
+    const workspace = {
+      ...sampleWorkspace,
+      cameraLists: sampleWorkspace.cameraLists.map((list) => ({
+        ...list,
+        cameras: list.cameras.map((camera, index) =>
+          index === 0 ? { ...camera, suffix: "camera-one" } : camera
+        )
+      }))
+    };
+
+    const status = buildControlApiStatus(workspace, {
+      expansionEnabled: false,
+      focusMode: false
+    });
+
+    expect(status.selectedCameraNumber).toBeNull();
+    expect(status.tabs[0].cameraNumber).toBeNull();
   });
 });
