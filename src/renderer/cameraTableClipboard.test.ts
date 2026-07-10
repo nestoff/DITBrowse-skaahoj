@@ -8,6 +8,7 @@ import {
   cloneCameraList,
   createCameraTableSelection,
   isCameraTableCellSelected,
+  pasteCameraTableText,
   resizeDraftCameraList,
   serializeCameraTableSelection,
   serializeWholeCameraTable
@@ -183,5 +184,166 @@ describe("shared camera draft helpers", () => {
       suffix: "04",
       url: "http://10.20.100.04"
     });
+  });
+});
+
+describe("camera table paste", () => {
+  it("pastes positionally and appends sequential rows", () => {
+    const shortList = { ...list, cameras: [list.cameras[0]] };
+    let id = 0;
+    const result = pasteCameraTableText(
+      shortList,
+      { rowIndex: 0, columnIndex: 1 },
+      "Custom\t7\r\nSecond\t8\r\nThird\t9\r\n",
+      () => `pasted-${++id}`
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.mode).toBe("positional");
+    expect(result?.rowsAdded).toBe(2);
+    expect(result?.cellsUpdated).toBe(6);
+    expect(result?.list.cameras).toEqual([
+      expect.objectContaining({
+        name: "Custom",
+        suffix: "07",
+        url: "http://10.20.100.07"
+      }),
+      expect.objectContaining({
+        name: "Second",
+        suffix: "08",
+        url: "http://10.20.100.08"
+      }),
+      expect.objectContaining({
+        name: "Third",
+        suffix: "09",
+        url: "http://10.20.100.09"
+      })
+    ]);
+    expect(result?.selection).toEqual(
+      createCameraTableSelection(
+        "cells",
+        { rowIndex: 0, columnIndex: 1 },
+        { rowIndex: 2, columnIndex: 2 }
+      )
+    );
+  });
+
+  it("maps reordered headers and applies explicit values in deterministic order", () => {
+    const result = pasteCameraTableText(
+      list,
+      { rowIndex: 0, columnIndex: 8 },
+      "Lens\tCamera #\tIndex\tZoom\tViewport\tFollow Prefix\tUnknown\n35mm\t5\tHero\t125%\t1200X800\tno\tignored"
+    );
+
+    expect(result?.mode).toBe("headers");
+    expect(result?.list.cameras[0]).toMatchObject({
+      name: "Hero",
+      suffix: "05",
+      url: "http://10.20.100.05",
+      lens: "35mm",
+      viewportOverride: { width: 1200, height: 800 },
+      zoomOverride: 1.25,
+      usesListPrefix: false
+    });
+    expect(result?.issues).toEqual([
+      expect.objectContaining({
+        sourceRow: 1,
+        cameraRow: null,
+        column: "Unknown",
+        value: "Unknown"
+      })
+    ]);
+  });
+
+  it("recognizes header aliases and normalizes explicit URLs", () => {
+    const result = pasteCameraTableText(
+      list,
+      { rowIndex: 1, columnIndex: 0 },
+      "Name\tAddress\tNotes\tScale\nRemote\t10.20.100.107/index\tStage Right\t105%"
+    );
+
+    expect(result?.list.cameras[1]).toMatchObject({
+      name: "Remote",
+      url: "http://10.20.100.107/index",
+      displayNote: "Stage Right",
+      zoomOverride: 1.05,
+      usesListPrefix: false
+    });
+  });
+
+  it("skips invalid special values without rejecting valid cells", () => {
+    const result = pasteCameraTableText(
+      list,
+      { rowIndex: 0, columnIndex: 0 },
+      "Viewport\tZoom\tFollow Prefix\tType\n0x720\t400%\tperhaps\tFR7"
+    );
+
+    expect(result?.cellsUpdated).toBe(1);
+    expect(result?.issues).toHaveLength(3);
+    expect(result?.list.cameras[0]).toMatchObject({
+      cameraType: "FR7",
+      viewportOverride: null,
+      zoomOverride: null,
+      usesListPrefix: true
+    });
+  });
+
+  it("ignores empty clipboard text and preserves interior empty cells", () => {
+    expect(pasteCameraTableText(list, { rowIndex: 0, columnIndex: 0 }, "")).toBeNull();
+
+    const result = pasteCameraTableText(
+      list,
+      { rowIndex: 0, columnIndex: 4 },
+      "VENICE 2\t\tStage"
+    );
+    expect(result?.list.cameras[0]).toMatchObject({
+      cameraType: "VENICE 2",
+      lens: "",
+      displayNote: "Stage"
+    });
+  });
+
+  it("reports positional cells beyond the final data column", () => {
+    const result = pasteCameraTableText(
+      list,
+      { rowIndex: 0, columnIndex: 8 },
+      "1.1\textra"
+    );
+
+    expect(result?.cellsUpdated).toBe(1);
+    expect(result?.issues).toEqual([
+      expect.objectContaining({
+        sourceRow: 1,
+        cameraRow: 1,
+        column: "Column 10",
+        value: "extra"
+      })
+    ]);
+  });
+
+  it("does not grow past the 99-camera limit", () => {
+    let generatedId = 0;
+    const fullList = resizeDraftCameraList(
+      list,
+      99,
+      () => `full-${++generatedId}`
+    );
+    const result = pasteCameraTableText(
+      fullList,
+      { rowIndex: 98, columnIndex: 1 },
+      "Last\nOverflow"
+    );
+
+    expect(result?.list.cameras).toHaveLength(99);
+    expect(result?.rowsAdded).toBe(0);
+    expect(result?.cellsUpdated).toBe(1);
+    expect(result?.issues).toEqual([
+      expect.objectContaining({
+        sourceRow: 2,
+        cameraRow: 100,
+        column: "Row",
+        value: "Overflow"
+      })
+    ]);
   });
 });

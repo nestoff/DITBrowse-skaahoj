@@ -310,3 +310,329 @@ export function serializeWholeCameraTable(list: CameraList): string {
   });
   return `${headers}\n${rows}`;
 }
+
+const HEADER_ALIASES: Record<CameraTableColumnKey, readonly string[]> = {
+  usesListPrefix: ["follow prefix", "follow_prefix", "uses list prefix"],
+  name: ["index", "name"],
+  suffix: ["camera #", "camera number", "number", "suffix"],
+  url: ["full url", "url", "address"],
+  cameraType: ["type", "camera type", "camera_type"],
+  lens: ["lens"],
+  displayNote: ["display note", "display_note", "note", "notes"],
+  viewportOverride: ["viewport", "view", "resolution"],
+  zoomOverride: ["zoom", "scale"]
+};
+
+const APPLY_PRIORITY: readonly CameraTableColumnKey[] = [
+  "suffix",
+  "name",
+  "url",
+  "cameraType",
+  "lens",
+  "displayNote",
+  "viewportOverride",
+  "zoomOverride",
+  "usesListPrefix"
+];
+
+const HEADER_COLUMN_INDEX = new Map<string, number>();
+for (const [columnIndex, column] of CAMERA_TABLE_COLUMNS.entries()) {
+  const aliases = [column.label, column.key, ...HEADER_ALIASES[column.key]];
+  for (const alias of aliases) {
+    HEADER_COLUMN_INDEX.set(normalizeHeader(alias), columnIndex);
+  }
+}
+
+export interface CameraTablePasteIssue {
+  sourceRow: number;
+  cameraRow: number | null;
+  column: string;
+  value: string;
+  message: string;
+}
+
+export interface CameraTablePasteResult {
+  list: CameraList;
+  selection: CameraTableSelection;
+  mode: "positional" | "headers";
+  rowsAdded: number;
+  cellsUpdated: number;
+  issues: CameraTablePasteIssue[];
+}
+
+interface PasteAssignment {
+  columnIndex: number;
+  sourceColumnIndex: number;
+  value: string;
+}
+
+type ParsedPatch =
+  | { ok: true; patch: CameraEntryPatch }
+  | { ok: false; message: string };
+
+function normalizeHeader(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function parseClipboardRows(text: string): string[][] {
+  if (!text) {
+    return [];
+  }
+
+  const normalized = text.replace(/\r\n?/g, "\n");
+  const lines = normalized.split("\n");
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+  return lines.map((line) => line.split("\t"));
+}
+
+function parseFollowPrefix(value: string): boolean | undefined {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+  if (["true", "yes", "1", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "no", "0", "off"].includes(normalized)) {
+    return false;
+  }
+  return undefined;
+}
+
+function parseViewport(value: string): CameraEntry["viewportOverride"] | undefined {
+  const normalized = value.trim();
+  if (!normalized || normalized.toLowerCase() === "default") {
+    return null;
+  }
+
+  const match = normalized.match(/^(\d+)\s*[xX]\s*(\d+)$/);
+  if (!match) {
+    return undefined;
+  }
+
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  return width > 0 && height > 0 ? { width, height } : undefined;
+}
+
+function parseZoom(value: string): number | null | undefined {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === "default") {
+    return null;
+  }
+
+  const parsed = normalized.endsWith("%")
+    ? Number(normalized.slice(0, -1)) / 100
+    : Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0.25 && parsed <= 3
+    ? parsed
+    : undefined;
+}
+
+function parseAssignmentPatch(
+  key: CameraTableColumnKey,
+  value: string
+): ParsedPatch {
+  switch (key) {
+    case "usesListPrefix": {
+      const usesListPrefix = parseFollowPrefix(value);
+      return usesListPrefix === undefined
+        ? {
+            ok: false,
+            message: "Expected true, false, yes, no, 1, 0, on, or off."
+          }
+        : { ok: true, patch: { usesListPrefix } };
+    }
+    case "name":
+      return { ok: true, patch: { name: value } };
+    case "suffix":
+      return { ok: true, patch: { suffix: value } };
+    case "url":
+      return { ok: true, patch: { url: value } };
+    case "cameraType":
+      return { ok: true, patch: { cameraType: value } };
+    case "lens":
+      return { ok: true, patch: { lens: value } };
+    case "displayNote":
+      return { ok: true, patch: { displayNote: value } };
+    case "viewportOverride": {
+      const viewportOverride = parseViewport(value);
+      return viewportOverride === undefined
+        ? { ok: false, message: "Expected WIDTHxHEIGHT or Default." }
+        : { ok: true, patch: { viewportOverride } };
+    }
+    case "zoomOverride": {
+      const zoomOverride = parseZoom(value);
+      return zoomOverride === undefined
+        ? {
+            ok: false,
+            message: "Expected 25%-300% or a scale from 0.25 to 3."
+          }
+        : { ok: true, patch: { zoomOverride } };
+    }
+  }
+}
+
+function assignmentsForPositionalRow(
+  row: string[],
+  startColumnIndex: number,
+  sourceRow: number,
+  cameraRow: number,
+  issues: CameraTablePasteIssue[]
+): PasteAssignment[] {
+  return row.flatMap((value, sourceColumnIndex) => {
+    const columnIndex = startColumnIndex + sourceColumnIndex;
+    if (columnIndex >= CAMERA_TABLE_COLUMN_COUNT) {
+      issues.push({
+        sourceRow,
+        cameraRow,
+        column: `Column ${columnIndex + 1}`,
+        value,
+        message: "No camera table column exists at this position."
+      });
+      return [];
+    }
+    return [{ columnIndex, sourceColumnIndex, value }];
+  });
+}
+
+function assignmentsForHeaderRow(
+  row: string[],
+  headerColumns: Array<number | null>
+): PasteAssignment[] {
+  return headerColumns.flatMap((columnIndex, sourceColumnIndex) => {
+    if (columnIndex === null || sourceColumnIndex >= row.length) {
+      return [];
+    }
+    return [{ columnIndex, sourceColumnIndex, value: row[sourceColumnIndex] }];
+  });
+}
+
+function sortAssignments(assignments: PasteAssignment[]): PasteAssignment[] {
+  return [...assignments].sort((a, b) => {
+    const aKey = CAMERA_TABLE_COLUMNS[a.columnIndex].key;
+    const bKey = CAMERA_TABLE_COLUMNS[b.columnIndex].key;
+    return APPLY_PRIORITY.indexOf(aKey) - APPLY_PRIORITY.indexOf(bKey);
+  });
+}
+
+export function pasteCameraTableText(
+  list: CameraList,
+  activeCell: CameraTableCell,
+  text: string,
+  createId: CameraIdFactory = draftCameraId
+): CameraTablePasteResult | null {
+  const rows = parseClipboardRows(text);
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const firstRowColumnIndexes = rows[0].map((header) => {
+    const columnIndex = HEADER_COLUMN_INDEX.get(normalizeHeader(header));
+    return columnIndex === undefined ? null : columnIndex;
+  });
+  const recognizedHeaderCount = firstRowColumnIndexes.filter(
+    (columnIndex): columnIndex is number => columnIndex !== null
+  ).length;
+  const mode = recognizedHeaderCount >= 2 ? "headers" : "positional";
+  const headerColumns = mode === "headers" ? firstRowColumnIndexes : [];
+  const dataRows = mode === "headers" ? rows.slice(1) : rows;
+  const issues: CameraTablePasteIssue[] = [];
+
+  if (mode === "headers") {
+    rows[0].forEach((header, sourceColumnIndex) => {
+      if (headerColumns[sourceColumnIndex] !== null) {
+        return;
+      }
+      issues.push({
+        sourceRow: 1,
+        cameraRow: null,
+        column: header || `Column ${sourceColumnIndex + 1}`,
+        value: header,
+        message: "Unknown spreadsheet header."
+      });
+    });
+  }
+
+  let nextList = cloneCameraList(list);
+  const requiredRowCount = Math.min(99, activeCell.rowIndex + dataRows.length);
+  while (nextList.cameras.length < requiredRowCount) {
+    nextList = appendSequentialCamera(nextList, createId);
+  }
+  const rowsAdded = nextList.cameras.length - list.cameras.length;
+  let cellsUpdated = 0;
+
+  const mappedColumns =
+    mode === "headers"
+      ? headerColumns.filter((columnIndex): columnIndex is number => columnIndex !== null)
+      : dataRows.flatMap((row) =>
+          row.map((_, sourceColumnIndex) => activeCell.columnIndex + sourceColumnIndex)
+        ).filter((columnIndex) => columnIndex < CAMERA_TABLE_COLUMN_COUNT);
+  const selectionColumnStart =
+    mappedColumns.length > 0 ? Math.min(...mappedColumns) : activeCell.columnIndex;
+  const selectionColumnEnd =
+    mappedColumns.length > 0 ? Math.max(...mappedColumns) : activeCell.columnIndex;
+  let finalDestinationRow = activeCell.rowIndex;
+
+  dataRows.forEach((row, dataRowIndex) => {
+    const destinationRow = activeCell.rowIndex + dataRowIndex;
+    const sourceRow = dataRowIndex + (mode === "headers" ? 2 : 1);
+    if (destinationRow >= 99 || !nextList.cameras[destinationRow]) {
+      issues.push({
+        sourceRow,
+        cameraRow: destinationRow + 1,
+        column: "Row",
+        value: row.join("\t"),
+        message: "Camera list is limited to 99 rows."
+      });
+      return;
+    }
+
+    finalDestinationRow = destinationRow;
+    const assignments =
+      mode === "headers"
+        ? assignmentsForHeaderRow(row, headerColumns)
+        : assignmentsForPositionalRow(
+            row,
+            activeCell.columnIndex,
+            sourceRow,
+            destinationRow + 1,
+            issues
+          );
+    let camera = nextList.cameras[destinationRow];
+
+    for (const assignment of sortAssignments(assignments)) {
+      const column = CAMERA_TABLE_COLUMNS[assignment.columnIndex];
+      const parsed = parseAssignmentPatch(column.key, assignment.value);
+      if (!parsed.ok) {
+        issues.push({
+          sourceRow,
+          cameraRow: destinationRow + 1,
+          column: column.label,
+          value: assignment.value,
+          message: parsed.message
+        });
+        continue;
+      }
+
+      camera = applyDraftCameraPatch(camera, parsed.patch, nextList.defaultPrefix);
+      cellsUpdated += 1;
+    }
+    nextList.cameras[destinationRow] = camera;
+  });
+
+  return {
+    list: nextList,
+    selection: createCameraTableSelection(
+      "cells",
+      { rowIndex: activeCell.rowIndex, columnIndex: selectionColumnStart },
+      { rowIndex: finalDestinationRow, columnIndex: selectionColumnEnd }
+    ),
+    mode,
+    rowsAdded,
+    cellsUpdated,
+    issues
+  };
+}
