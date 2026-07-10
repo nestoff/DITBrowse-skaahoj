@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "format": "prettier -w .",
-    "package": "yarn build && companion-module-build",
+    "package": "npm run build && companion-module-build",
     "check": "yarn companion-module-check",
     "companion-module-check": "node scripts/check-module.mjs",
     "build": "rimraf dist && tsc -p tsconfig.build.json",

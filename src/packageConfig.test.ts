@@ -6,10 +6,14 @@ interface PackageManifest {
   scripts?: Record<string, string>;
 }
 
-function packageIgnorePattern(): RegExp {
-  const manifest = JSON.parse(
+function packageManifest(): PackageManifest {
+  return JSON.parse(
     readFileSync(resolve(process.cwd(), "package.json"), "utf8")
   ) as PackageManifest;
+}
+
+function packageIgnorePattern(): RegExp {
+  const manifest = packageManifest();
   const packageScript = manifest.scripts?.["package:mac"] ?? "";
   const ignoreSource = packageScript.match(/--ignore="([^"]+)"/)?.[1];
 
@@ -27,7 +31,21 @@ describe("macOS package configuration", () => {
     expect(ignore.test("/.superpowers/brainstorm/content.html")).toBe(true);
     expect(ignore.test("/release/DITBrowse-darwin-arm64/DITBrowse.app")).toBe(true);
     expect(ignore.test("/src/renderer/App.tsx")).toBe(true);
+    expect(ignore.test("/companion-module-lightlab-ditbrowse/src/main.ts")).toBe(true);
+    expect(ignore.test("/resources/companion-module/lightlab-ditbrowse/main.js")).toBe(true);
     expect(ignore.test("/dist-renderer/index.html")).toBe(false);
     expect(ignore.test("/dist-electron/electron/main.js")).toBe(false);
+  });
+
+  it("stages the Companion module and copies it as an extra macOS resource", () => {
+    const scripts = packageManifest().scripts ?? {};
+    const packageScript = scripts["package:mac"] ?? "";
+
+    expect(scripts["stage:companion-module"]).toContain("stage-companion-module.mjs");
+    expect(packageScript).toContain("npm run stage:companion-module");
+    expect(packageScript.indexOf("npm run stage:companion-module")).toBeLessThan(
+      packageScript.indexOf("electron-packager")
+    );
+    expect(packageScript).toContain("--extra-resource=resources/companion-module");
   });
 });
