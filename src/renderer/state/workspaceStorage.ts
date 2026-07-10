@@ -8,6 +8,10 @@ import type {
   ControlApiStatus
 } from "../../shared/controlApi";
 import type { HttpAuthRequest, HttpAuthResponse } from "../../shared/httpAuth";
+import type {
+  CompanionModuleInstallResult,
+  CompanionModuleInstallStatus
+} from "../../shared/companionModule";
 
 declare global {
   interface Window {
@@ -23,6 +27,8 @@ declare global {
       ) => () => void;
       getControlApiInfo?: () => Promise<ControlApiInfo>;
       setControlApiPort?: (port: number | null) => Promise<ControlApiInfo>;
+      getCompanionModuleInstallStatus?: () => Promise<CompanionModuleInstallStatus>;
+      installCompanionModule?: () => Promise<CompanionModuleInstallResult>;
       onControlApiInfo?: (callback: (info: ControlApiInfo) => void) => () => void;
       onControlApiCommand?: (callback: (command: ControlApiCommand) => void) => () => void;
       sendControlApiResponse?: (requestId: string, response: ControlApiResponse) => void;

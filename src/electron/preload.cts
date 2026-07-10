@@ -8,6 +8,10 @@ import type {
 import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 import type { TemporaryViewGesture } from "../shared/temporaryView.js";
 import type { WorkspaceState } from "../shared/types.js";
+import type {
+  CompanionModuleInstallResult,
+  CompanionModuleInstallStatus
+} from "../shared/companionModule.js";
 
 const api = {
   version: "0.1.0",
@@ -22,6 +26,10 @@ const api = {
   getControlApiInfo: () => ipcRenderer.invoke("control-api:info") as Promise<ControlApiInfo>,
   setControlApiPort: (port: number | null) =>
     ipcRenderer.invoke("control-api:setPort", port) as Promise<ControlApiInfo>,
+  getCompanionModuleInstallStatus: () =>
+    ipcRenderer.invoke("companion-module:status") as Promise<CompanionModuleInstallStatus>,
+  installCompanionModule: () =>
+    ipcRenderer.invoke("companion-module:install") as Promise<CompanionModuleInstallResult>,
   onControlApiInfo: (callback: (info: ControlApiInfo) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, info: ControlApiInfo): void => {
       callback(info);

@@ -12,6 +12,7 @@ import { findCredentialRecord } from "../shared/credentials";
 import { normalizeCredentialUrl } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import type { HttpAuthRequest } from "../shared/httpAuth";
+import type { CompanionModuleInstallStatus } from "../shared/companionModule";
 import { sampleWorkspace } from "../shared/sampleData";
 import type {
   CameraEntry,
@@ -103,6 +104,10 @@ export function App(): ReactElement {
   const [expansionEnabled, setExpansionEnabled] = useState(true);
   const [httpAuthQueue, setHttpAuthQueue] = useState<HttpAuthPromptState[]>([]);
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
+  const [companionModuleStatus, setCompanionModuleStatus] =
+    useState<CompanionModuleInstallStatus | null>(null);
+  const [companionModuleBusy, setCompanionModuleBusy] = useState(false);
+  const [companionModuleError, setCompanionModuleError] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
   const [resetProgressMessage, setResetProgressMessage] = useState("");
   const [resetNotice, setResetNotice] = useState<
@@ -137,6 +142,50 @@ export function App(): ReactElement {
     return () => {
       active = false;
     };
+  }, []);
+
+  const refreshCompanionModuleStatus = useCallback(async (): Promise<void> => {
+    const getStatus = window.ditbrowse?.getCompanionModuleInstallStatus;
+    if (!getStatus) {
+      setCompanionModuleError("Companion module installation is unavailable in this build.");
+      return;
+    }
+
+    try {
+      setCompanionModuleError("");
+      setCompanionModuleStatus(await getStatus());
+    } catch (error) {
+      setCompanionModuleError(
+        error instanceof Error ? error.message : "Could not check the Companion module."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    if (editorOpen) {
+      void refreshCompanionModuleStatus();
+    }
+  }, [editorOpen, refreshCompanionModuleStatus]);
+
+  const installCompanionModule = useCallback(async (): Promise<void> => {
+    const install = window.ditbrowse?.installCompanionModule;
+    if (!install) {
+      setCompanionModuleError("Companion module installation is unavailable in this build.");
+      return;
+    }
+
+    setCompanionModuleBusy(true);
+    setCompanionModuleError("");
+    try {
+      const result = await install();
+      setCompanionModuleStatus(result.status);
+    } catch (error) {
+      setCompanionModuleError(
+        error instanceof Error ? error.message : "Could not install the Companion module."
+      );
+    } finally {
+      setCompanionModuleBusy(false);
+    }
   }, []);
 
   useDebouncedWorkspaceSave({ loaded, workspace, saveWorkspace });

@@ -48,6 +48,25 @@ describe("App control API commands", () => {
         configuredPort: port
       })),
       onControlApiInfo: vi.fn(() => vi.fn()),
+      getCompanionModuleInstallStatus: vi.fn(async () => ({
+        state: "missing" as const,
+        bundledVersion: "0.1.0",
+        installedVersion: null,
+        targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+        message: "DIT Browse Companion module is not installed.",
+        canInstall: true
+      })),
+      installCompanionModule: vi.fn(async () => ({
+        outcome: "installed" as const,
+        status: {
+          state: "current" as const,
+          bundledVersion: "0.1.0",
+          installedVersion: "0.1.0",
+          targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+          message: "DIT Browse Companion module 0.1.0 is installed.",
+          canInstall: false
+        }
+      })),
       onControlApiCommand: vi.fn((callback) => {
         controlApiCommandHandler = callback;
         return vi.fn();
@@ -163,6 +182,19 @@ describe("App control API commands", () => {
           selectedCameraNumber: 1
         })
       );
+    });
+  });
+
+  it("loads Companion module status when workspace settings opens", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    expect(window.ditbrowse.getCompanionModuleInstallStatus).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+
+    await waitFor(() => {
+      expect(window.ditbrowse.getCompanionModuleInstallStatus).toHaveBeenCalledOnce();
     });
   });
 

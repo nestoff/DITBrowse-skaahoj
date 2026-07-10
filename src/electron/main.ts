@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
 import { resetCameraSessionData, resetListSessionData } from "./session.js";
+import { createCompanionModuleInstaller } from "./companionModuleInstaller.js";
 import {
   loadControlApiConfig,
   normalizeControlApiPort,
@@ -31,6 +32,7 @@ import type {
 } from "../shared/controlApi.js";
 import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 import type { WorkspaceState } from "../shared/types.js";
+import { COMPANION_MODULE_ID } from "../shared/companionModule.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -250,6 +252,23 @@ const createWindow = async (): Promise<void> => {
   const storage = createJsonStorage(userDataPath);
   const savedWindowState = await loadWindowState(userDataPath);
   const savedControlApiConfig = await loadControlApiConfig(userDataPath);
+  const companionInstaller = createCompanionModuleInstaller({
+    configPath: path.join(
+      app.getPath("home"),
+      "Library",
+      "Application Support",
+      "companion",
+      "config.json"
+    ),
+    bundledModulePath: app.isPackaged
+      ? path.join(process.resourcesPath, "companion-module", COMPANION_MODULE_ID)
+      : path.join(
+          app.getAppPath(),
+          "resources",
+          "companion-module",
+          COMPANION_MODULE_ID
+        )
+  });
 
   ipcMain.handle("workspace:load", async () => {
     const workspace = await storage.loadWorkspace();
@@ -274,6 +293,15 @@ const createWindow = async (): Promise<void> => {
     }
   );
   ipcMain.handle("control-api:info", () => controlApiInfo);
+  ipcMain.handle("companion-module:status", () => companionInstaller.getStatus());
+  ipcMain.handle("companion-module:install", async () => {
+    try {
+      return await companionInstaller.install();
+    } catch (error) {
+      console.error("Companion module installation failed", error);
+      throw new Error(error instanceof Error ? error.message : "Companion installation failed");
+    }
+  });
 
   const mainWindow = new BrowserWindow({
     ...toBrowserWindowOptions(savedWindowState),
