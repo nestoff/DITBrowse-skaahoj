@@ -768,8 +768,8 @@ export function App(): ReactElement {
       )}
       {confirmListReset && (
         <Dialog
-          title="Clear data for every camera?"
-          description="This signs every camera out, clears browsing data and active authentication, then reloads each camera from its base address. Saved usernames and passwords are kept."
+          title="Sign out and reload every camera?"
+          description="This clears cookies, site data, current authentication, and camera connections, then reloads every camera from its base IP. Saved usernames and passwords are kept."
           onClose={() => setConfirmListReset(false)}
           actions={
             <>
@@ -777,7 +777,7 @@ export function App(): ReactElement {
                 Cancel
               </Button>
               <Button variant="primary" onClick={() => void resetEveryCameraData()}>
-                Clear and reload
+                Sign Out & Reload All
               </Button>
             </>
           }

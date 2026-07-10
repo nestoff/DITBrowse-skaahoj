@@ -494,7 +494,7 @@ export function CameraListEditor({
           </div>
         </header>
         {draftList && (
-          <>
+          <section className="camera-list-table-section" aria-label="Editable camera table">
             <div className="editor-prefix-row">
               <label className="editor-field">
                 List Prefix
@@ -723,7 +723,7 @@ export function CameraListEditor({
                 </tbody>
               </table>
             </div>
-          </>
+          </section>
         )}
         <p className="panel-note">
           CSV columns: number, url, type, lens, display_note, notes. A full URL wins over camera #.

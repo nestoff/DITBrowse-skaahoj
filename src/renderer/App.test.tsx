@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ControlApiCommand } from "../shared/controlApi";
 import type { HttpAuthRequest } from "../shared/httpAuth";
@@ -390,8 +390,8 @@ describe("App control API commands", () => {
     webview.executeJavaScript = vi.fn(async () => undefined);
     webview.loadURL = vi.fn(async () => undefined);
 
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.click(screen.getByRole("button", { name: "Clear camera data" }));
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload Camera" }));
     await waitFor(() => {
       expect(webview.loadURL).toHaveBeenCalledWith("http://192.168.1.01/");
     });
@@ -405,9 +405,10 @@ describe("App control API commands", () => {
       });
     });
 
-    expect(await screen.findByRole("dialog", { name: "Camera sign in" })).toBeVisible();
-    expect(screen.getByLabelText("Username")).toHaveValue("admin");
-    expect(screen.getByLabelText("Password")).toHaveValue("secret");
+    const signInDialog = await screen.findByRole("dialog", { name: "Camera sign in" });
+    expect(signInDialog).toBeVisible();
+    expect(within(signInDialog).getByLabelText("Username")).toHaveValue("admin");
+    expect(within(signInDialog).getByLabelText("Password")).toHaveValue("secret");
     expect(window.ditbrowse.sendHttpAuthResponse).not.toHaveBeenCalledWith(
       "auth-after-reset",
       expect.anything()
@@ -433,12 +434,15 @@ describe("App control API commands", () => {
       webview.loadURL = vi.fn(async () => undefined);
     });
 
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.click(screen.getByRole("button", { name: "Clear list data" }));
-    expect(
-      screen.getByRole("dialog", { name: "Clear data for every camera?" })
-    ).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Clear and reload" }));
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload All" }));
+    const confirmation = screen.getByRole("dialog", {
+      name: "Sign out and reload every camera?"
+    });
+    expect(confirmation).toBeVisible();
+    fireEvent.click(
+      within(confirmation).getByRole("button", { name: "Sign Out & Reload All" })
+    );
 
     await waitFor(() => {
       expect(window.ditbrowse.resetListSessionData).toHaveBeenCalledWith(
@@ -463,8 +467,8 @@ describe("App control API commands", () => {
     webview.executeJavaScript = vi.fn(async () => undefined);
     webview.loadURL = vi.fn(async () => undefined);
 
-    fireEvent.click(screen.getByLabelText("Workspace tools"));
-    fireEvent.click(screen.getByRole("button", { name: "Clear camera data" }));
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload Camera" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("clear failed");
     expect(webview.loadURL).not.toHaveBeenCalled();

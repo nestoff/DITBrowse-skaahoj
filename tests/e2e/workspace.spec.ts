@@ -5,17 +5,12 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
 
   await expect(page.getByLabel("Camera tabs")).toBeVisible();
   await expect(page.getByLabel("Browser toolbar")).toBeVisible();
-  await expect(page.getByLabel("Workspace tools")).toBeVisible();
-  await expect(page.getByLabel("Camera workspace tools")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Camera List", exact: true })).toBeVisible();
   await expect(page.getByLabel("Grid columns")).toHaveValue("4");
 
   const tabsBox = await page.getByLabel("Camera tabs").boundingBox();
   const toolbarBox = await page.getByLabel("Browser toolbar").boundingBox();
   expect(tabsBox?.y).toBeLessThan(toolbarBox?.y ?? 0);
-
-  await page.getByLabel("Workspace tools").click();
-  await expect(page.getByLabel("Camera workspace tools")).toBeVisible();
-  await expect(page.getByLabel("Job and camera list")).toBeVisible();
 
   const grid = page.locator(".tile-grid");
   await expect(grid).toHaveCSS("overflow", "hidden");
@@ -39,6 +34,31 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   await page.getByLabel("Close A").click();
   await expect(page.getByLabel("Close A")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
+});
+
+test("camera list opens the full table and settings in one click", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
+
+  const editor = page.getByLabel("Camera list editor");
+  const table = page.getByRole("table");
+  const settings = page.getByLabel("Camera workspace settings");
+  await expect(editor).toBeVisible();
+  await expect(table).toBeVisible();
+  await expect(settings).toBeVisible();
+  await expect(page.getByRole("button", { name: /Move .* left/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Move .* right/ })).toHaveCount(0);
+
+  const tableBox = await table.boundingBox();
+  const settingsBox = await settings.boundingBox();
+  expect(tableBox?.height).toBeGreaterThan(300);
+  expect(settingsBox?.y).toBeGreaterThan(
+    (tableBox?.y ?? 0) + (tableBox?.height ?? 0)
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    (await page.viewportSize())?.width
+  );
 });
 
 test("toolbar stays inside the window at supported widths", async ({ page }) => {
@@ -132,8 +152,7 @@ test("clicking the page area of an inactive tile activates its tab", async ({ pa
 test("camera list editor moves down on Enter and across on Tab", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Workspace tools" }).click();
-  await page.getByRole("button", { name: "Edit List" }).click();
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
 
   await page.getByLabel("A type").focus();
   await page.keyboard.press("Enter");

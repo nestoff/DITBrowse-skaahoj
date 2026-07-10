@@ -86,8 +86,8 @@ test("camera reset clears authentication and reloads the base redirect", async (
       rootRequestsBeforeResize
     );
 
-    await window.getByLabel("Workspace tools").click();
-    await window.getByRole("button", { name: "Clear camera data" }).click();
+    await window.getByRole("button", { name: "Camera List", exact: true }).click();
+    await window.getByRole("button", { name: "Sign Out & Reload Camera" }).click();
 
     await expect(signInDialog).toBeVisible();
     await expect(signInDialog.getByLabel("Username")).toHaveValue("admin");
