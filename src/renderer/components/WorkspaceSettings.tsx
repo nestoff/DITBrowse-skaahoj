@@ -1,6 +1,6 @@
 import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
-import { ListRestart, Maximize2, PencilLine, RotateCcw, Trash2 } from "lucide-react";
+import { ListRestart, Maximize2, RotateCcw, Trash2 } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
 import type {
   CameraList,
@@ -13,7 +13,7 @@ import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
 import { Button } from "./ui/Button";
 
-interface BrowserToolsMenuProps {
+export interface WorkspaceSettingsProps {
   jobs: Job[];
   cameraLists: CameraList[];
   activeCameraListId: string | null;
@@ -23,7 +23,6 @@ interface BrowserToolsMenuProps {
   onCreateJob: (jobName: string, listName: string, defaultPrefix: string) => void;
   onUpdateJobName: (jobName: string) => void;
   onDeleteJob: (jobId: string) => void;
-  onEditList: () => void;
   onReloadAll: () => void;
   credentialPresets: CredentialPreset[];
   passwordRecords: PasswordRecord[];
@@ -44,7 +43,7 @@ interface BrowserToolsMenuProps {
   onSetControlApiPort: (port: number | null) => Promise<void>;
 }
 
-export function BrowserToolsMenu({
+export function WorkspaceSettings({
   jobs,
   cameraLists,
   activeCameraListId,
@@ -54,7 +53,6 @@ export function BrowserToolsMenu({
   onCreateJob,
   onUpdateJobName,
   onDeleteJob,
-  onEditList,
   onReloadAll,
   credentialPresets,
   passwordRecords,
@@ -69,7 +67,7 @@ export function BrowserToolsMenu({
   onRequestResetList,
   controlApiInfo,
   onSetControlApiPort
-}: BrowserToolsMenuProps): ReactElement {
+}: WorkspaceSettingsProps): ReactElement {
   const [portDraft, setPortDraft] = useState("");
   const [portError, setPortError] = useState("");
   const [presetUsername, setPresetUsername] = useState("");
@@ -111,10 +109,18 @@ export function BrowserToolsMenu({
   };
 
   return (
-    <aside className="browser-tools-popover" aria-label="Camera workspace tools">
-      <div className="tools-section">
-        <div className="tools-section-header">
+    <section className="workspace-settings" aria-label="Camera workspace settings">
+      <header className="workspace-settings-header">
+        <div>
           <span>Workspace</span>
+          <h3>Settings</h3>
+        </div>
+        <p>Jobs, camera sessions, passwords, and local control.</p>
+      </header>
+
+      <div className="workspace-settings-section workspace-job-section">
+        <div className="tools-section-header">
+          <span>Job and camera list</span>
           <strong>{activeList?.name ?? "No camera list"}</strong>
         </div>
         <JobListSelector
@@ -128,68 +134,70 @@ export function BrowserToolsMenu({
           onDeleteJob={onDeleteJob}
         />
       </div>
-      <div className="tools-section tools-actions">
-        <Button
-          className="tool-command"
-          variant="ghost"
-          size="compact"
-          icon={<RotateCcw size={15} strokeWidth={2.2} />}
-          tooltip={{
-            title: "Reload every camera",
-            description: "Loads every open tile again from its camera base address."
-          }}
-          onClick={onReloadAll}
-        >
-          Reload every camera
-        </Button>
-        <Button
-          className="tool-command"
-          variant="ghost"
-          size="compact"
-          icon={<PencilLine size={15} strokeWidth={2.2} />}
-          tooltip={{
-            title: "Edit camera list",
-            description: "Opens the camera table for addresses, metadata, viewport, and zoom changes."
-          }}
-          onClick={onEditList}
-        >
-          Edit List
-        </Button>
-        <Button
-          className="tool-command"
-          variant="ghost"
-          size="compact"
-          icon={<Maximize2 size={15} strokeWidth={2.2} />}
-          tooltip={{
-            title: "Reset selected scaling",
-            description: "Returns the selected camera's saved zoom and viewport to list defaults."
-          }}
-          onClick={onResetSelectedScale}
-        >
-          Reset Scale
-        </Button>
-        <Button
-          className="tool-command"
-          variant="ghost"
-          size="compact"
-          icon={<ListRestart size={15} strokeWidth={2.2} />}
-          tooltip={{
-            title: "Reset camera order",
-            description: "Restores open tabs and grid tiles to the saved camera-list order."
-          }}
-          onClick={onResetGridOrder}
-        >
-          Reset Order
-        </Button>
+
+      <div className="workspace-settings-section">
+        <div className="tools-section-header">
+          <span>Camera commands</span>
+          <strong>{activeList?.cameras.length ?? 0}</strong>
+        </div>
+        <div className="tools-actions workspace-command-grid">
+          <Button
+            className="tool-command"
+            variant="ghost"
+            size="compact"
+            icon={<RotateCcw size={15} strokeWidth={2.2} />}
+            tooltip={{
+              title: "Reload every camera",
+              description: "Loads every open camera again without changing the saved list."
+            }}
+            onClick={onReloadAll}
+          >
+            Reload Every Camera
+          </Button>
+          <Button
+            className="tool-command"
+            variant="ghost"
+            size="compact"
+            icon={<Maximize2 size={15} strokeWidth={2.2} />}
+            tooltip={{
+              title: "Reset selected scaling",
+              description: "Returns the selected camera's saved zoom and viewport to list defaults."
+            }}
+            onClick={onResetSelectedScale}
+          >
+            Reset Scale
+          </Button>
+          <Button
+            className="tool-command"
+            variant="ghost"
+            size="compact"
+            icon={<ListRestart size={15} strokeWidth={2.2} />}
+            tooltip={{
+              title: "Reset camera order",
+              description: "Restores open tabs and grid tiles to the saved camera-list order."
+            }}
+            onClick={onResetGridOrder}
+          >
+            Reset Order
+          </Button>
+        </div>
       </div>
-      <CookieCommands
-        canResetSelected={!!selectedTile}
-        canResetList={!!activeCameraListId && !!activeList && activeList.cameras.length > 0}
-        busy={resetBusy}
-        onResetSelected={onResetSelectedCamera}
-        onRequestResetList={onRequestResetList}
-      />
-      <div className="tools-section credential-preset-section">
+
+      <div className="workspace-settings-section workspace-session-section">
+        <div className="tools-section-header">
+          <span>Camera sign-in sessions</span>
+          <strong>Saved passwords stay</strong>
+        </div>
+        <CookieCommands
+          canResetSelected={!!selectedTile}
+          canResetList={!!activeCameraListId && !!activeList && activeList.cameras.length > 0}
+          busy={resetBusy}
+          onResetSelected={onResetSelectedCamera}
+          onRequestResetList={onRequestResetList}
+        />
+      </div>
+
+      <div className="workspace-settings-section credential-preset-section">
         <div className="tools-section-header">
           <span>Password presets</span>
           <strong>{credentialPresets.length}</strong>
@@ -250,7 +258,8 @@ export function BrowserToolsMenu({
           </div>
         )}
       </div>
-      <div className="tools-section saved-password-section">
+
+      <div className="workspace-settings-section saved-password-section">
         <div className="tools-section-header">
           <span>Saved camera passwords</span>
           <strong>{passwordRecords.length}</strong>
@@ -285,7 +294,8 @@ export function BrowserToolsMenu({
           </div>
         )}
       </div>
-      <div className="tools-section control-api-section">
+
+      <div className="workspace-settings-section control-api-section">
         <div className="tools-section-header">
           <span>Local API</span>
           <strong>{controlApiInfo?.baseUrl ?? "Starting"}</strong>
@@ -326,6 +336,6 @@ export function BrowserToolsMenu({
         </form>
         {portError && <p className="control-api-error">{portError}</p>}
       </div>
-    </aside>
+    </section>
   );
 }

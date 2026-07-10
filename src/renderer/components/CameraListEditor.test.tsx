@@ -10,8 +10,39 @@ type CameraListEditorProps = ComponentProps<typeof CameraListEditor>;
 function renderEditor(overrides: Partial<CameraListEditorProps> = {}) {
   const onSaveList = vi.fn<(list: CameraList) => void>();
   const onClose = vi.fn();
+  const workspaceSettings: CameraListEditorProps["workspaceSettings"] = {
+    jobs: sampleWorkspace.jobs,
+    cameraLists: sampleWorkspace.cameraLists,
+    activeCameraListId: sampleWorkspace.activeCameraListId,
+    selectedTile:
+      sampleWorkspace.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId) ?? null,
+    onSelectCameraList: vi.fn(),
+    onCreateJob: vi.fn(),
+    onUpdateJobName: vi.fn(),
+    onDeleteJob: vi.fn(),
+    onReloadAll: vi.fn(),
+    credentialPresets: [],
+    passwordRecords: [],
+    onAddCredentialPreset: vi.fn(),
+    onDeleteCredentialPreset: vi.fn(),
+    onDeletePasswordRecord: vi.fn(),
+    onDeleteSelectedTilePassword: vi.fn(),
+    onResetSelectedScale: vi.fn(),
+    onResetGridOrder: vi.fn(),
+    resetBusy: false,
+    onResetSelectedCamera: vi.fn(),
+    onRequestResetList: vi.fn(),
+    controlApiInfo: {
+      host: "127.0.0.1",
+      port: 54321,
+      baseUrl: "http://127.0.0.1:54321",
+      configuredPort: 54321
+    },
+    onSetControlApiPort: vi.fn(async () => undefined)
+  };
   const props: CameraListEditorProps = {
     activeList: sampleWorkspace.cameraLists[0],
+    workspaceSettings,
     onSaveList,
     onClose,
     ...overrides
@@ -57,6 +88,26 @@ describe("CameraListEditor", () => {
     expect(
       addCameraButton.compareDocumentPosition(cameraTable) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+
+  it("places workspace settings after the editable camera table", () => {
+    renderEditor();
+
+    const table = screen.getByRole("table");
+    const settings = screen.getByLabelText("Camera workspace settings");
+
+    expect(
+      table.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("describes session actions by their outcome", () => {
+    renderEditor();
+
+    expect(screen.getByRole("button", { name: "Sign Out & Reload Camera" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sign Out & Reload All" })).toBeVisible();
+    expect(screen.queryByText("Clear camera data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Clear list data")).not.toBeInTheDocument();
   });
 
   it("keeps list edits local until Save Changes is clicked", () => {

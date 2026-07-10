@@ -26,13 +26,13 @@ export function CookieCommands({
         disabled={!canResetSelected}
         busy={busy}
         tooltip={{
-          title: "Clear camera data",
+          title: "Sign out and reload camera",
           description:
-            "Signs out the selected camera, clears its browsing data and authentication, then reloads its base address."
+            "Clears cookies, site data, current authentication, and camera connections, then reloads the selected camera from its base IP. Saved passwords stay."
         }}
         onClick={onResetSelected}
       >
-        Clear camera data
+        Sign Out & Reload Camera
       </Button>
       <Button
         icon={<ShieldX size={14} strokeWidth={2.2} />}
@@ -41,13 +41,13 @@ export function CookieCommands({
         disabled={!canResetList}
         busy={busy}
         tooltip={{
-          title: "Clear list data",
+          title: "Sign out and reload every camera",
           description:
-            "Signs out every open camera, clears the list session, then reloads each camera from its base address."
+            "Clears cookies, site data, current authentication, and connections for the open list, then reloads every camera from its base IP. Saved passwords stay."
         }}
         onClick={onRequestResetList}
       >
-        Clear list data
+        Sign Out & Reload All
       </Button>
     </div>
   );

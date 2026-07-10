@@ -738,6 +738,30 @@ export function App(): ReactElement {
       {editorOpen && (
         <CameraListEditor
           activeList={activeList ?? null}
+          workspaceSettings={{
+            jobs: workspace.jobs,
+            cameraLists: workspace.cameraLists,
+            activeCameraListId: workspace.activeCameraListId,
+            selectedTile,
+            onSelectCameraList: selectCameraList,
+            onCreateJob: createJob,
+            onUpdateJobName: updateJobName,
+            onDeleteJob: deleteJob,
+            onReloadAll: () => runAllTileCommand("reload"),
+            credentialPresets: workspace.credentialPresets,
+            passwordRecords: workspace.passwordRecords,
+            onAddCredentialPreset: addCredentialPreset,
+            onDeleteCredentialPreset: deleteCredentialPreset,
+            onDeletePasswordRecord: deletePasswordRecord,
+            onDeleteSelectedTilePassword: deleteSelectedTilePassword,
+            onResetSelectedScale: resetSelectedScale,
+            onResetGridOrder: resetGridOrder,
+            resetBusy,
+            onResetSelectedCamera: () => void resetSelectedCameraData(),
+            onRequestResetList: () => setConfirmListReset(true),
+            controlApiInfo,
+            onSetControlApiPort: setControlApiPort
+          }}
           onClose={() => setEditorOpen(false)}
           onSaveList={saveCameraListDraft}
         />

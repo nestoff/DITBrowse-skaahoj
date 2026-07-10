@@ -16,6 +16,8 @@ import type { CameraEntryPatch } from "../state/workspaceReducer";
 import { Button } from "./ui/Button";
 import { Dialog } from "./ui/Dialog";
 import { IconButton } from "./ui/IconButton";
+import { WorkspaceSettings } from "./WorkspaceSettings";
+import type { WorkspaceSettingsProps } from "./WorkspaceSettings";
 
 const CAMERA_TABLE_COLUMN_COUNT = 9;
 const CAMERA_CELL_SELECTOR = "[data-camera-list-cell='true']";
@@ -173,12 +175,14 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
 
 interface CameraListEditorProps {
   activeList: CameraList | null;
+  workspaceSettings: Omit<WorkspaceSettingsProps, "activeList">;
   onSaveList: (list: CameraList) => void;
   onClose: () => void;
 }
 
 export function CameraListEditor({
   activeList,
+  workspaceSettings,
   onSaveList,
   onClose
 }: CameraListEditorProps): ReactElement {
@@ -722,6 +726,10 @@ export function CameraListEditor({
         >
           Import Valid Rows
         </Button>
+        <WorkspaceSettings
+          {...workspaceSettings}
+          activeList={activeList}
+        />
         {confirmDiscardOpen && (
           <Dialog
             title="Discard camera-list changes?"
