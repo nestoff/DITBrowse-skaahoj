@@ -26,12 +26,14 @@ export interface SessionResetDependencies {
 interface SelectedResetInput {
   tile: TileState;
   operationKey: string;
+  onSessionCleared(): void;
 }
 
 interface ListResetInput {
   tiles: TileState[];
   partition: string;
   operationKey: string;
+  onSessionCleared(): void;
 }
 
 interface ResetTarget {
@@ -61,6 +63,7 @@ export async function resetSelectedCamera(
     }
 
     await dependencies.resetCameraData(input.tile.partition, target.origin);
+    input.onSessionCleared();
     if (!dependencies.isCurrent(input.operationKey)) {
       dependencies.clearManualAuth([input.tile.id]);
       return {
@@ -119,6 +122,7 @@ export async function resetCameraList(
       }))
     );
     await dependencies.resetListData(input.partition);
+    input.onSessionCleared();
 
     let reloaded = 0;
     let skipped = invalid.length;

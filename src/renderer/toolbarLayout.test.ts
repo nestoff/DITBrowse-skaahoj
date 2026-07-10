@@ -35,7 +35,7 @@ describe("toolbar layout CSS", () => {
 
     expect(styles).toContain("@media (max-width: 1180px)");
     expect(styles).toContain("@media (max-width: 1020px)");
-    expect(styles).toContain(".toolbar-reload-all");
+    expect(styles).toContain(".camera-session-trigger");
     expect(styles).toContain("white-space: nowrap;");
     expect(styles).toContain(".browser-layout-controls > *");
     expect(styles).toContain("width: clamp(72px, 6vw, 96px);");

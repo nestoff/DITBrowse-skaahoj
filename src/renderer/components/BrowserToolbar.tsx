@@ -5,13 +5,12 @@ import {
   Link2,
   Maximize2,
   Minimize2,
-  RotateCw,
   Rows3,
-  RotateCcw,
   Save
 } from "lucide-react";
 import type { TileState, ViewportSize } from "../../shared/types";
 import { AddressBar } from "./AddressBar";
+import { CameraSessionMenu } from "./CameraSessionMenu";
 import { GridControls } from "./GridControls";
 import { Button } from "./ui/Button";
 import { IconButton } from "./ui/IconButton";
@@ -30,6 +29,10 @@ interface BrowserToolbarProps {
   onForward: () => void;
   onReload: () => void;
   onReloadAll: () => void;
+  hasTiles: boolean;
+  sessionBusy: boolean;
+  onSignOutSelected: () => void;
+  onRequestSignOutAll: () => void;
   onColumnsChange: (columns: number) => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
@@ -54,6 +57,10 @@ export function BrowserToolbar({
   onForward,
   onReload,
   onReloadAll,
+  hasTiles,
+  sessionBusy,
+  onSignOutSelected,
+  onRequestSignOutAll,
   onColumnsChange,
   onRelativeGlobalZoomChange,
   onGlobalViewportChange,
@@ -84,25 +91,14 @@ export function BrowserToolbar({
           icon={<ArrowRight size={16} strokeWidth={2.2} />}
           onClick={onForward}
         />
-        <IconButton
-          label="Reload"
-          tooltip={{
-            title: "Reload camera",
-            description: "Loads the selected tile again from its base address.",
-            shortcut: "⌘R"
-          }}
-          icon={<RotateCw size={15} strokeWidth={2.2} />}
-          onClick={onReload}
-        />
-        <IconButton
-          label="Reload all"
-          className="toolbar-reload-all"
-          tooltip={{
-            title: "Reload every camera",
-            description: "Loads every open tile again from its camera base address."
-          }}
-          icon={<RotateCcw size={15} strokeWidth={2.2} />}
-          onClick={onReloadAll}
+        <CameraSessionMenu
+          canReloadSelected={!!selectedTile}
+          canReloadAll={hasTiles}
+          busy={sessionBusy}
+          onReloadSelected={onReload}
+          onReloadAll={onReloadAll}
+          onSignOutSelected={onSignOutSelected}
+          onRequestSignOutAll={onRequestSignOutAll}
         />
       </div>
       <div className="browser-toolbar-main">

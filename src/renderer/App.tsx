@@ -621,13 +621,6 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     dispatch({ type: "discardTileCredential", tileId });
   }, []);
 
-  const deleteSelectedTilePassword = useCallback((): void => {
-    const tileId = selectedTileIdRef.current;
-    if (tileId) {
-      discardTileCredential(tileId);
-    }
-  }, [discardTileCredential]);
-
   const cancelQueuedAuthForTiles = useCallback((tileIds: string[]): void => {
     const affectedTileIds = new Set(tileIds);
     const { kept, removed } = removeHttpAuthPrompts(
@@ -650,11 +643,13 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     const tile = currentWorkspace.tiles.find(
       (candidate) => candidate.id === currentWorkspace.selectedTileId
     );
-    if (!tile) {
+    const jobId = currentWorkspace.activeJobId;
+    const cameraListId = currentWorkspace.activeCameraListId;
+    if (!tile || !jobId || !cameraListId) {
       return;
     }
 
-    const operationKey = `${currentWorkspace.activeJobId ?? ""}:${currentWorkspace.activeCameraListId ?? ""}`;
+    const operationKey = `${jobId}:${cameraListId}`;
     cancelQueuedAuthForTiles([tile.id]);
     resetBusyRef.current = true;
     setResetBusy(true);
@@ -663,7 +658,21 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
 
     try {
       const result = await resetSelectedCamera(
-        { tile, operationKey },
+        {
+          tile,
+          operationKey,
+          onSessionCleared: () => {
+            const action = {
+              type: "forgetCameraCredential",
+              jobId,
+              cameraListId,
+              cameraId: tile.cameraId,
+              url: tile.url
+            } as const;
+            workspaceRef.current = workspaceReducer(workspaceRef.current, action);
+            dispatch(action);
+          }
+        },
         sessionResetDependencies
       );
       setResetNotice(result);
@@ -686,15 +695,17 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     }
 
     const currentWorkspace = workspaceRef.current;
-    if (!currentWorkspace.activeJobId || !currentWorkspace.activeCameraListId) {
+    const jobId = currentWorkspace.activeJobId;
+    const cameraListId = currentWorkspace.activeCameraListId;
+    if (!jobId || !cameraListId) {
       setConfirmListReset(false);
       setResetNotice({ tone: "error", message: "Select a camera list before clearing data." });
       return;
     }
 
     const tiles = [...currentWorkspace.tiles];
-    const operationKey = `${currentWorkspace.activeJobId}:${currentWorkspace.activeCameraListId}`;
-    const partition = `persist:ditbrowse-${currentWorkspace.activeJobId}-${currentWorkspace.activeCameraListId}`;
+    const operationKey = `${jobId}:${cameraListId}`;
+    const partition = `persist:ditbrowse-${jobId}-${cameraListId}`;
     setConfirmListReset(false);
     cancelQueuedAuthForTiles(tiles.map((tile) => tile.id));
     resetBusyRef.current = true;
@@ -704,7 +715,20 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
 
     try {
       const result = await resetCameraList(
-        { tiles, partition, operationKey },
+        {
+          tiles,
+          partition,
+          operationKey,
+          onSessionCleared: () => {
+            const action = {
+              type: "forgetCameraListCredentials",
+              jobId,
+              cameraListId
+            } as const;
+            workspaceRef.current = workspaceReducer(workspaceRef.current, action);
+            dispatch(action);
+          }
+        },
         sessionResetDependencies
       );
       setResetNotice(result);
@@ -907,6 +931,9 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         onForward={() => runSelectedTileCommand(selectedTileIdRef.current, "forward")}
         onReload={() => runSelectedTileCommand(selectedTileIdRef.current, "reload")}
         onReloadAll={() => runAllTileCommand("reload")}
+        sessionBusy={resetBusy}
+        onSignOutSelected={() => void resetSelectedCameraData()}
+        onRequestSignOutAll={() => setConfirmListReset(true)}
         onColumnsChange={setColumns}
         onRelativeGlobalZoomChange={setRelativeGlobalZoom}
         onGlobalViewportChange={setGlobalViewport}
@@ -947,23 +974,17 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
             jobs: workspace.jobs,
             cameraLists: workspace.cameraLists,
             activeCameraListId: workspace.activeCameraListId,
-            selectedTile,
             onSelectCameraList: selectCameraList,
             onCreateJob: createJob,
             onUpdateJobName: updateJobName,
             onDeleteJob: deleteJob,
-            onReloadAll: () => runAllTileCommand("reload"),
             credentialPresets: workspace.credentialPresets,
             passwordRecords: workspace.passwordRecords,
             onAddCredentialPreset: addCredentialPreset,
             onDeleteCredentialPreset: deleteCredentialPreset,
             onDeletePasswordRecord: deletePasswordRecord,
-            onDeleteSelectedTilePassword: deleteSelectedTilePassword,
             onResetSelectedScale: resetSelectedScale,
             onResetGridOrder: resetGridOrder,
-            resetBusy,
-            onResetSelectedCamera: () => void resetSelectedCameraData(),
-            onRequestResetList: () => setConfirmListReset(true),
             controlApiInfo,
             onSetControlApiPort: setControlApiPort,
             companionModuleStatus,
@@ -978,8 +999,8 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
       )}
       {confirmListReset && (
         <Dialog
-          title="Sign out and reload every camera?"
-          description="This clears cookies, site data, current authentication, and camera connections, then reloads every camera from its base IP. Saved usernames and passwords are kept."
+          title="Sign out, forget logins, and reload every camera?"
+          description="This clears camera session data, forgets saved logins for the active camera list, and reloads every camera from its base address. Password presets and logins saved for other lists stay unchanged."
           onClose={() => setConfirmListReset(false)}
           actions={
             <>

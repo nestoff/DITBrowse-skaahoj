@@ -14,24 +14,17 @@ function createWorkspaceSettings(
     jobs: sampleWorkspace.jobs,
     cameraLists: sampleWorkspace.cameraLists,
     activeCameraListId: sampleWorkspace.activeCameraListId,
-    selectedTile:
-      sampleWorkspace.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId) ?? null,
     onSelectCameraList: vi.fn(),
     onCreateJob: vi.fn(),
     onUpdateJobName: vi.fn(),
     onDeleteJob: vi.fn(),
-    onReloadAll: vi.fn(),
     credentialPresets: [],
     passwordRecords: [],
     onAddCredentialPreset: vi.fn(),
     onDeleteCredentialPreset: vi.fn(),
     onDeletePasswordRecord: vi.fn(),
-    onDeleteSelectedTilePassword: vi.fn(),
     onResetSelectedScale: vi.fn(),
     onResetGridOrder: vi.fn(),
-    resetBusy: false,
-    onResetSelectedCamera: vi.fn(),
-    onRequestResetList: vi.fn(),
     controlApiInfo: {
       host: "127.0.0.1",
       port: 54321,
@@ -120,13 +113,11 @@ describe("CameraListEditor", () => {
     ).toBeTruthy();
   });
 
-  it("describes session actions by their outcome", () => {
+  it("keeps session actions out of camera-list settings", () => {
     renderEditor();
 
-    expect(screen.getByRole("button", { name: "Sign Out & Reload Camera" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Sign Out & Reload All" })).toBeVisible();
-    expect(screen.queryByText("Clear camera data")).not.toBeInTheDocument();
-    expect(screen.queryByText("Clear list data")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sign Out/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Reload Every Camera/i })).not.toBeInTheDocument();
   });
 
   it("keeps list edits local until Save Changes is clicked", () => {

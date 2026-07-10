@@ -1145,6 +1145,112 @@ describe("workspaceReducer", () => {
     expect(state.passwordRecords).toEqual([]);
   });
 
+  it("forgets a captured camera credential scope after the active workspace changes", () => {
+    const state = workspaceReducer(
+      {
+        ...sampleWorkspace,
+        activeJobId: "job-current",
+        activeCameraListId: "list-current",
+        passwordRecords: [
+          {
+            id: "captured-linked",
+            jobId: "job-original",
+            cameraListId: "list-original",
+            cameraId: "camera-41",
+            url: "http://10.20.100.109",
+            username: "admin",
+            password: "linked"
+          },
+          {
+            id: "captured-legacy",
+            jobId: "job-original",
+            cameraListId: "list-original",
+            cameraId: null,
+            url: "http://10.20.100.109/login.html",
+            username: "admin",
+            password: "legacy"
+          },
+          {
+            id: "shared-origin-other-camera",
+            jobId: "job-original",
+            cameraListId: "list-original",
+            cameraId: "camera-42",
+            url: "http://10.20.100.109",
+            username: "admin",
+            password: "other-camera"
+          },
+          {
+            id: "current-scope",
+            jobId: "job-current",
+            cameraListId: "list-current",
+            cameraId: "camera-41",
+            url: "http://10.20.100.109",
+            username: "admin",
+            password: "current"
+          }
+        ]
+      },
+      {
+        type: "forgetCameraCredential",
+        jobId: "job-original",
+        cameraListId: "list-original",
+        cameraId: "camera-41",
+        url: "http://10.20.100.109/rmt.html"
+      }
+    );
+
+    expect(state.passwordRecords.map((record) => record.id)).toEqual([
+      "shared-origin-other-camera",
+      "current-scope"
+    ]);
+  });
+
+  it("forgets a captured camera-list credential scope after the active workspace changes", () => {
+    const state = workspaceReducer(
+      {
+        ...sampleWorkspace,
+        activeJobId: "job-current",
+        activeCameraListId: "list-current",
+        passwordRecords: [
+          {
+            id: "original-linked",
+            jobId: "job-original",
+            cameraListId: "list-original",
+            cameraId: "camera-41",
+            url: "http://10.20.100.109",
+            username: "admin",
+            password: "linked"
+          },
+          {
+            id: "original-legacy",
+            jobId: "job-original",
+            cameraListId: "list-original",
+            cameraId: null,
+            url: "http://10.20.100.110",
+            username: "admin",
+            password: "legacy"
+          },
+          {
+            id: "current-scope",
+            jobId: "job-current",
+            cameraListId: "list-current",
+            cameraId: "camera-41",
+            url: "http://10.20.100.109",
+            username: "admin",
+            password: "current"
+          }
+        ]
+      },
+      {
+        type: "forgetCameraListCredentials",
+        jobId: "job-original",
+        cameraListId: "list-original"
+      }
+    );
+
+    expect(state.passwordRecords.map((record) => record.id)).toEqual(["current-scope"]);
+  });
+
   it("discards stale saved credentials for a camera after auth retry failure", () => {
     const withPassword = {
       ...sampleWorkspace,

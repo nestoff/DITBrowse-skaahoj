@@ -25,6 +25,9 @@ const baseProps = {
   onForward: vi.fn(),
   onReload: vi.fn(),
   onReloadAll: vi.fn(),
+  sessionBusy: false,
+  onSignOutSelected: vi.fn(),
+  onRequestSignOutAll: vi.fn(),
   onColumnsChange: vi.fn(),
   onRelativeGlobalZoomChange: vi.fn(),
   onGlobalViewportChange: vi.fn(),
@@ -49,16 +52,15 @@ describe("BrowserChrome", () => {
   it("uses descriptive shared tooltips for browser commands", () => {
     render(<BrowserChrome {...baseProps} />);
 
-    const reload = screen.getByRole("button", { name: "Reload" });
-    expect(reload).not.toHaveAttribute("title");
-    fireEvent.focus(reload);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Reload camera");
+    const back = screen.getByRole("button", { name: "Back" });
+    expect(back).not.toHaveAttribute("title");
+    fireEvent.focus(back);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Back");
     expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Loads the selected tile again from its base address."
+      "Returns the selected camera to its previous page."
     );
-    expect(screen.getByRole("tooltip")).toHaveTextContent("⌘R");
 
-    fireEvent.blur(reload);
+    fireEvent.blur(back);
     const cameraList = screen.getByRole("button", { name: "Camera List" });
     expect(cameraList).not.toHaveAttribute("title");
     fireEvent.focus(cameraList);

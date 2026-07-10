@@ -26,6 +26,9 @@ interface BrowserChromeProps {
   onForward: () => void;
   onReload: () => void;
   onReloadAll: () => void;
+  sessionBusy: boolean;
+  onSignOutSelected: () => void;
+  onRequestSignOutAll: () => void;
   onColumnsChange: (columns: number) => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
@@ -52,6 +55,9 @@ export function BrowserChrome({
   onForward,
   onReload,
   onReloadAll,
+  sessionBusy,
+  onSignOutSelected,
+  onRequestSignOutAll,
   onColumnsChange,
   onRelativeGlobalZoomChange,
   onGlobalViewportChange,
@@ -108,6 +114,10 @@ export function BrowserChrome({
         onForward={onForward}
         onReload={onReload}
         onReloadAll={onReloadAll}
+        hasTiles={workspace.tiles.length > 0}
+        sessionBusy={sessionBusy}
+        onSignOutSelected={onSignOutSelected}
+        onRequestSignOutAll={onRequestSignOutAll}
         onColumnsChange={onColumnsChange}
         onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
         onGlobalViewportChange={onGlobalViewportChange}

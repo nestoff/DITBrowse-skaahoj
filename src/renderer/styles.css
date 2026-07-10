@@ -527,6 +527,59 @@ textarea::selection {
   padding: 0;
 }
 
+.camera-session-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.camera-session-trigger {
+  height: 34px;
+}
+
+.camera-session-panel {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 120;
+  display: grid;
+  gap: 2px;
+  width: min(370px, calc(100vw - 16px));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  background: var(--surface-2);
+  box-shadow: var(--shadow);
+}
+
+.camera-session-panel .button {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 34px;
+  height: auto;
+  padding: 8px 10px;
+  white-space: normal;
+}
+
+.camera-session-panel .button-label {
+  white-space: normal;
+  text-align: left;
+}
+
+.camera-session-separator {
+  height: 1px;
+  margin: 4px 5px;
+  background: var(--line);
+}
+
+.camera-session-danger {
+  color: var(--danger);
+}
+
+.camera-session-danger:hover:not(:disabled) {
+  background: rgba(232, 140, 134, 0.12);
+  color: #ffc2be;
+}
+
 .browser-layout-controls {
   justify-self: end;
   gap: 5px;
@@ -821,10 +874,6 @@ textarea::selection {
   opacity: 0.45;
 }
 
-.saved-password-clear-selected:disabled {
-  opacity: 0.45;
-}
-
 .credential-preset-list {
   display: grid;
   gap: 6px;
@@ -937,15 +986,10 @@ textarea::selection {
   justify-content: flex-start;
 }
 
-.tools-actions,
-.cookie-commands {
+.tools-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
-}
-
-.cookie-commands {
-  padding: 0;
 }
 
 .control-api-form {
@@ -1663,14 +1707,8 @@ textarea::selection {
 }
 
 .workspace-command-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.workspace-session-section .cookie-commands {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  border: 0;
 }
 
 .http-auth-dialog {
@@ -1804,10 +1842,6 @@ textarea::selection {
 }
 
 @media (max-width: 1020px) {
-  .toolbar-reload-all {
-    display: none;
-  }
-
   .grid-control select {
     max-width: 92px;
   }
@@ -1820,8 +1854,7 @@ textarea::selection {
     gap: 6px;
   }
 
-  .workspace-command-grid,
-  .workspace-session-section .cookie-commands {
+  .workspace-command-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

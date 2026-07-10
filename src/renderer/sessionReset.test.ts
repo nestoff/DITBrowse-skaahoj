@@ -40,7 +40,11 @@ describe("resetSelectedCamera", () => {
   it("clears runtime and persistent state before loading one base URL", async () => {
     const calls: string[] = [];
     const result = await resetSelectedCamera(
-      { tile: selectedTile, operationKey: "job:list" },
+      {
+        tile: selectedTile,
+        operationKey: "job:list",
+        onSessionCleared: () => calls.push("forget")
+      },
       createDependencies({
         clearRuntime: async () => {
           calls.push("runtime");
@@ -58,13 +62,14 @@ describe("resetSelectedCamera", () => {
       })
     );
 
-    expect(calls).toEqual(["mark:tile-41", "runtime", "electron", "load"]);
+    expect(calls).toEqual(["mark:tile-41", "runtime", "electron", "forget", "load"]);
     expect(result).toMatchObject({ tone: "success", reloaded: 1, skipped: 0 });
   });
 
   it("does not navigate after cleanup failure and removes the auth marker", async () => {
     const loadBase = vi.fn(async () => true);
     const clearManualAuth = vi.fn();
+    const onSessionCleared = vi.fn();
     const dependencies = createDependencies({
       resetCameraData: async () => {
         throw new Error("clear failed");
@@ -75,24 +80,55 @@ describe("resetSelectedCamera", () => {
 
     await expect(
       resetSelectedCamera(
-        { tile: selectedTile, operationKey: "job:list" },
+        { tile: selectedTile, operationKey: "job:list", onSessionCleared },
         dependencies
       )
     ).rejects.toThrow("clear failed");
+    expect(onSessionCleared).not.toHaveBeenCalled();
     expect(loadBase).not.toHaveBeenCalled();
     expect(clearManualAuth).toHaveBeenCalledWith(["tile-41"]);
   });
 
   it("skips invalid browser URLs without touching the session", async () => {
     const dependencies = createDependencies();
+    const onSessionCleared = vi.fn();
 
     const result = await resetSelectedCamera(
-      { tile: tile("tile-blank", "about:blank"), operationKey: "job:list" },
+      {
+        tile: tile("tile-blank", "about:blank"),
+        operationKey: "job:list",
+        onSessionCleared
+      },
       dependencies
     );
 
     expect(result).toMatchObject({ tone: "partial", reloaded: 0, skipped: 1 });
     expect(dependencies.resetCameraData).not.toHaveBeenCalled();
+    expect(onSessionCleared).not.toHaveBeenCalled();
+  });
+
+  it("forgets the credential after cleanup even when the base page does not reload", async () => {
+    const calls: string[] = [];
+
+    const result = await resetSelectedCamera(
+      {
+        tile: selectedTile,
+        operationKey: "job:list",
+        onSessionCleared: () => calls.push("forget")
+      },
+      createDependencies({
+        resetCameraData: async () => {
+          calls.push("electron");
+        },
+        loadBase: async () => {
+          calls.push("load");
+          return false;
+        }
+      })
+    );
+
+    expect(calls).toEqual(["electron", "forget", "load"]);
+    expect(result).toMatchObject({ tone: "partial", reloaded: 0, failed: ["tile-41"] });
   });
 });
 
@@ -114,7 +150,8 @@ describe("resetCameraList", () => {
           tile("tile-b", "http://10.20.100.102/index.html")
         ],
         partition: "persist:list",
-        operationKey: "job:list"
+        operationKey: "job:list",
+        onSessionCleared: vi.fn()
       },
       dependencies
     );
@@ -137,7 +174,8 @@ describe("resetCameraList", () => {
           tile("tile-b", "http://10.20.100.102/index.html")
         ],
         partition: "persist:list",
-        operationKey: "job:list"
+        operationKey: "job:list",
+        onSessionCleared: vi.fn()
       },
       createDependencies({ loadBase, clearManualAuth, isCurrent })
     );
@@ -164,7 +202,8 @@ describe("resetCameraList", () => {
           tile("tile-c", "http://10.20.100.103/")
         ],
         partition: "persist:list",
-        operationKey: "job:list"
+        operationKey: "job:list",
+        onSessionCleared: vi.fn()
       },
       dependencies
     );
@@ -193,7 +232,8 @@ describe("resetCameraList", () => {
           tile("tile-b", "http://10.20.100.102/")
         ],
         partition: "persist:list",
-        operationKey: "job:list"
+        operationKey: "job:list",
+        onSessionCleared: vi.fn()
       },
       createDependencies({ loadBase })
     );
@@ -203,5 +243,96 @@ describe("resetCameraList", () => {
     });
     finishFirstLoad?.(true);
     await expect(reset).resolves.toMatchObject({ tone: "success", reloaded: 2 });
+  });
+
+  it("forgets the active-list credentials after partition cleanup and before reload", async () => {
+    const calls: string[] = [];
+
+    const result = await resetCameraList(
+      {
+        tiles: [
+          tile("tile-a", "http://10.20.100.101/rmt.html"),
+          tile("tile-b", "http://10.20.100.102/index.html")
+        ],
+        partition: "persist:list",
+        operationKey: "job:list",
+        onSessionCleared: () => calls.push("forget")
+      },
+      createDependencies({
+        clearRuntime: async (tileId) => {
+          calls.push(`runtime:${tileId}`);
+          return true;
+        },
+        resetListData: async () => {
+          calls.push("electron");
+        },
+        loadBase: async (tileId) => {
+          calls.push(`load:${tileId}`);
+          return true;
+        },
+        markManualAuth: (ids) => calls.push(`mark:${ids.join(",")}`)
+      })
+    );
+
+    expect(calls).toEqual([
+      "mark:tile-a,tile-b",
+      "runtime:tile-a",
+      "runtime:tile-b",
+      "electron",
+      "forget",
+      "load:tile-a",
+      "load:tile-b"
+    ]);
+    expect(result).toMatchObject({ tone: "success", reloaded: 2 });
+  });
+
+  it("does not forget list credentials or reload after partition cleanup fails", async () => {
+    const onSessionCleared = vi.fn();
+    const loadBase = vi.fn(async () => true);
+
+    await expect(
+      resetCameraList(
+        {
+          tiles: [tile("tile-a", "http://10.20.100.101/rmt.html")],
+          partition: "persist:list",
+          operationKey: "job:list",
+          onSessionCleared
+        },
+        createDependencies({
+          resetListData: async () => {
+            throw new Error("partition clear failed");
+          },
+          loadBase
+        })
+      )
+    ).rejects.toThrow("partition clear failed");
+
+    expect(onSessionCleared).not.toHaveBeenCalled();
+    expect(loadBase).not.toHaveBeenCalled();
+  });
+
+  it("keeps list credentials forgotten when a camera fails to reload", async () => {
+    const calls: string[] = [];
+
+    const result = await resetCameraList(
+      {
+        tiles: [tile("tile-a", "http://10.20.100.101/rmt.html")],
+        partition: "persist:list",
+        operationKey: "job:list",
+        onSessionCleared: () => calls.push("forget")
+      },
+      createDependencies({
+        resetListData: async () => {
+          calls.push("electron");
+        },
+        loadBase: async () => {
+          calls.push("load");
+          return false;
+        }
+      })
+    );
+
+    expect(calls).toEqual(["electron", "forget", "load"]);
+    expect(result).toMatchObject({ tone: "partial", reloaded: 0, failed: ["tile-a"] });
   });
 });

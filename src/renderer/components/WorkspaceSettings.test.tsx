@@ -14,24 +14,17 @@ function createProps(
     cameraLists: sampleWorkspace.cameraLists,
     activeCameraListId: sampleWorkspace.activeCameraListId,
     activeList: sampleWorkspace.cameraLists[0],
-    selectedTile:
-      sampleWorkspace.tiles.find((tile) => tile.id === sampleWorkspace.selectedTileId) ?? null,
     onSelectCameraList: vi.fn(),
     onCreateJob: vi.fn(),
     onUpdateJobName: vi.fn(),
     onDeleteJob: vi.fn(),
-    onReloadAll: vi.fn(),
     credentialPresets: [],
     passwordRecords: [],
     onAddCredentialPreset: vi.fn(),
     onDeleteCredentialPreset: vi.fn(),
     onDeletePasswordRecord: vi.fn(),
-    onDeleteSelectedTilePassword: vi.fn(),
     onResetSelectedScale: vi.fn(),
     onResetGridOrder: vi.fn(),
-    resetBusy: false,
-    onResetSelectedCamera: vi.fn(),
-    onRequestResetList: vi.fn(),
     controlApiInfo: {
       host: "127.0.0.1",
       port: 54321,
@@ -104,20 +97,16 @@ describe("WorkspaceSettings", () => {
     confirm.mockRestore();
   });
 
-  it("runs selected and all-camera sign-out actions", () => {
-    const onResetSelectedCamera = vi.fn();
-    const onRequestResetList = vi.fn();
-    render(
-      <WorkspaceSettings
-        {...createProps({ onResetSelectedCamera, onRequestResetList })}
-      />
-    );
+  it("keeps camera session commands on the main page instead of duplicating them", () => {
+    render(<WorkspaceSettings {...createProps()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload Camera" }));
-    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload All" }));
-
-    expect(onResetSelectedCamera).toHaveBeenCalledOnce();
-    expect(onRequestResetList).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: /Reload Every Camera/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sign Out/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Forget Selected Tile Password" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reset Scale" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Reset Order" })).toBeVisible();
   });
 
   it("sets and clears the local control API port", async () => {
@@ -282,7 +271,6 @@ describe("WorkspaceSettings", () => {
 
   it("shows and deletes saved camera passwords", () => {
     const onDeletePasswordRecord = vi.fn();
-    const onDeleteSelectedTilePassword = vi.fn();
     render(
       <WorkspaceSettings
         {...createProps({
@@ -297,8 +285,7 @@ describe("WorkspaceSettings", () => {
               password: "ABCD1234"
             }
           ],
-          onDeletePasswordRecord,
-          onDeleteSelectedTilePassword
+          onDeletePasswordRecord
         })}
       />
     );
@@ -307,9 +294,6 @@ describe("WorkspaceSettings", () => {
       "http://192.168.1.41"
     );
     expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent("ABCD1234");
-
-    fireEvent.click(screen.getByRole("button", { name: "Forget Selected Tile Password" }));
-    expect(onDeleteSelectedTilePassword).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByLabelText("Saved camera passwords").querySelector("button")!);
     expect(onDeletePasswordRecord).toHaveBeenCalledWith("password-1");

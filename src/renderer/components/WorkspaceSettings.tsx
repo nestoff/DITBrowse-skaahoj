@@ -7,10 +7,8 @@ import type {
   CameraList,
   CredentialPreset,
   Job,
-  PasswordRecord,
-  TileState
+  PasswordRecord
 } from "../../shared/types";
-import { CookieCommands } from "./CookieCommands";
 import { JobListSelector } from "./JobListSelector";
 import { Button } from "./ui/Button";
 
@@ -19,12 +17,10 @@ export interface WorkspaceSettingsProps {
   cameraLists: CameraList[];
   activeCameraListId: string | null;
   activeList: CameraList | null;
-  selectedTile: TileState | null;
   onSelectCameraList: (cameraListId: string) => void;
   onCreateJob: (jobName: string, listName: string, defaultPrefix: string) => void;
   onUpdateJobName: (jobName: string) => void;
   onDeleteJob: (jobId: string) => void;
-  onReloadAll: () => void;
   credentialPresets: CredentialPreset[];
   passwordRecords: PasswordRecord[];
   onAddCredentialPreset: (
@@ -34,12 +30,8 @@ export interface WorkspaceSettingsProps {
   ) => void;
   onDeleteCredentialPreset: (presetId: string) => void;
   onDeletePasswordRecord: (passwordRecordId: string) => void;
-  onDeleteSelectedTilePassword: () => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
-  resetBusy: boolean;
-  onResetSelectedCamera: () => void;
-  onRequestResetList: () => void;
   controlApiInfo: ControlApiInfo | null;
   onSetControlApiPort: (port: number | null) => Promise<void>;
   companionModuleStatus: CompanionModuleInstallStatus | null;
@@ -75,23 +67,17 @@ export function WorkspaceSettings({
   cameraLists,
   activeCameraListId,
   activeList,
-  selectedTile,
   onSelectCameraList,
   onCreateJob,
   onUpdateJobName,
   onDeleteJob,
-  onReloadAll,
   credentialPresets,
   passwordRecords,
   onAddCredentialPreset,
   onDeleteCredentialPreset,
   onDeletePasswordRecord,
-  onDeleteSelectedTilePassword,
   onResetSelectedScale,
   onResetGridOrder,
-  resetBusy,
-  onResetSelectedCamera,
-  onRequestResetList,
   controlApiInfo,
   onSetControlApiPort,
   companionModuleStatus,
@@ -147,7 +133,7 @@ export function WorkspaceSettings({
           <span>Workspace</span>
           <h3>Settings</h3>
         </div>
-        <p>Jobs, camera sessions, passwords, and local control.</p>
+        <p>Jobs, passwords, and local control.</p>
       </header>
 
       <div className="workspace-settings-section workspace-job-section">
@@ -177,19 +163,6 @@ export function WorkspaceSettings({
             className="tool-command"
             variant="ghost"
             size="compact"
-            icon={<RotateCcw size={15} strokeWidth={2.2} />}
-            tooltip={{
-              title: "Reload every camera",
-              description: "Loads every open camera again without changing the saved list."
-            }}
-            onClick={onReloadAll}
-          >
-            Reload Every Camera
-          </Button>
-          <Button
-            className="tool-command"
-            variant="ghost"
-            size="compact"
             icon={<Maximize2 size={15} strokeWidth={2.2} />}
             tooltip={{
               title: "Reset selected scaling",
@@ -213,20 +186,6 @@ export function WorkspaceSettings({
             Reset Order
           </Button>
         </div>
-      </div>
-
-      <div className="workspace-settings-section workspace-session-section">
-        <div className="tools-section-header">
-          <span>Camera sign-in sessions</span>
-          <strong>Saved passwords stay</strong>
-        </div>
-        <CookieCommands
-          canResetSelected={!!selectedTile}
-          canResetList={!!activeCameraListId && !!activeList && activeList.cameras.length > 0}
-          busy={resetBusy}
-          onResetSelected={onResetSelectedCamera}
-          onRequestResetList={onRequestResetList}
-        />
       </div>
 
       <div className="workspace-settings-section credential-preset-section">
@@ -296,15 +255,6 @@ export function WorkspaceSettings({
           <span>Saved camera passwords</span>
           <strong>{passwordRecords.length}</strong>
         </div>
-        <Button
-          className="saved-password-clear-selected"
-          variant="danger"
-          size="compact"
-          disabled={!selectedTile}
-          onClick={onDeleteSelectedTilePassword}
-        >
-          Forget Selected Tile Password
-        </Button>
         {passwordRecords.length > 0 && (
           <div className="saved-password-list" aria-label="Saved camera passwords">
             {passwordRecords.map((record) => (

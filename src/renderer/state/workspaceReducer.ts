@@ -8,6 +8,10 @@ import {
 import { formatCameraLabel } from "../../shared/cameraLabel";
 import { normalizeCredentialUrl } from "../../shared/credentials";
 import {
+  forgetCameraCredential,
+  forgetCameraListCredentials
+} from "../../shared/passwordRecords";
+import {
   cameraBaseFromCommittedUrl,
   normalizeCameraPrefix,
   normalizeCameraUrl,
@@ -82,6 +86,18 @@ export type WorkspaceAction =
     }
   | { type: "deleteCredentialPreset"; presetId: string }
   | { type: "deletePasswordRecord"; passwordRecordId: string }
+  | {
+      type: "forgetCameraCredential";
+      jobId: string;
+      cameraListId: string;
+      cameraId: string | null;
+      url: string;
+    }
+  | {
+      type: "forgetCameraListCredentials";
+      jobId: string;
+      cameraListId: string;
+    }
   | { type: "addCameraEntry" }
   | { type: "closeTile"; tileId: string }
   | { type: "moveTile"; tileId: string; direction: "left" | "right" }
@@ -1136,6 +1152,16 @@ export function workspaceReducer(
         )
       };
     }
+    case "forgetCameraCredential":
+      return {
+        ...state,
+        passwordRecords: forgetCameraCredential(state.passwordRecords, action)
+      };
+    case "forgetCameraListCredentials":
+      return {
+        ...state,
+        passwordRecords: forgetCameraListCredentials(state.passwordRecords, action)
+      };
     case "addCameraEntry": {
       const activeList = state.cameraLists.find((list) => list.id === state.activeCameraListId);
       if (!activeList) {

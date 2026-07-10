@@ -57,6 +57,11 @@ function workspaceAt(url: string) {
   };
 }
 
+function openCameraSessionMenu(): HTMLElement {
+  fireEvent.click(screen.getByRole("button", { name: "Camera Session" }));
+  return screen.getByRole("menu");
+}
+
 describe("App control API commands", () => {
   beforeEach(() => {
     controlApiCommandHandler = null;
@@ -343,6 +348,28 @@ describe("App control API commands", () => {
     expect(selectedWebview.reload).not.toHaveBeenCalled();
     expect(otherWebview.loadURL).not.toHaveBeenCalled();
     expect(otherWebview.reload).not.toHaveBeenCalled();
+    expect(window.ditbrowse.resetCameraSessionData).not.toHaveBeenCalled();
+    expect(window.ditbrowse.resetListSessionData).not.toHaveBeenCalled();
+  });
+
+  it("keeps the Camera Session reload selected action non-destructive", async () => {
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const selectedWebview = document.querySelector(
+      'webview[data-tile-id="tile-41"]'
+    ) as Electron.WebviewTag;
+    selectedWebview.loadURL = vi.fn(async () => undefined);
+    selectedWebview.getURL = vi.fn(() => "http://192.168.1.01/rmt.html");
+
+    const sessionMenu = openCameraSessionMenu();
+    fireEvent.click(
+      within(sessionMenu).getByRole("menuitem", { name: "Reload selected" })
+    );
+
+    expect(selectedWebview.loadURL).toHaveBeenCalledWith("http://192.168.1.01");
+    expect(window.ditbrowse.resetCameraSessionData).not.toHaveBeenCalled();
+    expect(window.ditbrowse.resetListSessionData).not.toHaveBeenCalled();
   });
 
   it("saves the selected live URL to the selected camera only when requested", async () => {
@@ -564,7 +591,7 @@ describe("App control API commands", () => {
     expect(await screen.findByText("192.168.1.02")).toBeVisible();
   });
 
-  it("keeps the saved password but requires explicit sign in after camera reset", async () => {
+  it("forgets the selected saved login and requires a fresh sign in after sign-out", async () => {
     const workspaceWithSavedCameraPassword = {
       ...sampleWorkspace,
       passwordRecords: [
@@ -590,8 +617,12 @@ describe("App control API commands", () => {
     webview.executeJavaScript = vi.fn(async () => undefined);
     webview.loadURL = vi.fn(async () => undefined);
 
-    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
-    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload Camera" }));
+    const sessionMenu = openCameraSessionMenu();
+    fireEvent.click(
+      within(sessionMenu).getByRole("menuitem", {
+        name: "Sign out, forget login & reload selected"
+      })
+    );
     await waitFor(() => {
       expect(webview.loadURL).toHaveBeenCalledWith("http://192.168.1.01/");
     });
@@ -607,22 +638,59 @@ describe("App control API commands", () => {
 
     const signInDialog = await screen.findByRole("dialog", { name: "Camera sign in" });
     expect(signInDialog).toBeVisible();
-    expect(within(signInDialog).getByLabelText("Username")).toHaveValue("admin");
-    expect(within(signInDialog).getByLabelText("Password")).toHaveValue("secret");
+    expect(within(signInDialog).getByLabelText("Username")).toHaveValue("");
+    expect(within(signInDialog).getByLabelText("Password")).toHaveValue("");
     expect(window.ditbrowse.sendHttpAuthResponse).not.toHaveBeenCalledWith(
       "auth-after-reset",
       expect.anything()
     );
   });
 
-  it("confirms a list reset and reloads each open camera from its base address", async () => {
+  it("forgets only active-list logins and reloads each open camera", async () => {
     window.ditbrowse.loadWorkspace = vi.fn(async () => ({
       ...sampleWorkspace,
       cameraLists: sampleWorkspace.cameraLists.map((list) => ({
         ...list,
         cameras: list.cameras.slice(0, 2)
       })),
-      tiles: sampleWorkspace.tiles.slice(0, 2)
+      tiles: sampleWorkspace.tiles.slice(0, 2),
+      credentialPresets: [
+        {
+          id: "preset-venice",
+          username: "admin",
+          password: "preset-secret",
+          cameraType: "VENICE 2"
+        }
+      ],
+      passwordRecords: [
+        {
+          id: "active-one",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.01",
+          username: "admin",
+          password: "active-secret-one"
+        },
+        {
+          id: "active-two",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-42",
+          url: "http://192.168.1.02",
+          username: "admin",
+          password: "active-secret-two"
+        },
+        {
+          id: "other-list",
+          jobId: "job-other",
+          cameraListId: "list-other",
+          cameraId: "camera-other",
+          url: "http://10.20.30.40",
+          username: "other",
+          password: "other-secret"
+        }
+      ]
     }));
     render(<App />);
     await screen.findByDisplayValue("http://192.168.1.01");
@@ -634,10 +702,14 @@ describe("App control API commands", () => {
       webview.loadURL = vi.fn(async () => undefined);
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
-    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload All" }));
+    const sessionMenu = openCameraSessionMenu();
+    fireEvent.click(
+      within(sessionMenu).getByRole("menuitem", {
+        name: "Sign out, forget active-list logins & reload all…"
+      })
+    );
     const confirmation = screen.getByRole("dialog", {
-      name: "Sign out and reload every camera?"
+      name: "Sign out, forget logins, and reload every camera?"
     });
     expect(confirmation).toBeVisible();
     fireEvent.click(
@@ -651,9 +723,35 @@ describe("App control API commands", () => {
       expect(webviews[0].loadURL).toHaveBeenCalledWith("http://192.168.1.01/");
       expect(webviews[1].loadURL).toHaveBeenCalledWith("http://192.168.1.02/");
     });
+
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    await screen.findByRole("button", { name: "Install Companion Module" });
+    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent(
+      "other-secret"
+    );
+    expect(screen.getByLabelText("Saved camera passwords")).not.toHaveTextContent(
+      "active-secret-one"
+    );
+    expect(screen.getByLabelText("Saved credential presets")).toHaveTextContent(
+      "preset-secret"
+    );
   });
 
   it("keeps the page loaded when camera session cleanup fails", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...sampleWorkspace,
+      passwordRecords: [
+        {
+          id: "password-camera-41",
+          jobId: "job-sample",
+          cameraListId: "list-sample",
+          cameraId: "camera-41",
+          url: "http://192.168.1.01",
+          username: "admin",
+          password: "retained-secret"
+        }
+      ]
+    }));
     window.ditbrowse.resetCameraSessionData = vi.fn(async () => {
       throw new Error("clear failed");
     });
@@ -667,10 +765,20 @@ describe("App control API commands", () => {
     webview.executeJavaScript = vi.fn(async () => undefined);
     webview.loadURL = vi.fn(async () => undefined);
 
-    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
-    fireEvent.click(screen.getByRole("button", { name: "Sign Out & Reload Camera" }));
+    const sessionMenu = openCameraSessionMenu();
+    fireEvent.click(
+      within(sessionMenu).getByRole("menuitem", {
+        name: "Sign out, forget login & reload selected"
+      })
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("clear failed");
     expect(webview.loadURL).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    await screen.findByRole("button", { name: "Install Companion Module" });
+    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent(
+      "retained-secret"
+    );
   });
 });
