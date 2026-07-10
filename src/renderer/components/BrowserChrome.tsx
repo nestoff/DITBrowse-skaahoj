@@ -32,6 +32,7 @@ interface BrowserChromeProps {
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
+  expansionEnabled: boolean;
   focusMode: boolean;
   onFocusModeToggle: () => void;
 }
@@ -58,6 +59,7 @@ export function BrowserChrome({
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
+  expansionEnabled,
   focusMode,
   onFocusModeToggle
 }: BrowserChromeProps): ReactElement {
@@ -115,6 +117,7 @@ export function BrowserChrome({
         onGlobalViewportChange={onGlobalViewportChange}
         onZoomChange={onZoomChange}
         onViewportChange={onViewportChange}
+        expansionEnabled={expansionEnabled}
         focusMode={focusMode}
         onFocusModeToggle={onFocusModeToggle}
       />

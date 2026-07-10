@@ -113,9 +113,12 @@ describe("WorkspaceSettings", () => {
     render(<WorkspaceSettings {...createProps({ onSetControlApiPort })} />);
 
     expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent(
-      "GET /api/focus/01"
+      "GET /api/focus/1"
     );
     expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent("GET /api/grid");
+    expect(screen.getByLabelText("Local API shortcuts")).toHaveTextContent(
+      "ws://127.0.0.1:54321/api/ws"
+    );
 
     fireEvent.change(screen.getByLabelText("API port"), {
       target: { value: "54001" }

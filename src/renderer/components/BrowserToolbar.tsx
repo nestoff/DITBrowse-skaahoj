@@ -38,6 +38,7 @@ interface BrowserToolbarProps {
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
+  expansionEnabled: boolean;
   focusMode: boolean;
   onFocusModeToggle: () => void;
 }
@@ -63,6 +64,7 @@ export function BrowserToolbar({
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
+  expansionEnabled,
   focusMode,
   onFocusModeToggle
 }: BrowserToolbarProps): ReactElement {
@@ -143,7 +145,13 @@ export function BrowserToolbar({
         <IconButton
           label={focusMode ? "Show all pages" : "Focus selected page"}
           tooltip={
-            focusMode
+            !expansionEnabled
+              ? {
+                  title: "Expansion locked",
+                  description:
+                    "Companion expansion mode is off, so the camera grid stays visible."
+                }
+              : focusMode
               ? {
                   title: "Show all pages",
                   description: "Returns to the camera grid without reloading any pages."
@@ -161,7 +169,7 @@ export function BrowserToolbar({
             )
           }
           active={focusMode}
-          disabled={!selectedTile}
+          disabled={!selectedTile || !expansionEnabled}
           onClick={onFocusModeToggle}
         />
         <span className="selected-tile-status">

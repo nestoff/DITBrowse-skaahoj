@@ -100,6 +100,7 @@ export function App(): ReactElement {
   const [loaded, setLoaded] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [expansionEnabled, setExpansionEnabled] = useState(true);
   const [httpAuthQueue, setHttpAuthQueue] = useState<HttpAuthPromptState[]>([]);
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
@@ -114,13 +115,15 @@ export function App(): ReactElement {
   const manualAuthGateRef = useRef(new OneShotManualAuthGate());
   const resetBusyRef = useRef(false);
   const activeWorkspaceKeyRef = useRef("");
-  const effectiveFocusMode = focusMode && !!workspace.selectedTileId;
+  const effectiveFocusMode = expansionEnabled && focusMode && !!workspace.selectedTileId;
   const focusModeRef = useRef(effectiveFocusMode);
+  const expansionEnabledRef = useRef(expansionEnabled);
   const httpAuthPrompt = httpAuthQueue[0] ?? null;
 
   workspaceRef.current = workspace;
   httpAuthQueueRef.current = httpAuthQueue;
   focusModeRef.current = effectiveFocusMode;
+  expansionEnabledRef.current = expansionEnabled;
   activeWorkspaceKeyRef.current = `${workspace.activeJobId ?? ""}:${workspace.activeCameraListId ?? ""}`;
 
   useEffect(() => {
@@ -137,6 +140,28 @@ export function App(): ReactElement {
   }, []);
 
   useDebouncedWorkspaceSave({ loaded, workspace, saveWorkspace });
+
+  const controlApiStatus = useMemo(
+    () =>
+      buildControlApiStatus(workspace, {
+        expansionEnabled,
+        focusMode: effectiveFocusMode
+      }),
+    [
+      effectiveFocusMode,
+      expansionEnabled,
+      workspace.activeCameraListId,
+      workspace.cameraLists,
+      workspace.selectedTileId,
+      workspace.tiles
+    ]
+  );
+
+  useEffect(() => {
+    if (loaded) {
+      window.ditbrowse?.publishControlApiStatus?.(controlApiStatus);
+    }
+  }, [controlApiStatus, loaded]);
 
   useEffect(() => {
     let active = true;
@@ -300,7 +325,14 @@ export function App(): ReactElement {
   }, []);
 
   const toggleFocusMode = useCallback((): void => {
-    setFocusMode((active) => !active);
+    if (!expansionEnabledRef.current) {
+      return;
+    }
+    setFocusMode((active) => {
+      const next = !active;
+      focusModeRef.current = next;
+      return next;
+    });
   }, []);
 
   const setControlApiPort = useCallback(async (port: number | null): Promise<void> => {
@@ -631,20 +663,63 @@ export function App(): ReactElement {
     (command: ControlApiCommand): void => {
       const currentWorkspace = workspaceRef.current;
       const currentFocusMode = focusModeRef.current && !!currentWorkspace.selectedTileId;
+      const currentExpansionEnabled = expansionEnabledRef.current;
+
+      const buildStatus = (
+        workspaceState: WorkspaceState,
+        expansionIsEnabled: boolean,
+        focusIsActive: boolean
+      ) =>
+        buildControlApiStatus(workspaceState, {
+          expansionEnabled: expansionIsEnabled,
+          focusMode: focusIsActive
+        });
 
       if (command.type === "status") {
         sendControlApiResponse(command.requestId, {
           ok: true,
-          status: buildControlApiStatus(currentWorkspace, currentFocusMode)
+          status: buildStatus(
+            currentWorkspace,
+            currentExpansionEnabled,
+            currentFocusMode
+          )
         });
         return;
       }
 
       if (command.type === "showGrid") {
+        focusModeRef.current = false;
         setFocusMode(false);
         sendControlApiResponse(command.requestId, {
           ok: true,
-          status: buildControlApiStatus(currentWorkspace, false)
+          status: buildStatus(currentWorkspace, currentExpansionEnabled, false)
+        });
+        return;
+      }
+
+      if (command.type === "toggleExpansion") {
+        const nextExpansionEnabled = !currentExpansionEnabled;
+        expansionEnabledRef.current = nextExpansionEnabled;
+        setExpansionEnabled(nextExpansionEnabled);
+        if (!nextExpansionEnabled) {
+          focusModeRef.current = false;
+          setFocusMode(false);
+        }
+        sendControlApiResponse(command.requestId, {
+          ok: true,
+          status: buildStatus(
+            currentWorkspace,
+            nextExpansionEnabled,
+            nextExpansionEnabled ? currentFocusMode : false
+          )
+        });
+        return;
+      }
+
+      if (!currentExpansionEnabled) {
+        sendControlApiResponse(command.requestId, {
+          ok: true,
+          status: buildStatus(currentWorkspace, false, false)
         });
         return;
       }
@@ -659,17 +734,22 @@ export function App(): ReactElement {
         sendControlApiResponse(command.requestId, {
           ok: false,
           error: "not_found",
-          message: `No ${label} matches "${value}"`
+          message: `No ${label} matches ${value}`
         });
         return;
       }
 
       selectedTileIdRef.current = tile.id;
       dispatch({ type: "selectTile", tileId: tile.id });
+      focusModeRef.current = true;
       setFocusMode(true);
       sendControlApiResponse(command.requestId, {
         ok: true,
-        status: buildControlApiStatus({ ...currentWorkspace, selectedTileId: tile.id }, true)
+        status: buildStatus(
+          { ...currentWorkspace, selectedTileId: tile.id },
+          true,
+          true
+        )
       });
     },
     [sendControlApiResponse]
@@ -710,6 +790,7 @@ export function App(): ReactElement {
         onZoomChange={setSelectedZoom}
         onViewportChange={setSelectedViewport}
         focusMode={effectiveFocusMode}
+        expansionEnabled={expansionEnabled}
         onFocusModeToggle={toggleFocusMode}
       />
       {resetBusy && (

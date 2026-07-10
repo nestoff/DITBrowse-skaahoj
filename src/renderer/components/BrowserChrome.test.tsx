@@ -31,6 +31,7 @@ const baseProps = {
   onZoomChange: vi.fn(),
   onDefaultViewportChange: vi.fn(),
   onViewportChange: vi.fn(),
+  expansionEnabled: true,
   focusMode: false,
   onFocusModeToggle: vi.fn()
 };
@@ -146,6 +147,19 @@ describe("BrowserChrome", () => {
     );
 
     expect(screen.getByLabelText("Show all pages")).toBeVisible();
+  });
+
+  it("disables selected-page focus while expansion mode is off", () => {
+    render(<BrowserChrome {...baseProps} expansionEnabled={false} />);
+
+    const focusButton = screen.getByLabelText("Focus selected page");
+    expect(focusButton).toBeDisabled();
+
+    fireEvent.focus(focusButton);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Expansion locked");
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Companion expansion mode is off, so the camera grid stays visible."
+    );
   });
 
   it("resets selected zoom when the percent marker is double-clicked", () => {

@@ -57,6 +57,7 @@ describe("App control API commands", () => {
         return vi.fn();
       }),
       sendControlApiResponse: vi.fn(),
+      publishControlApiStatus: vi.fn(),
       onHttpAuthRequest: vi.fn((callback) => {
         httpAuthRequestHandler = callback;
         return vi.fn();
@@ -73,7 +74,7 @@ describe("App control API commands", () => {
     await screen.findByDisplayValue("http://192.168.1.01");
 
     act(() => {
-      controlApiCommandHandler?.({ requestId: "focus-1", type: "focusCamera", cameraNumber: "02" });
+      controlApiCommandHandler?.({ requestId: "focus-1", type: "focusCamera", cameraNumber: 2 });
     });
 
     await waitFor(() => {
@@ -107,13 +108,61 @@ describe("App control API commands", () => {
     await screen.findByDisplayValue("http://192.168.1.01");
 
     act(() => {
-      controlApiCommandHandler?.({ requestId: "missing-1", type: "focusCamera", cameraNumber: "99" });
+      controlApiCommandHandler?.({ requestId: "missing-1", type: "focusCamera", cameraNumber: 99 });
     });
 
     expect(window.ditbrowse.sendControlApiResponse).toHaveBeenCalledWith("missing-1", {
       ok: false,
       error: "not_found",
-      message: "No camera number matches \"99\""
+      message: "No camera number matches 99"
+    });
+  });
+
+  it("locks the grid and makes camera focus a successful no-op while expansion is off", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    act(() => {
+      controlApiCommandHandler?.({ requestId: "focus-2", type: "focusCamera", cameraNumber: 2 });
+    });
+    await screen.findByDisplayValue("http://192.168.1.02");
+    expect(screen.getByLabelText("Show all pages")).toBeVisible();
+
+    act(() => {
+      controlApiCommandHandler?.({ requestId: "expansion-off", type: "toggleExpansion" });
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Focus selected page")).toBeDisabled();
+    });
+
+    act(() => {
+      controlApiCommandHandler?.({ requestId: "blocked-focus", type: "focusCamera", cameraNumber: 3 });
+    });
+
+    expect(screen.getByRole("textbox", { name: "Address" })).toHaveValue(
+      "http://192.168.1.02"
+    );
+    expect(window.ditbrowse.sendControlApiResponse).toHaveBeenCalledWith(
+      "blocked-focus",
+      expect.objectContaining({
+        ok: true,
+        status: expect.objectContaining({ expansionEnabled: false, focusMode: false })
+      })
+    );
+  });
+
+  it("publishes complete control status after workspace hydration", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(window.ditbrowse.publishControlApiStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expansionEnabled: true,
+          focusMode: false,
+          selectedCameraNumber: 1
+        })
+      );
     });
   });
 

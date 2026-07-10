@@ -301,9 +301,15 @@ export function WorkspaceSettings({
           <strong>{controlApiInfo?.baseUrl ?? "Starting"}</strong>
         </div>
         <div className="control-api-shortcuts" aria-label="Local API shortcuts">
-          <code>GET /api/focus/01</code>
+          <code>GET /api/focus/1</code>
           <code>GET /api/grid</code>
+          <code>
+            {controlApiInfo
+              ? `${controlApiInfo.baseUrl.replace(/^http:/, "ws:")}/api/ws`
+              : "ws://127.0.0.1:52780/api/ws"}
+          </code>
         </div>
+        <p>Companion connects on this computer and uses integer camera numbers.</p>
         <form className="control-api-form" onSubmit={(event) => void savePort(event)}>
           <label className="job-inline-field">
             <span>API port</span>
