@@ -7,7 +7,8 @@
   "scripts": {
     "format": "prettier -w .",
     "package": "yarn build && companion-module-build",
-    "check": "companion-module-check",
+    "check": "yarn companion-module-check",
+    "companion-module-check": "node scripts/check-module.mjs",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
     "lint:raw": "eslint",
@@ -29,7 +30,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@companion-module/tools": "^3.0.1",
+    "@companion-module/tools": "3.0.1",
     "@types/node": "^22.19.17",
     "@types/ws": "^8.18.1",
     "eslint": "^10.2.0",
