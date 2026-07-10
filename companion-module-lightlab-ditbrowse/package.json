@@ -7,12 +7,12 @@
   "scripts": {
     "format": "prettier -w .",
     "package": "npm run build && companion-module-build",
-    "check": "yarn companion-module-check",
+    "check": "npm run companion-module-check",
     "companion-module-check": "node scripts/check-module.mjs",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
     "lint:raw": "eslint",
-    "lint": "yarn lint:raw .",
+    "lint": "npm run lint:raw -- .",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
