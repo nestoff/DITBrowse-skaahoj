@@ -164,6 +164,7 @@ function safeForwardActivationClick(
 
 interface WebviewTileProps {
   tile: TileState;
+  cameraNumber?: number | null;
   globalZoom?: number;
   selected: boolean;
   focused?: boolean;
@@ -178,6 +179,7 @@ interface WebviewTileProps {
 
 function WebviewTileComponent({
   tile,
+  cameraNumber = null,
   globalZoom = 1,
   selected,
   focused = false,
@@ -501,6 +503,10 @@ function WebviewTileComponent({
       ? `translate(${temporaryView.offsetX}px, ${temporaryView.offsetY}px) scale(${scale})`
       : `scale(${scale})`;
   const activationLabel = `Activate ${tile.title || tile.url || "tile"}`;
+  const hasCameraNumber =
+    typeof cameraNumber === "number" &&
+    Number.isSafeInteger(cameraNumber) &&
+    cameraNumber > 0;
   const handleInactivePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>): void => {
       event.preventDefault();
@@ -523,7 +529,13 @@ function WebviewTileComponent({
         .join(" ")}
       onMouseDown={() => onSelectTile(tile.id)}
     >
-      <div className="tile-label">{tile.title || tile.url || "Blank"}</div>
+      <div className={hasCameraNumber ? "tile-label has-camera-number" : "tile-label"}>
+        <span className="tile-label-title">{tile.title || tile.url || "Blank"}</span>
+        {hasCameraNumber && (
+          <strong className="tile-camera-number">CAM {cameraNumber}</strong>
+        )}
+        {hasCameraNumber && <span className="tile-label-balance" aria-hidden="true" />}
+      </div>
       <div className="webview-frame">
         <webview
           ref={webviewRef}

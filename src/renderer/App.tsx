@@ -2,6 +2,7 @@ import type { FormEvent, ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   buildControlApiStatus,
+  parseStoredCameraNumber,
   resolveControlApiCamera,
   resolveControlApiTab,
   type ControlApiCommand,
@@ -252,6 +253,16 @@ export function App(): ReactElement {
   const activeList = workspace.cameraLists.find(
     (list) => list.id === workspace.activeCameraListId
   );
+  const cameraNumbersById = useMemo(() => {
+    const numbers = new Map<string, number>();
+    for (const camera of activeList?.cameras ?? []) {
+      const cameraNumber = parseStoredCameraNumber(camera.suffix);
+      if (cameraNumber !== null) {
+        numbers.set(camera.id, cameraNumber);
+      }
+    }
+    return numbers;
+  }, [activeList]);
   const webviewPreloadPath = window.ditbrowse?.webviewPreloadPath ?? null;
 
   const sessionResetDependencies = useMemo<SessionResetDependencies>(
@@ -854,6 +865,7 @@ export function App(): ReactElement {
       )}
       <TileGrid
         tiles={workspace.tiles}
+        cameraNumbersById={cameraNumbersById}
         globalZoom={workspace.globalZoom}
         columns={workspace.gridColumns}
         selectedTileId={workspace.selectedTileId}

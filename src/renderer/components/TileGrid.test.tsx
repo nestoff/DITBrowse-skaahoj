@@ -12,6 +12,7 @@ vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 const baseProps = {
   tiles: sampleWorkspace.tiles.slice(0, 4),
+  cameraNumbersById: new Map([["camera-41", 9]]),
   globalZoom: 1,
   columns: 2,
   selectedTileId: "tile-42",
@@ -23,6 +24,23 @@ const baseProps = {
 };
 
 describe("TileGrid", () => {
+  it("matches camera numbers by camera id instead of tile position", () => {
+    const reorderedTiles = [baseProps.tiles[1], baseProps.tiles[0]];
+    const { getByText } = render(
+      <TileGrid
+        {...baseProps}
+        tiles={reorderedTiles}
+        cameraNumbersById={new Map([
+          ["camera-41", 9],
+          ["camera-42", 3]
+        ])}
+      />
+    );
+
+    expect(getByText("CAM 9")).toBeVisible();
+    expect(getByText("CAM 3")).toBeVisible();
+  });
+
   it("keeps every webview mounted while focusing the selected page", () => {
     const { container } = render(<TileGrid {...baseProps} focusMode />);
 

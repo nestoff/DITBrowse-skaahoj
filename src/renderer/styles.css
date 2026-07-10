@@ -1110,6 +1110,33 @@ textarea::selection {
   white-space: nowrap;
 }
 
+.tile-label-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-label.has-camera-number {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+}
+
+.tile-camera-number {
+  grid-column: 2;
+  justify-self: center;
+  color: var(--accent-strong);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.tile-label-balance {
+  grid-column: 3;
+}
+
 .tile-error {
   position: absolute;
   inset: 34px 8px 8px;

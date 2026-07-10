@@ -149,6 +149,40 @@ describe("WebviewTile", () => {
     expect(webview).toHaveAttribute("webpreferences", "nodeIntegrationInSubFrames=yes");
   });
 
+  it("shows the linked camera number as a centered integer label", () => {
+    render(
+      <WebviewTile
+        tile={tile}
+        cameraNumber={1}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(screen.getByText("CAM 1")).toBeVisible();
+  });
+
+  it("omits the camera number for an unlinked tile", () => {
+    render(
+      <WebviewTile
+        tile={{ ...tile, cameraId: null }}
+        cameraNumber={null}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(screen.queryByText(/CAM \d+/)).not.toBeInTheDocument();
+  });
+
   it("adds http to bare LAN webview URLs before rendering src", () => {
     render(
       <WebviewTile
