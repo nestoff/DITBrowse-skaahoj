@@ -247,6 +247,30 @@ describe("controlApiServer", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it("rejects and closes unsupported protocol versions", async () => {
+    const { server } = await startTestServer();
+    const socket = await openSocket(`ws://${server.host}:${server.port}/api/ws`);
+
+    const result = nextMessage(socket);
+    const closed = new Promise<number>((resolve) => {
+      socket.once("close", (code) => resolve(code));
+    });
+    socket.send(
+      JSON.stringify({
+        type: "hello",
+        protocol: "ditbrowse.control",
+        protocolVersion: 2,
+        client: { name: "future-client", version: "2.0.0" }
+      })
+    );
+
+    await expect(result).resolves.toMatchObject({
+      type: "error",
+      error: { code: "unsupported_protocol" }
+    });
+    await expect(closed).resolves.toBe(1002);
+  });
+
   it("broadcasts revisioned status to handshaken clients", async () => {
     const { server } = await startTestServer();
     const socket = await openSocket(`ws://${server.host}:${server.port}/api/ws`);

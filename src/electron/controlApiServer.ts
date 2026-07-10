@@ -278,6 +278,20 @@ export async function startControlApiServer({
         return;
       }
 
+      if (
+        rawMessage &&
+        typeof rawMessage === "object" &&
+        "type" in rawMessage &&
+        rawMessage.type === "hello" &&
+        ("protocol" in rawMessage && rawMessage.protocol !== CONTROL_PROTOCOL ||
+          "protocolVersion" in rawMessage &&
+            rawMessage.protocolVersion !== CONTROL_PROTOCOL_VERSION)
+      ) {
+        protocolError(socket, "unsupported_protocol", "Unsupported DIT Browse control protocol");
+        socket.close(1002, "Unsupported protocol");
+        return;
+      }
+
       const message = parseControlProtocolClientMessage(rawMessage);
       if (isControlProtocolParseError(message)) {
         if (message.requestId) {
