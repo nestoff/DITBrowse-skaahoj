@@ -52,6 +52,31 @@ body {
   overflow: hidden;
 }
 
+.workspace-boot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--window);
+  color: var(--muted);
+}
+
+.workspace-boot > p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.workspace-boot-error {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.workspace-boot-error strong {
+  color: var(--text-strong);
+  font-size: 13px;
+}
+
 button,
 input,
 select,

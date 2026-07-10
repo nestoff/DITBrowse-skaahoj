@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ControlApiCommand } from "../shared/controlApi";
@@ -15,6 +16,46 @@ class ResizeObserverStub {
 }
 
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function workspaceAt(url: string) {
+  const normalizedUrl = `http://${url}`;
+  const camera = {
+    ...sampleWorkspace.cameraLists[0].cameras[0],
+    url: normalizedUrl,
+    prefixOverride: normalizedUrl,
+    usesListPrefix: false
+  };
+  const tile = {
+    ...sampleWorkspace.tiles[0],
+    cameraId: camera.id,
+    url: normalizedUrl
+  };
+  return {
+    ...sampleWorkspace,
+    cameraLists: [
+      {
+        ...sampleWorkspace.cameraLists[0],
+        cameras: [camera]
+      }
+    ],
+    tiles: [tile],
+    selectedTileId: tile.id
+  };
+}
 
 describe("App control API commands", () => {
   beforeEach(() => {
@@ -87,6 +128,63 @@ describe("App control API commands", () => {
     };
   });
 
+  it("mounts no sample cameras before the saved workspace is ready", async () => {
+    const loading = deferred<ReturnType<typeof workspaceAt>>();
+    window.ditbrowse.loadWorkspace = vi.fn(() => loading.promise);
+
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>
+    );
+
+    await waitFor(() => expect(window.ditbrowse.loadWorkspace).toHaveBeenCalledOnce());
+    expect(screen.getByRole("status")).toHaveTextContent("Loading workspace…");
+    expect(screen.queryByLabelText("Browser toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Camera tabs")).not.toBeInTheDocument();
+    expect(document.querySelectorAll("webview")).toHaveLength(0);
+    expect(document.body).not.toHaveTextContent("192.168.1.01");
+    expect(window.ditbrowse.publishControlApiStatus).not.toHaveBeenCalled();
+
+    loading.resolve(workspaceAt("10.20.100.109"));
+
+    expect(await screen.findByDisplayValue("http://10.20.100.109")).toBeVisible();
+    expect(document.querySelectorAll("webview")).toHaveLength(1);
+    expect(document.querySelector("webview")).toHaveAttribute(
+      "src",
+      "http://10.20.100.109"
+    );
+    await waitFor(() => {
+      expect(window.ditbrowse.publishControlApiStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tabs: [expect.objectContaining({ url: "http://10.20.100.109" })]
+        })
+      );
+    });
+  });
+
+  it("keeps webviews unmounted after a load failure and retries", async () => {
+    window.ditbrowse.loadWorkspace = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("broken workspace"))
+      .mockResolvedValueOnce(workspaceAt("10.20.100.110"));
+
+    render(<App />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Workspace could not be loaded"
+    );
+    expect(document.querySelectorAll("webview")).toHaveLength(0);
+    expect(screen.queryByLabelText("Browser toolbar")).not.toBeInTheDocument();
+    expect(window.ditbrowse.publishControlApiStatus).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByDisplayValue("http://10.20.100.110")).toBeVisible();
+    expect(window.ditbrowse.loadWorkspace).toHaveBeenCalledTimes(2);
+    expect(document.querySelectorAll("webview")).toHaveLength(1);
+  });
+
   it("focuses a requested camera number and returns to grid from local API commands", async () => {
     render(<App />);
 
@@ -130,10 +228,12 @@ describe("App control API commands", () => {
       controlApiCommandHandler?.({ requestId: "missing-1", type: "focusCamera", cameraNumber: 99 });
     });
 
-    expect(window.ditbrowse.sendControlApiResponse).toHaveBeenCalledWith("missing-1", {
-      ok: false,
-      error: "not_found",
-      message: "No camera number matches 99"
+    await waitFor(() => {
+      expect(window.ditbrowse.sendControlApiResponse).toHaveBeenCalledWith("missing-1", {
+        ok: false,
+        error: "not_found",
+        message: "No camera number matches 99"
+      });
     });
   });
 

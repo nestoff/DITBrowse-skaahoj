@@ -14,7 +14,6 @@ import { normalizeCredentialUrl } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import type { HttpAuthRequest } from "../shared/httpAuth";
 import type { CompanionModuleInstallStatus } from "../shared/companionModule";
-import { sampleWorkspace } from "../shared/sampleData";
 import type {
   CameraEntry,
   CameraList,
@@ -79,6 +78,83 @@ function findTileForAuthRequest(
   );
 }
 
+type WorkspaceBootstrapState =
+  | { status: "loading" }
+  | { status: "ready"; workspace: WorkspaceState }
+  | { status: "error" };
+
+interface WorkspaceLoadAttempt {
+  attempt: number;
+  promise: Promise<WorkspaceState>;
+}
+
+export function App(): ReactElement {
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [bootstrapState, setBootstrapState] = useState<WorkspaceBootstrapState>({
+    status: "loading"
+  });
+  const inFlightLoadRef = useRef<WorkspaceLoadAttempt | null>(null);
+
+  useEffect(() => {
+    const existingAttempt = inFlightLoadRef.current;
+    const currentAttempt =
+      existingAttempt?.attempt === loadAttempt
+        ? existingAttempt
+        : {
+            attempt: loadAttempt,
+            promise: Promise.resolve().then(() => loadWorkspace())
+          };
+    inFlightLoadRef.current = currentAttempt;
+    let cancelled = false;
+
+    void currentAttempt.promise.then(
+      (workspace) => {
+        if (!cancelled && inFlightLoadRef.current === currentAttempt) {
+          setBootstrapState({ status: "ready", workspace });
+        }
+      },
+      () => {
+        if (!cancelled && inFlightLoadRef.current === currentAttempt) {
+          setBootstrapState({ status: "error" });
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadAttempt]);
+
+  const retryLoad = useCallback((): void => {
+    inFlightLoadRef.current = null;
+    setBootstrapState({ status: "loading" });
+    setLoadAttempt((attempt) => attempt + 1);
+  }, []);
+
+  if (bootstrapState.status === "loading") {
+    return (
+      <main className="workspace-boot">
+        <p role="status">Loading workspace…</p>
+      </main>
+    );
+  }
+
+  if (bootstrapState.status === "error") {
+    return (
+      <main className="workspace-boot">
+        <div className="workspace-boot-error" role="alert">
+          <strong>Workspace could not be loaded</strong>
+          <Button type="button" variant="subtle" size="compact" onClick={retryLoad}>
+            Retry
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
+  return <WorkspaceApp initialWorkspace={bootstrapState.workspace} />;
+}
+
 function normalizedPresetText(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -97,9 +173,20 @@ function findMatchingCredentialPreset(
   );
 }
 
-export function App(): ReactElement {
-  const [workspace, dispatch] = useReducer(workspaceReducer, sampleWorkspace);
-  const [loaded, setLoaded] = useState(false);
+interface WorkspaceAppProps {
+  initialWorkspace: WorkspaceState;
+}
+
+function hydrateInitialWorkspace(workspace: WorkspaceState): WorkspaceState {
+  return workspaceReducer(workspace, { type: "hydrateWorkspace", workspace });
+}
+
+function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
+  const [workspace, dispatch] = useReducer(
+    workspaceReducer,
+    initialWorkspace,
+    hydrateInitialWorkspace
+  );
   const [editorOpen, setEditorOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [expansionEnabled, setExpansionEnabled] = useState(true);
@@ -131,19 +218,6 @@ export function App(): ReactElement {
   focusModeRef.current = effectiveFocusMode;
   expansionEnabledRef.current = expansionEnabled;
   activeWorkspaceKeyRef.current = `${workspace.activeJobId ?? ""}:${workspace.activeCameraListId ?? ""}`;
-
-  useEffect(() => {
-    let active = true;
-    loadWorkspace().then((loadedWorkspace) => {
-      if (active) {
-        dispatch({ type: "hydrateWorkspace", workspace: loadedWorkspace });
-        setLoaded(true);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const refreshCompanionModuleStatus = useCallback(async (): Promise<void> => {
     const getStatus = window.ditbrowse?.getCompanionModuleInstallStatus;
@@ -189,7 +263,7 @@ export function App(): ReactElement {
     }
   }, []);
 
-  useDebouncedWorkspaceSave({ loaded, workspace, saveWorkspace });
+  useDebouncedWorkspaceSave({ loaded: true, workspace, saveWorkspace });
 
   const controlApiStatus = useMemo(
     () =>
@@ -208,10 +282,8 @@ export function App(): ReactElement {
   );
 
   useEffect(() => {
-    if (loaded) {
-      window.ditbrowse?.publishControlApiStatus?.(controlApiStatus);
-    }
-  }, [controlApiStatus, loaded]);
+    window.ditbrowse?.publishControlApiStatus?.(controlApiStatus);
+  }, [controlApiStatus]);
 
   useEffect(() => {
     let active = true;
