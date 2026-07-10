@@ -1,0 +1,10 @@
+{
+  "extends": "@companion-module/tools/tsconfig/node22/recommended-esm.json",
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
+  "exclude": ["node_modules/**", "dist/**"],
+  "compilerOptions": {
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node", "vitest/globals"]
+  }
+}
