@@ -39,6 +39,18 @@ function createProps(
       configuredPort: 54321
     },
     onSetControlApiPort: vi.fn(async () => undefined),
+    companionModuleStatus: {
+      state: "missing",
+      bundledVersion: "0.1.0",
+      installedVersion: null,
+      targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+      message: "DIT Browse Companion module is not installed.",
+      canInstall: true
+    },
+    companionModuleBusy: false,
+    companionModuleError: "",
+    onRefreshCompanionModuleStatus: vi.fn(async () => undefined),
+    onInstallCompanionModule: vi.fn(async () => undefined),
     ...overrides
   };
 }
@@ -130,6 +142,102 @@ describe("WorkspaceSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Auto" }));
 
     await waitFor(() => expect(onSetControlApiPort).toHaveBeenCalledWith(null));
+  });
+
+  it.each([
+    ["missing", "Install Companion Module", false],
+    ["outdated", "Update Companion Module", false],
+    ["current", "Installed", true],
+    ["newer", "Newer Version Installed", true],
+    ["invalid", "Install Unavailable", true],
+    ["not_configured", "Install Unavailable", true]
+  ] as const)(
+    "renders the %s Companion module state",
+    (state, buttonName, disabled) => {
+      const installedVersion = ["outdated", "current", "newer"].includes(state)
+        ? "0.1.0"
+        : null;
+      render(
+        <WorkspaceSettings
+          {...createProps({
+            companionModuleStatus: {
+              state,
+              bundledVersion: "0.1.0",
+              installedVersion,
+              targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+              message: `Companion state is ${state}.`,
+              canInstall: state === "missing" || state === "outdated"
+            }
+          })}
+        />
+      );
+
+      const button = screen.getByRole("button", { name: buttonName });
+      if (disabled) {
+        expect(button).toBeDisabled();
+      } else {
+        expect(button).toBeEnabled();
+      }
+      expect(screen.getByLabelText("Companion module status")).toHaveTextContent(
+        `Companion state is ${state}.`
+      );
+    }
+  );
+
+  it("runs install and refresh actions and disables installation while busy", async () => {
+    const onInstallCompanionModule = vi.fn(async () => undefined);
+    const onRefreshCompanionModuleStatus = vi.fn(async () => undefined);
+    const { rerender } = render(
+      <WorkspaceSettings
+        {...createProps({
+          onInstallCompanionModule,
+          onRefreshCompanionModuleStatus
+        })}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Install Companion Module" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check Again" }));
+
+    expect(onInstallCompanionModule).toHaveBeenCalledOnce();
+    expect(onRefreshCompanionModuleStatus).toHaveBeenCalledOnce();
+
+    rerender(
+      <WorkspaceSettings
+        {...createProps({
+          companionModuleBusy: true,
+          onInstallCompanionModule,
+          onRefreshCompanionModuleStatus
+        })}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Installing…" })).toBeDisabled();
+  });
+
+  it("shows installer errors and reload guidance", () => {
+    const { rerender } = render(
+      <WorkspaceSettings
+        {...createProps({ companionModuleError: "Permission denied." })}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Permission denied.");
+
+    rerender(
+      <WorkspaceSettings
+        {...createProps({
+          companionModuleStatus: {
+            state: "current",
+            bundledVersion: "0.1.0",
+            installedVersion: "0.1.0",
+            targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+            message: "DIT Browse Companion module 0.1.0 is installed.",
+            canInstall: false
+          }
+        })}
+      />
+    );
+    expect(screen.getByText(/Refresh modules list/)).toBeVisible();
   });
 
   it("manages visible global credential presets", () => {

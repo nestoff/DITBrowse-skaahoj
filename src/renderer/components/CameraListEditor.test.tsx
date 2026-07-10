@@ -39,6 +39,18 @@ function createWorkspaceSettings(
       configuredPort: 54321
     },
     onSetControlApiPort: vi.fn(async () => undefined),
+    companionModuleStatus: {
+      state: "current",
+      bundledVersion: "0.1.0",
+      installedVersion: "0.1.0",
+      targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+      message: "DIT Browse Companion module 0.1.0 is installed.",
+      canInstall: false
+    },
+    companionModuleBusy: false,
+    companionModuleError: "",
+    onRefreshCompanionModuleStatus: vi.fn(async () => undefined),
+    onInstallCompanionModule: vi.fn(async () => undefined),
     ...overrides
   };
 }

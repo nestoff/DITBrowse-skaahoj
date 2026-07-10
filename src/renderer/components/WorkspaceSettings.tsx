@@ -1,7 +1,8 @@
 import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
-import { ListRestart, Maximize2, RotateCcw, Trash2 } from "lucide-react";
+import { Download, ListRestart, Maximize2, RotateCcw, Trash2 } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
+import type { CompanionModuleInstallStatus } from "../../shared/companionModule";
 import type {
   CameraList,
   CredentialPreset,
@@ -41,6 +42,32 @@ export interface WorkspaceSettingsProps {
   onRequestResetList: () => void;
   controlApiInfo: ControlApiInfo | null;
   onSetControlApiPort: (port: number | null) => Promise<void>;
+  companionModuleStatus: CompanionModuleInstallStatus | null;
+  companionModuleBusy: boolean;
+  companionModuleError: string;
+  onRefreshCompanionModuleStatus: () => Promise<void>;
+  onInstallCompanionModule: () => Promise<void>;
+}
+
+function companionInstallButtonLabel(
+  status: CompanionModuleInstallStatus | null,
+  busy: boolean
+): string {
+  if (busy) {
+    return "Installing…";
+  }
+  switch (status?.state) {
+    case "missing":
+      return "Install Companion Module";
+    case "outdated":
+      return "Update Companion Module";
+    case "current":
+      return "Installed";
+    case "newer":
+      return "Newer Version Installed";
+    default:
+      return "Install Unavailable";
+  }
 }
 
 export function WorkspaceSettings({
@@ -66,7 +93,12 @@ export function WorkspaceSettings({
   onResetSelectedCamera,
   onRequestResetList,
   controlApiInfo,
-  onSetControlApiPort
+  onSetControlApiPort,
+  companionModuleStatus,
+  companionModuleBusy,
+  companionModuleError,
+  onRefreshCompanionModuleStatus,
+  onInstallCompanionModule
 }: WorkspaceSettingsProps): ReactElement {
   const [portDraft, setPortDraft] = useState("");
   const [portError, setPortError] = useState("");
@@ -341,6 +373,64 @@ export function WorkspaceSettings({
           </div>
         </form>
         {portError && <p className="control-api-error">{portError}</p>}
+        <div
+          className={`companion-module-status companion-module-${companionModuleStatus?.state ?? "checking"}`}
+          aria-label="Companion module status"
+          aria-live="polite"
+        >
+          <div className="companion-module-copy">
+            <div className="tools-section-header">
+              <span>Companion module</span>
+              <strong>
+                {companionModuleStatus?.bundledVersion
+                  ? `Bundled ${companionModuleStatus.bundledVersion}`
+                  : "Checking"}
+              </strong>
+            </div>
+            <p>
+              {companionModuleStatus?.message ??
+                "Checking Companion's developer-module folder…"}
+            </p>
+            {companionModuleStatus?.installedVersion && (
+              <small className="companion-module-meta">
+                Installed version {companionModuleStatus.installedVersion}
+              </small>
+            )}
+            {companionModuleStatus?.state === "current" && (
+              <small className="companion-module-guidance">
+                Companion normally reloads this automatically. If it does not appear, use
+                Companion&apos;s Refresh modules list control.
+              </small>
+            )}
+            {companionModuleError && (
+              <p className="companion-module-error" role="alert">
+                {companionModuleError}
+              </p>
+            )}
+          </div>
+          <div className="companion-module-actions">
+            <Button
+              type="button"
+              variant="subtle"
+              size="compact"
+              icon={<Download size={13} strokeWidth={2.2} />}
+              disabled={companionModuleBusy || !companionModuleStatus?.canInstall}
+              onClick={() => void onInstallCompanionModule()}
+            >
+              {companionInstallButtonLabel(companionModuleStatus, companionModuleBusy)}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="compact"
+              icon={<RotateCcw size={13} strokeWidth={2.2} />}
+              disabled={companionModuleBusy}
+              onClick={() => void onRefreshCompanionModuleStatus()}
+            >
+              Check Again
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   );

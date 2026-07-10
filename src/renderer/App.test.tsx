@@ -198,6 +198,22 @@ describe("App control API commands", () => {
     });
   });
 
+  it("installs the Companion module from workspace settings", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Install Companion Module" })
+    );
+
+    await waitFor(() => {
+      expect(window.ditbrowse.installCompanionModule).toHaveBeenCalledOnce();
+    });
+    expect(await screen.findByRole("button", { name: "Installed" })).toBeDisabled();
+  });
+
   it("reloads only the selected webview from the host Command+R shortcut", async () => {
     render(<App />);
 

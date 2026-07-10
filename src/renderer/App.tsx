@@ -890,7 +890,12 @@ export function App(): ReactElement {
             onResetSelectedCamera: () => void resetSelectedCameraData(),
             onRequestResetList: () => setConfirmListReset(true),
             controlApiInfo,
-            onSetControlApiPort: setControlApiPort
+            onSetControlApiPort: setControlApiPort,
+            companionModuleStatus,
+            companionModuleBusy,
+            companionModuleError,
+            onRefreshCompanionModuleStatus: refreshCompanionModuleStatus,
+            onInstallCompanionModule: installCompanionModule
           }}
           onClose={() => setEditorOpen(false)}
           onSaveList={saveCameraListDraft}
