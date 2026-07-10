@@ -7,10 +7,10 @@ import { CameraListEditor } from "./CameraListEditor";
 
 type CameraListEditorProps = ComponentProps<typeof CameraListEditor>;
 
-function renderEditor(overrides: Partial<CameraListEditorProps> = {}) {
-  const onSaveList = vi.fn<(list: CameraList) => void>();
-  const onClose = vi.fn();
-  const workspaceSettings: CameraListEditorProps["workspaceSettings"] = {
+function createWorkspaceSettings(
+  overrides: Partial<CameraListEditorProps["workspaceSettings"]> = {}
+): CameraListEditorProps["workspaceSettings"] {
+  return {
     jobs: sampleWorkspace.jobs,
     cameraLists: sampleWorkspace.cameraLists,
     activeCameraListId: sampleWorkspace.activeCameraListId,
@@ -38,8 +38,15 @@ function renderEditor(overrides: Partial<CameraListEditorProps> = {}) {
       baseUrl: "http://127.0.0.1:54321",
       configuredPort: 54321
     },
-    onSetControlApiPort: vi.fn(async () => undefined)
+    onSetControlApiPort: vi.fn(async () => undefined),
+    ...overrides
   };
+}
+
+function renderEditor(overrides: Partial<CameraListEditorProps> = {}) {
+  const onSaveList = vi.fn<(list: CameraList) => void>();
+  const onClose = vi.fn();
+  const workspaceSettings = createWorkspaceSettings();
   const props: CameraListEditorProps = {
     activeList: sampleWorkspace.cameraLists[0],
     workspaceSettings,
@@ -154,6 +161,92 @@ describe("CameraListEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("requires a decision before switching away from a dirty list", () => {
+    const onSelectCameraList = vi.fn();
+    const secondaryList: CameraList = {
+      ...sampleWorkspace.cameraLists[0],
+      id: "list-secondary",
+      name: "Secondary Cameras"
+    };
+    renderEditor({
+      workspaceSettings: createWorkspaceSettings({
+        cameraLists: [...sampleWorkspace.cameraLists, secondaryList],
+        onSelectCameraList
+      })
+    });
+
+    fireEvent.change(screen.getByLabelText("List Prefix"), {
+      target: { value: "http://10.20.30." }
+    });
+    fireEvent.change(screen.getByLabelText("Job and camera list"), {
+      target: { value: "list-secondary" }
+    });
+
+    expect(screen.getByRole("dialog", { name: "Save camera-list changes?" })).toBeVisible();
+    expect(onSelectCameraList).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onSelectCameraList).not.toHaveBeenCalled();
+  });
+
+  it("saves or discards a dirty draft before switching lists", () => {
+    const onSaveList = vi.fn<(list: CameraList) => void>();
+    const onSelectCameraList = vi.fn();
+    const secondaryList: CameraList = {
+      ...sampleWorkspace.cameraLists[0],
+      id: "list-secondary",
+      name: "Secondary Cameras"
+    };
+    const workspaceSettings = createWorkspaceSettings({
+      cameraLists: [...sampleWorkspace.cameraLists, secondaryList],
+      onSelectCameraList
+    });
+    const { unmount } = render(
+      <CameraListEditor
+        activeList={sampleWorkspace.cameraLists[0]}
+        workspaceSettings={workspaceSettings}
+        onSaveList={onSaveList}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("List Prefix"), {
+      target: { value: "http://10.20.30." }
+    });
+    fireEvent.change(screen.getByLabelText("Job and camera list"), {
+      target: { value: "list-secondary" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and Switch" }));
+
+    expect(onSaveList).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultPrefix: "http://10.20.30." })
+    );
+    expect(onSelectCameraList).toHaveBeenCalledWith("list-secondary");
+
+    unmount();
+    onSaveList.mockClear();
+    onSelectCameraList.mockClear();
+
+    render(
+      <CameraListEditor
+        activeList={sampleWorkspace.cameraLists[0]}
+        workspaceSettings={workspaceSettings}
+        onSaveList={onSaveList}
+        onClose={vi.fn()}
+      />
+    );
+    fireEvent.change(screen.getByLabelText("List Prefix"), {
+      target: { value: "http://10.20.40." }
+    });
+    fireEvent.change(screen.getByLabelText("Job and camera list"), {
+      target: { value: "list-secondary" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Discard and Switch" }));
+
+    expect(onSaveList).not.toHaveBeenCalled();
+    expect(onSelectCameraList).toHaveBeenCalledWith("list-secondary");
   });
 
   it("updates one follow-prefix row when a row checkbox is clicked", () => {

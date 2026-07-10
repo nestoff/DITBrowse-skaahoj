@@ -195,6 +195,7 @@ export function CameraListEditor({
   const [lastFollowIndex, setLastFollowIndex] = useState<number | null>(null);
   const [draggedCameraId, setDraggedCameraId] = useState<string | null>(null);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const [pendingCameraListId, setPendingCameraListId] = useState<string | null>(null);
   const allFollowCheckboxRef = useRef<HTMLInputElement | null>(null);
   const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
   const allRowsFollowPrefix =
@@ -209,6 +210,7 @@ export function CameraListEditor({
   useEffect(() => {
     setDraftList(activeList ? cloneCameraList(activeList) : null);
     setLastFollowIndex(null);
+    setPendingCameraListId(null);
   }, [activeList]);
 
   useEffect(() => {
@@ -358,6 +360,33 @@ export function CameraListEditor({
     }
 
     onClose();
+  }
+
+  function requestCameraListSwitch(cameraListId: string): void {
+    if (!cameraListId || cameraListId === workspaceSettings.activeCameraListId) {
+      return;
+    }
+
+    if (!dirty) {
+      workspaceSettings.onSelectCameraList(cameraListId);
+      return;
+    }
+
+    setPendingCameraListId(cameraListId);
+  }
+
+  function completeCameraListSwitch(mode: "save" | "discard"): void {
+    if (!pendingCameraListId) {
+      return;
+    }
+
+    const cameraListId = pendingCameraListId;
+    if (mode === "save" && draftList) {
+      onSaveList(draftList);
+    }
+
+    setPendingCameraListId(null);
+    workspaceSettings.onSelectCameraList(cameraListId);
   }
 
   function focusCameraCell(
@@ -729,7 +758,28 @@ export function CameraListEditor({
         <WorkspaceSettings
           {...workspaceSettings}
           activeList={activeList}
+          onSelectCameraList={requestCameraListSwitch}
         />
+        {pendingCameraListId && (
+          <Dialog
+            title="Save camera-list changes?"
+            description="Choose whether to save or discard the current table changes before opening another camera list."
+            onClose={() => setPendingCameraListId(null)}
+            actions={
+              <>
+                <Button variant="ghost" onClick={() => setPendingCameraListId(null)}>
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={() => completeCameraListSwitch("discard")}>
+                  Discard and Switch
+                </Button>
+                <Button variant="primary" onClick={() => completeCameraListSwitch("save")}>
+                  Save and Switch
+                </Button>
+              </>
+            }
+          />
+        )}
         {confirmDiscardOpen && (
           <Dialog
             title="Discard camera-list changes?"
