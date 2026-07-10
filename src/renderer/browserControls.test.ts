@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearTileRuntimeSession,
+  findTileIdForWebContentsId,
   loadTileBaseAddress,
   runAllTileCommand,
   runSelectedTileCommand
@@ -21,6 +22,35 @@ function addWebview(tileId: string): Electron.WebviewTag {
   document.body.append(webview);
   return webview;
 }
+
+describe("findTileIdForWebContentsId", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("maps an Electron guest ID to its mounted camera tile", () => {
+    const first = addWebview("tile-a");
+    const second = addWebview("tile-b");
+    first.getWebContentsId = vi.fn(() => 41);
+    second.getWebContentsId = vi.fn(() => 42);
+
+    expect(findTileIdForWebContentsId(42)).toBe("tile-b");
+    expect(findTileIdForWebContentsId(undefined)).toBeNull();
+    expect(findTileIdForWebContentsId(-1)).toBeNull();
+    expect(findTileIdForWebContentsId(999)).toBeNull();
+  });
+
+  it("continues looking when a guest disappears during auth routing", () => {
+    const disappearing = addWebview("tile-gone");
+    const matching = addWebview("tile-live");
+    disappearing.getWebContentsId = vi.fn(() => {
+      throw new Error("guest destroyed");
+    });
+    matching.getWebContentsId = vi.fn(() => 52);
+
+    expect(findTileIdForWebContentsId(52)).toBe("tile-live");
+  });
+});
 
 describe("runSelectedTileCommand", () => {
   beforeEach(() => {

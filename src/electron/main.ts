@@ -14,6 +14,7 @@ import {
 import type { ControlApiServer } from "./controlApiServer.js";
 import { startControlApiServer } from "./controlApiServer.js";
 import {
+  createHttpAuthRequest,
   HttpAuthCredentialCache,
   type HttpAuthChallenge
 } from "./httpAuthCache.js";
@@ -30,7 +31,7 @@ import type {
   ControlApiResponse,
   ControlApiStatus
 } from "../shared/controlApi.js";
-import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
+import type { HttpAuthResponse } from "../shared/httpAuth.js";
 import type { WorkspaceState } from "../shared/types.js";
 import { COMPANION_MODULE_ID } from "../shared/companionModule.js";
 
@@ -150,15 +151,7 @@ function sendHttpAuthRequest(
   }
 
   const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  const request: HttpAuthRequest = {
-    requestId,
-    url: challenge.url,
-    host: challenge.host,
-    port: challenge.port,
-    ...(challenge.realm ? { realm: challenge.realm } : {}),
-    ...(challenge.scheme ? { scheme: challenge.scheme } : {}),
-    ...(challenge.isProxy !== undefined ? { isProxy: challenge.isProxy } : {})
-  };
+  const request = createHttpAuthRequest(requestId, challenge);
 
   return new Promise<HttpAuthResponse>((resolve) => {
     const timeout = setTimeout(() => {

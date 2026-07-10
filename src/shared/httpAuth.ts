@@ -6,6 +6,7 @@ export interface HttpAuthRequest {
   realm?: string;
   scheme?: string;
   isProxy?: boolean;
+  webContentsId?: number;
 }
 
 export interface HttpAuthResponse {

@@ -18,6 +18,7 @@ function prompt(requestId: string, tileId: string): HttpAuthPromptState {
     },
     tileId,
     cameraLabel: tileId,
+    cameraType: "VENICE 2",
     username: "admin",
     password: "secret",
     save: true
@@ -42,7 +43,11 @@ describe("HTTP auth queue", () => {
       save: false
     });
 
-    expect(updated[0]).toMatchObject({ username: "operator", save: false });
+    expect(updated[0]).toMatchObject({
+      cameraType: "VENICE 2",
+      username: "operator",
+      save: false
+    });
     expect(updated[1]).toEqual(queue[1]);
   });
 

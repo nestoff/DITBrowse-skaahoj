@@ -13,6 +13,32 @@ function findWebviewForTile(tileId: string | null): Electron.WebviewTag | null {
   return webviews.find((webview) => webview.getAttribute("data-tile-id") === tileId) ?? null;
 }
 
+export function findTileIdForWebContentsId(
+  webContentsId: number | undefined
+): string | null {
+  if (!Number.isSafeInteger(webContentsId) || (webContentsId ?? 0) <= 0) {
+    return null;
+  }
+
+  const webviews = Array.from(
+    document.querySelectorAll("webview[data-tile-id]")
+  ) as Electron.WebviewTag[];
+  for (const webview of webviews) {
+    try {
+      if (
+        typeof webview.getWebContentsId === "function" &&
+        webview.getWebContentsId() === webContentsId
+      ) {
+        return webview.getAttribute("data-tile-id");
+      }
+    } catch {
+      // A guest can disappear while an authentication challenge is being routed.
+    }
+  }
+
+  return null;
+}
+
 export async function clearTileRuntimeSession(tileId: string): Promise<boolean> {
   const webview = findWebviewForTile(tileId);
   if (!webview || typeof webview.executeJavaScript !== "function") {

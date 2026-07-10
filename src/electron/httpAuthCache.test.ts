@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createHttpAuthRequest,
   createHttpAuthCacheKey,
   HttpAuthCredentialCache,
   type HttpAuthChallenge
@@ -16,6 +17,27 @@ const challenge: HttpAuthChallenge = {
 };
 
 describe("HttpAuthCredentialCache", () => {
+  it("preserves the requesting guest ID in the renderer auth request", () => {
+    expect(createHttpAuthRequest("request-1", challenge)).toEqual({
+      requestId: "request-1",
+      url: "http://10.20.100.105/rmt.html",
+      host: "10.20.100.105",
+      port: 80,
+      realm: "Please enter your ID and password.",
+      scheme: "digest",
+      isProxy: false,
+      webContentsId: 12
+    });
+  });
+
+  it("omits the guest ID from renderer auth requests when Electron has none", () => {
+    const { webContentsId: _webContentsId, ...challengeWithoutGuest } = challenge;
+
+    expect(createHttpAuthRequest("request-2", challengeWithoutGuest)).not.toHaveProperty(
+      "webContentsId"
+    );
+  });
+
   it("keys cached credentials by the requesting webview and digest challenge", () => {
     expect(createHttpAuthCacheKey(challenge)).toBe(
       createHttpAuthCacheKey({

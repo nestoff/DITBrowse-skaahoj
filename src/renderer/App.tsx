@@ -12,18 +12,13 @@ import {
 import { findCredentialRecord } from "../shared/credentials";
 import { normalizeCredentialUrl } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
-import type { HttpAuthRequest } from "../shared/httpAuth";
+import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth";
 import type { CompanionModuleInstallStatus } from "../shared/companionModule";
-import type {
-  CameraEntry,
-  CameraList,
-  CredentialPreset,
-  TileState,
-  WorkspaceState
-} from "../shared/types";
+import type { CameraList, TileState, WorkspaceState } from "../shared/types";
 import { resolveCameraAddress } from "../shared/url";
 import {
   clearTileRuntimeSession,
+  findTileIdForWebContentsId,
   loadTileBaseAddress,
   runAllTileCommand,
   runSelectedTileCommand
@@ -56,6 +51,7 @@ import {
   updateCurrentHttpAuthPrompt,
   type HttpAuthPromptState
 } from "./state/httpAuthQueue";
+import { buildHttpAuthPresetActions } from "./state/httpAuthPresets";
 
 function authUrlFromRequest(request: HttpAuthRequest): string {
   if (request.url) {
@@ -70,8 +66,10 @@ function findTileForAuthRequest(
   workspace: WorkspaceState,
   request: HttpAuthRequest
 ): TileState | null {
+  const guestTileId = findTileIdForWebContentsId(request.webContentsId);
   const requestOrigin = normalizeCredentialUrl(authUrlFromRequest(request));
   return (
+    workspace.tiles.find((tile) => tile.id === guestTileId) ??
     workspace.tiles.find((tile) => normalizeCredentialUrl(tile.url) === requestOrigin) ??
     workspace.tiles.find((tile) => tile.id === workspace.selectedTileId) ??
     null
@@ -155,24 +153,6 @@ export function App(): ReactElement {
   return <WorkspaceApp initialWorkspace={bootstrapState.workspace} />;
 }
 
-function normalizedPresetText(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function findMatchingCredentialPreset(
-  presets: CredentialPreset[],
-  camera: CameraEntry | null
-): CredentialPreset | null {
-  return (
-    presets.find(
-      (preset) =>
-        !!preset.cameraType &&
-        !!camera?.cameraType &&
-        normalizedPresetText(preset.cameraType) === normalizedPresetText(camera.cameraType)
-    ) ?? null
-  );
-}
-
 interface WorkspaceAppProps {
   initialWorkspace: WorkspaceState;
 }
@@ -212,6 +192,14 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
   const focusModeRef = useRef(effectiveFocusMode);
   const expansionEnabledRef = useRef(expansionEnabled);
   const httpAuthPrompt = httpAuthQueue[0] ?? null;
+  const httpAuthPresetActions = useMemo(
+    () =>
+      buildHttpAuthPresetActions(
+        workspace.credentialPresets,
+        httpAuthPrompt?.cameraType
+      ),
+    [httpAuthPrompt?.cameraType, workspace.credentialPresets]
+  );
 
   workspaceRef.current = workspace;
   httpAuthQueueRef.current = httpAuthQueue;
@@ -403,7 +391,6 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
               url: authUrl
             })
           : null;
-      const preset = findMatchingCredentialPreset(currentWorkspace.credentialPresets, camera);
       const requiresManualSignIn = tile
         ? manualAuthGateRef.current.consume(tile.id)
         : false;
@@ -421,8 +408,9 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
           request,
           tileId: tile?.id ?? currentWorkspace.selectedTileId,
           cameraLabel: tile?.title || authUrl,
-          username: record?.username ?? preset?.username ?? "",
-          password: record?.password ?? preset?.password ?? "",
+          cameraType: camera?.cameraType ?? "",
+          username: record?.username ?? "",
+          password: record?.password ?? "",
           save: true
         });
         httpAuthQueueRef.current = nextQueue;
@@ -745,18 +733,40 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     }
   }, [cancelQueuedAuthForTiles, sessionResetDependencies]);
 
-  const cancelHttpAuth = useCallback((): void => {
-    if (!httpAuthPrompt) {
-      return;
-    }
+  const completeHttpAuthPrompt = useCallback(
+    (
+      expectedRequestId: string,
+      response: HttpAuthResponse,
+      saveCredential: boolean
+    ): void => {
+      const prompt = httpAuthQueueRef.current[0];
+      if (!prompt || prompt.request.requestId !== expectedRequestId) {
+        return;
+      }
 
-    window.ditbrowse?.sendHttpAuthResponse?.(httpAuthPrompt.request.requestId, {});
-    setHttpAuthQueue((queue) => {
-      const nextQueue = shiftHttpAuthPrompt(queue);
+      const nextQueue = shiftHttpAuthPrompt(httpAuthQueueRef.current);
       httpAuthQueueRef.current = nextQueue;
-      return nextQueue;
-    });
-  }, [httpAuthPrompt]);
+      setHttpAuthQueue(nextQueue);
+      window.ditbrowse?.sendHttpAuthResponse?.(expectedRequestId, response);
+
+      if (saveCredential && prompt.save && prompt.tileId && response.password) {
+        dispatch({
+          type: "saveCapturedCredential",
+          tileId: prompt.tileId,
+          url: authUrlFromRequest(prompt.request),
+          username: response.username?.trim() ?? "",
+          password: response.password
+        });
+      }
+    },
+    []
+  );
+
+  const cancelHttpAuth = useCallback((): void => {
+    if (httpAuthPrompt) {
+      completeHttpAuthPrompt(httpAuthPrompt.request.requestId, {}, false);
+    }
+  }, [completeHttpAuthPrompt, httpAuthPrompt]);
 
   const submitHttpAuth = useCallback(
     (event: FormEvent<HTMLFormElement>): void => {
@@ -765,29 +775,16 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         return;
       }
 
-      const username = httpAuthPrompt.username.trim();
-      window.ditbrowse?.sendHttpAuthResponse?.(httpAuthPrompt.request.requestId, {
-        username,
-        password: httpAuthPrompt.password
-      });
-
-      if (httpAuthPrompt.save && httpAuthPrompt.tileId) {
-        dispatch({
-          type: "saveCapturedCredential",
-          tileId: httpAuthPrompt.tileId,
-          url: authUrlFromRequest(httpAuthPrompt.request),
-          username,
+      completeHttpAuthPrompt(
+        httpAuthPrompt.request.requestId,
+        {
+          username: httpAuthPrompt.username.trim(),
           password: httpAuthPrompt.password
-        });
-      }
-
-      setHttpAuthQueue((queue) => {
-        const nextQueue = shiftHttpAuthPrompt(queue);
-        httpAuthQueueRef.current = nextQueue;
-        return nextQueue;
-      });
+        },
+        true
+      );
     },
-    [httpAuthPrompt]
+    [completeHttpAuthPrompt, httpAuthPrompt]
   );
 
   const commitTileNavigationUrl = useCallback((tileId: string, url: string): void => {
@@ -1046,40 +1043,31 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
               <strong>{httpAuthPrompt.cameraLabel}</strong>
               <span>{httpAuthPrompt.request.realm || httpAuthPrompt.request.host}</span>
             </div>
-            {workspace.credentialPresets.length > 0 && (
-              <div className="http-auth-presets" aria-label="Saved credential suggestions">
-                <div className="http-auth-preset-group" aria-label="Saved usernames">
-                  <span>Usernames</span>
-                  <div>
-                    {workspace.credentialPresets.map((preset) => (
-                      <Button
-                        key={`username-${preset.id}`}
-                        type="button"
-                        variant="subtle"
-                        size="compact"
-                        onClick={() => fillHttpAuthUsername(preset.username)}
-                      >
-                        {preset.username}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="http-auth-preset-group" aria-label="Saved passwords">
-                  <span>Passwords</span>
-                  <div>
-                    {workspace.credentialPresets.map((preset) => (
-                      <Button
-                        key={`password-${preset.id}`}
-                        type="button"
-                        variant="subtle"
-                        size="compact"
-                        onClick={() => fillHttpAuthPassword(preset.password)}
-                      >
-                        {preset.password}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+            {httpAuthPresetActions.length > 0 && (
+              <div
+                className="http-auth-preset-actions"
+                aria-label="Saved credential suggestions"
+              >
+                {httpAuthPresetActions.map((action) => (
+                  <Button
+                    key={action.preset.id}
+                    type="button"
+                    variant={action.recommended ? "primary" : "subtle"}
+                    className={action.recommended ? "http-auth-preset-recommended" : ""}
+                    onClick={() =>
+                      completeHttpAuthPrompt(
+                        httpAuthPrompt.request.requestId,
+                        {
+                          username: action.preset.username,
+                          password: action.preset.password
+                        },
+                        true
+                      )
+                    }
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </div>
             )}
             <label className="http-auth-field">

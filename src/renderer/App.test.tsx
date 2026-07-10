@@ -62,6 +62,32 @@ function openCameraSessionMenu(): HTMLElement {
   return screen.getByRole("menu");
 }
 
+function workspaceWithCameraPasswords() {
+  return {
+    ...sampleWorkspace,
+    passwordRecords: [
+      {
+        id: "password-camera-41",
+        jobId: "job-sample",
+        cameraListId: "list-sample",
+        cameraId: "camera-41",
+        url: "http://192.168.1.01",
+        username: "camera-one",
+        password: "secret-one"
+      },
+      {
+        id: "password-camera-42",
+        jobId: "job-sample",
+        cameraListId: "list-sample",
+        cameraId: "camera-42",
+        url: "http://192.168.1.02",
+        username: "camera-two",
+        password: "secret-two"
+      }
+    ]
+  };
+}
+
 describe("App control API commands", () => {
   beforeEach(() => {
     controlApiCommandHandler = null;
@@ -445,6 +471,80 @@ describe("App control API commands", () => {
     expect(screen.queryByRole("dialog", { name: "Camera sign in" })).not.toBeInTheDocument();
   });
 
+  it("routes HTTP auth to the originating camera guest before origin or selection", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => workspaceWithCameraPasswords());
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    const cameraTwoWebview = document.querySelector(
+      'webview[data-tile-id="tile-42"]'
+    ) as Electron.WebviewTag;
+    cameraTwoWebview.getWebContentsId = vi.fn(() => 4242);
+
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-guest-priority",
+        webContentsId: 4242,
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80
+      });
+    });
+
+    await waitFor(() => {
+      expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith(
+        "auth-guest-priority",
+        { username: "camera-two", password: "secret-two" }
+      );
+    });
+  });
+
+  it("falls back from an unknown guest to the matching camera origin", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => workspaceWithCameraPasswords());
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-origin-fallback",
+        webContentsId: 9999,
+        url: "http://192.168.1.02/login",
+        host: "192.168.1.02",
+        port: 80
+      });
+    });
+
+    await waitFor(() => {
+      expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith(
+        "auth-origin-fallback",
+        { username: "camera-two", password: "secret-two" }
+      );
+    });
+  });
+
+  it("uses the selected camera only when guest and origin cannot be matched", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => workspaceWithCameraPasswords());
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-selected-fallback",
+        webContentsId: 9999,
+        url: "http://unknown-camera.local/login",
+        host: "unknown-camera.local",
+        port: 80
+      });
+    });
+
+    await waitFor(() => {
+      expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith(
+        "auth-selected-fallback",
+        { username: "camera-one", password: "secret-one" }
+      );
+    });
+  });
+
   it("prompts for camera HTTP auth credentials when none are saved", async () => {
     render(<App />);
 
@@ -475,7 +575,7 @@ describe("App control API commands", () => {
     });
   });
 
-  it("fills the camera sign-in form from separate saved username and password buttons", async () => {
+  it("signs in from a paired saved login without exposing password text", async () => {
     window.ditbrowse.loadWorkspace = vi.fn(async () => ({
       ...sampleWorkspace,
       credentialPresets: [
@@ -509,16 +609,27 @@ describe("App control API commands", () => {
       });
     });
 
-    expect(await screen.findByLabelText("Saved credential suggestions")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "operator" }));
-    fireEvent.click(screen.getByRole("button", { name: "ABCD1234" }));
+    const suggestions = await screen.findByLabelText("Saved credential suggestions");
+    expect(suggestions).not.toHaveTextContent("ABCD1234");
+    expect(suggestions).not.toHaveTextContent("EFGH5678");
+    expect(screen.getByLabelText("Username")).toHaveValue("");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
 
-    expect(screen.getByLabelText("Username")).toHaveValue("operator");
-    expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
-    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
+    fireEvent.click(
+      within(suggestions).getByRole("button", {
+        name: "Use saved login · operator & Sign In"
+      })
+    );
+
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledTimes(1);
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith("auth-3", {
+      username: "operator",
+      password: "EFGH5678"
+    });
+    expect(screen.queryByRole("dialog", { name: "Camera sign in" })).not.toBeInTheDocument();
   });
 
-  it("auto-fills the camera sign-in form from a matching camera type preset", async () => {
+  it("recommends the matching camera login and saves it with one click", async () => {
     const cameraTypedWorkspace = {
       ...sampleWorkspace,
       cameraLists: sampleWorkspace.cameraLists.map((list) => ({
@@ -532,6 +643,12 @@ describe("App control API commands", () => {
     window.ditbrowse.loadWorkspace = vi.fn(async () => ({
       ...cameraTypedWorkspace,
       credentialPresets: [
+        {
+          id: "preset-other",
+          username: "operator",
+          password: "OTHER5678",
+          cameraType: "BURANO"
+        },
         {
           id: "preset-1",
           username: "admin",
@@ -556,8 +673,65 @@ describe("App control API commands", () => {
       });
     });
 
-    expect(await screen.findByLabelText("Username")).toHaveValue("admin");
-    expect(screen.getByLabelText("Password")).toHaveValue("ABCD1234");
+    const suggestions = await screen.findByLabelText("Saved credential suggestions");
+    const actions = within(suggestions).getAllByRole("button");
+    expect(actions[0]).toHaveAccessibleName("Use VENICE 2 login & Sign In");
+    expect(actions[0]).toHaveClass("http-auth-preset-recommended");
+    expect(suggestions).not.toHaveTextContent("ABCD1234");
+    expect(screen.getByLabelText("Username")).toHaveValue("");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
+
+    fireEvent.click(actions[0]);
+
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledTimes(1);
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith("auth-4", {
+      username: "admin",
+      password: "ABCD1234"
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    await screen.findByRole("button", { name: "Install Companion Module" });
+    expect(screen.getByLabelText("Saved camera passwords")).toHaveTextContent(
+      "ABCD1234"
+    );
+  });
+
+  it("does not save a paired login when Save for this camera is unchecked", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...sampleWorkspace,
+      credentialPresets: [
+        {
+          id: "preset-1",
+          username: "admin",
+          password: "ABCD1234",
+          cameraType: ""
+        }
+      ]
+    }));
+
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-unsaved-preset",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80
+      });
+    });
+
+    fireEvent.click(await screen.findByLabelText("Save for this camera"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use saved login · admin & Sign In" })
+    );
+
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith(
+      "auth-unsaved-preset",
+      { username: "admin", password: "ABCD1234" }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+    await screen.findByRole("button", { name: "Install Companion Module" });
+    expect(screen.queryByLabelText("Saved camera passwords")).not.toBeInTheDocument();
   });
 
   it("queues simultaneous HTTP auth prompts without overwriting either request", async () => {
@@ -589,6 +763,61 @@ describe("App control API commands", () => {
       { username: "admin", password: "one" }
     );
     expect(await screen.findByText("192.168.1.02")).toBeVisible();
+  });
+
+  it("answers only the expected queued prompt when a preset action fires twice", async () => {
+    window.ditbrowse.loadWorkspace = vi.fn(async () => ({
+      ...sampleWorkspace,
+      credentialPresets: [
+        {
+          id: "preset-1",
+          username: "admin",
+          password: "ABCD1234",
+          cameraType: ""
+        }
+      ]
+    }));
+    render(<App />);
+    await screen.findByDisplayValue("http://192.168.1.01");
+
+    act(() => {
+      httpAuthRequestHandler?.({
+        requestId: "auth-double-1",
+        url: "http://192.168.1.01/",
+        host: "192.168.1.01",
+        port: 80
+      });
+      httpAuthRequestHandler?.({
+        requestId: "auth-double-2",
+        url: "http://192.168.1.02/",
+        host: "192.168.1.02",
+        port: 80
+      });
+    });
+
+    const firstAction = await screen.findByRole("button", {
+      name: "Use saved login · admin & Sign In"
+    });
+    act(() => {
+      firstAction.click();
+      firstAction.click();
+    });
+
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledTimes(1);
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledWith(
+      "auth-double-1",
+      { username: "admin", password: "ABCD1234" }
+    );
+    expect(await screen.findByText("192.168.1.02")).toBeVisible();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use saved login · admin & Sign In" })
+    );
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenCalledTimes(2);
+    expect(window.ditbrowse.sendHttpAuthResponse).toHaveBeenLastCalledWith(
+      "auth-double-2",
+      { username: "admin", password: "ABCD1234" }
+    );
   });
 
   it("forgets the selected saved login and requires a fresh sign in after sign-out", async () => {

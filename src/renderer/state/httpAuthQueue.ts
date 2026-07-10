@@ -4,6 +4,7 @@ export interface HttpAuthPromptState {
   request: HttpAuthRequest;
   tileId: string | null;
   cameraLabel: string;
+  cameraType: string;
   username: string;
   password: string;
   save: boolean;

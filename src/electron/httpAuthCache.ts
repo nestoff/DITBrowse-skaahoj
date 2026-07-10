@@ -1,4 +1,4 @@
-import type { HttpAuthResponse } from "../shared/httpAuth.js";
+import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 
 export interface HttpAuthChallenge {
   url: string;
@@ -8,6 +8,24 @@ export interface HttpAuthChallenge {
   scheme?: string;
   isProxy?: boolean;
   webContentsId?: number;
+}
+
+export function createHttpAuthRequest(
+  requestId: string,
+  challenge: HttpAuthChallenge
+): HttpAuthRequest {
+  return {
+    requestId,
+    url: challenge.url,
+    host: challenge.host,
+    port: challenge.port,
+    ...(challenge.realm ? { realm: challenge.realm } : {}),
+    ...(challenge.scheme ? { scheme: challenge.scheme } : {}),
+    ...(challenge.isProxy !== undefined ? { isProxy: challenge.isProxy } : {}),
+    ...(challenge.webContentsId !== undefined
+      ? { webContentsId: challenge.webContentsId }
+      : {})
+  };
 }
 
 interface CachedHttpAuthCredential {
