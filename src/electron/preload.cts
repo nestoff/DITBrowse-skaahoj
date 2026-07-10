@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   ControlApiCommand,
   ControlApiInfo,
-  ControlApiResponse
+  ControlApiResponse,
+  ControlApiStatus
 } from "../shared/controlApi.js";
 import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 import type { TemporaryViewGesture } from "../shared/temporaryView.js";
@@ -37,6 +38,9 @@ const api = {
   },
   sendControlApiResponse: (requestId: string, response: ControlApiResponse) => {
     ipcRenderer.send("control-api:response", requestId, response);
+  },
+  publishControlApiStatus: (status: ControlApiStatus) => {
+    ipcRenderer.send("control-api:status", status);
   },
   onHttpAuthRequest: (callback: (request: HttpAuthRequest) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, request: HttpAuthRequest): void => {

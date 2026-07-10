@@ -26,7 +26,8 @@ import { installMainWindowShortcuts } from "./shortcuts.js";
 import type {
   ControlApiCommand,
   ControlApiInfo,
-  ControlApiResponse
+  ControlApiResponse,
+  ControlApiStatus
 } from "../shared/controlApi.js";
 import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
 import type { WorkspaceState } from "../shared/types.js";
@@ -47,7 +48,41 @@ const pendingControlResponses = new Map<
 
 let controlApiServer: ControlApiServer | null = null;
 let controlApiInfo: ControlApiInfo | null = null;
+let latestControlApiStatus: ControlApiStatus | null = null;
+let controlApiStatusRevision = 0;
 let appWindow: BrowserWindow | null = null;
+
+function isControlApiStatus(value: unknown): value is ControlApiStatus {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const status = value as Partial<ControlApiStatus>;
+  return (
+    typeof status.expansionEnabled === "boolean" &&
+    typeof status.focusMode === "boolean" &&
+    (status.selectedCameraNumber === null ||
+      (typeof status.selectedCameraNumber === "number" &&
+        Number.isSafeInteger(status.selectedCameraNumber) &&
+        status.selectedCameraNumber >= 1)) &&
+    (status.selectedTileId === null || typeof status.selectedTileId === "string") &&
+    (status.selectedIndex === null || typeof status.selectedIndex === "number") &&
+    Array.isArray(status.tabs)
+  );
+}
+
+function publishControlApiStatus(status: ControlApiStatus): void {
+  if (
+    latestControlApiStatus &&
+    JSON.stringify(latestControlApiStatus) === JSON.stringify(status)
+  ) {
+    return;
+  }
+
+  latestControlApiStatus = status;
+  controlApiStatusRevision += 1;
+  controlApiServer?.publishStatus(status, controlApiStatusRevision);
+}
 
 function sendControlApiCommand(
   webContents: WebContents,
@@ -144,9 +179,18 @@ ipcMain.on(
 
     clearTimeout(pending.timeout);
     pendingControlResponses.delete(requestId);
+    if (response.ok && response.status) {
+      publishControlApiStatus(response.status);
+    }
     pending.resolve(response);
   }
 );
+
+ipcMain.on("control-api:status", (_event, status: unknown): void => {
+  if (isControlApiStatus(status)) {
+    publishControlApiStatus(status);
+  }
+});
 
 ipcMain.on(
   "http-auth:response",
@@ -261,6 +305,7 @@ const createWindow = async (): Promise<void> => {
     try {
       nextServer = await startControlApiServer({
         port: normalizedPort,
+        appVersion: app.getVersion(),
         dispatch: (command) => sendControlApiCommand(mainWindow.webContents, command)
       });
     } catch (error) {
@@ -274,11 +319,15 @@ const createWindow = async (): Promise<void> => {
           : `Port ${normalizedPort} was unavailable`;
       nextServer = await startControlApiServer({
         port: null,
+        appVersion: app.getVersion(),
         dispatch: (command) => sendControlApiCommand(mainWindow.webContents, command)
       });
     }
 
     const previousServer = controlApiServer;
+    if (latestControlApiStatus) {
+      nextServer.publishStatus(latestControlApiStatus, controlApiStatusRevision);
+    }
     controlApiServer = nextServer;
     controlApiInfo = {
       host: nextServer.host,

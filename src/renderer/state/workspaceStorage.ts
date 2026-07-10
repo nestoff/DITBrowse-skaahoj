@@ -4,7 +4,8 @@ import type { TemporaryViewGesture } from "../../shared/temporaryView";
 import type {
   ControlApiCommand,
   ControlApiInfo,
-  ControlApiResponse
+  ControlApiResponse,
+  ControlApiStatus
 } from "../../shared/controlApi";
 import type { HttpAuthRequest, HttpAuthResponse } from "../../shared/httpAuth";
 
@@ -25,6 +26,7 @@ declare global {
       onControlApiInfo?: (callback: (info: ControlApiInfo) => void) => () => void;
       onControlApiCommand?: (callback: (command: ControlApiCommand) => void) => () => void;
       sendControlApiResponse?: (requestId: string, response: ControlApiResponse) => void;
+      publishControlApiStatus?: (status: ControlApiStatus) => void;
       onReloadSelectedTileShortcut?: (callback: () => void) => () => void;
       onHttpAuthRequest?: (callback: (request: HttpAuthRequest) => void) => () => void;
       sendHttpAuthResponse?: (requestId: string, response: HttpAuthResponse) => void;
