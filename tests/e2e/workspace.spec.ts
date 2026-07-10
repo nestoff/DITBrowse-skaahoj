@@ -62,6 +62,30 @@ test("camera list opens the full table and settings in one click", async ({ page
   );
 });
 
+test("workspace settings stay compact and centered on wide displays", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 2048, height: 1040 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
+
+  const editor = page.getByLabel("Camera list editor");
+  const settings = page.getByLabel("Camera workspace settings");
+  await settings.scrollIntoViewIfNeeded();
+
+  const editorBox = await editor.boundingBox();
+  const settingsBox = await settings.boundingBox();
+  expect(settingsBox?.width).toBeLessThanOrEqual(960);
+  expect(
+    Math.abs(
+      (settingsBox?.x ?? 0) + (settingsBox?.width ?? 0) / 2 -
+        ((editorBox?.x ?? 0) + (editorBox?.width ?? 0) / 2)
+    )
+  ).toBeLessThanOrEqual(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(2048);
+  await settings.screenshot({
+    path: testInfo.outputPath("workspace-settings-compact.png")
+  });
+});
+
 test("toolbar stays inside the window at supported widths", async ({ page }) => {
   await page.goto("/");
 
