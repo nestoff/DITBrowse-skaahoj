@@ -1,10 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { WebSocketServer, type WebSocket } from 'ws'
+import { WebSocketServer, type RawData, type WebSocket } from 'ws'
 import { DitBrowseConnection, type ConnectionPhase } from '../src/connection.js'
 import { statusFixture } from './fixtures.js'
 
 const servers: WebSocketServer[] = []
 const connections: DitBrowseConnection[] = []
+
+function rawDataText(data: RawData): string {
+	if (Array.isArray(data)) return Buffer.concat(data).toString('utf8')
+	if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8')
+	return data.toString('utf8')
+}
 
 async function startServer(
 	onCommand?: (message: Record<string, unknown>, socket: WebSocket) => void,
@@ -15,7 +21,7 @@ async function startServer(
 	await new Promise<void>((resolve) => server.once('listening', () => resolve()))
 	server.on('connection', (socket) => {
 		socket.on('message', (data) => {
-			const message = JSON.parse(data.toString()) as Record<string, unknown>
+			const message = JSON.parse(rawDataText(data)) as Record<string, unknown>
 			if (message.type === 'hello') {
 				socket.send(
 					JSON.stringify({
@@ -82,10 +88,10 @@ async function waitFor(check: () => boolean, timeoutMs = 1_000): Promise<void> {
 }
 
 afterEach(async () => {
-	await Promise.all(connections.splice(0).map((connection) => connection.stop()))
+	await Promise.all(connections.splice(0).map(async (connection) => connection.stop()))
 	await Promise.all(
 		servers.splice(0).map(
-			(server) =>
+			async (server) =>
 				new Promise<void>((resolve) => {
 					for (const socket of server.clients) socket.terminate()
 					server.close(() => resolve())
@@ -150,7 +156,9 @@ describe('DitBrowseConnection', () => {
 
 		socket.terminate()
 		await waitFor(() => phases.filter((phase) => phase === 'connected').length >= 2)
-		await waitFor(() => commands.filter((message) => (message.command as Record<string, unknown>).type === 'status').length >= 2)
+		await waitFor(
+			() => commands.filter((message) => (message.command as Record<string, unknown>).type === 'status').length >= 2,
+		)
 
 		expect(
 			commands.filter((message) => (message.command as Record<string, unknown>).type === 'focusCamera'),

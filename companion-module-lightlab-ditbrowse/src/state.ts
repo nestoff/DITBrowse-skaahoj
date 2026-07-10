@@ -45,11 +45,7 @@ export function sameCatalog(left: CameraCatalogEntry[], right: CameraCatalogEntr
 	return JSON.stringify(left) === JSON.stringify(right)
 }
 
-export function applyStatus(
-	previous: ConnectionState,
-	status: DitBrowseStatus,
-	revision?: number,
-): AppliedStatus {
+export function applyStatus(previous: ConnectionState, status: DitBrowseStatus, revision?: number): AppliedStatus {
 	if (revision !== undefined && revision <= previous.revision) {
 		return { state: previous, accepted: false, catalogChanged: false }
 	}

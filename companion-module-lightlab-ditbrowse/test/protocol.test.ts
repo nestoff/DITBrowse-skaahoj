@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-	ProtocolValidationError,
-	createClientHello,
-	parseServerMessage,
-} from '../src/protocol.js'
+import { ProtocolValidationError, createClientHello, parseServerMessage } from '../src/protocol.js'
 import { statusFixture } from './fixtures.js'
 
 describe('protocol', () => {

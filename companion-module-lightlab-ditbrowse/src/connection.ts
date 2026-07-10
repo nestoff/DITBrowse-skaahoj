@@ -1,4 +1,4 @@
-import WebSocket from 'ws'
+import WebSocket, { type RawData } from 'ws'
 import {
 	CONTROL_WEBSOCKET_PATH,
 	ProtocolValidationError,
@@ -33,6 +33,12 @@ interface PendingRequest {
 }
 
 const DEFAULT_RECONNECT_DELAYS = [1_000, 2_000, 5_000, 10_000]
+
+function rawDataText(data: RawData): string {
+	if (Array.isArray(data)) return Buffer.concat(data).toString('utf8')
+	if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8')
+	return data.toString('utf8')
+}
 
 export class DitBrowseConnection {
 	private readonly callbacks: ConnectionCallbacks
@@ -117,7 +123,7 @@ export class DitBrowseConnection {
 		return promise
 	}
 
-	refreshStatus(): Promise<DitBrowseStatus> {
+	async refreshStatus(): Promise<DitBrowseStatus> {
 		return this.sendCommand({ type: 'status' })
 	}
 
@@ -152,7 +158,7 @@ export class DitBrowseConnection {
 		socket.on('message', (data) => {
 			if (generation !== this.generation) return
 			try {
-				this.handleMessage(JSON.parse(data.toString()) as unknown)
+				this.handleMessage(JSON.parse(rawDataText(data)) as unknown)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : 'Invalid DIT Browse message'
 				this.callbacks.onError(message)

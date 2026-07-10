@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-	EMPTY_CONNECTION_STATE,
-	applyStatus,
-	cameraCatalog,
-	selectedCamera,
-} from '../src/state.js'
+import { EMPTY_CONNECTION_STATE, applyStatus, cameraCatalog, selectedCamera } from '../src/state.js'
 import { statusFixture } from './fixtures.js'
 
 describe('state', () => {
@@ -30,11 +25,7 @@ describe('state', () => {
 
 	it('reports catalog changes separately from selection changes', () => {
 		const first = applyStatus(EMPTY_CONNECTION_STATE, statusFixture, 1)
-		const selectionOnly = applyStatus(
-			first.state,
-			{ ...statusFixture, selectedCameraNumber: 2, selectedIndex: 2 },
-			2,
-		)
+		const selectionOnly = applyStatus(first.state, { ...statusFixture, selectedCameraNumber: 2, selectedIndex: 2 }, 2)
 
 		expect(first.catalogChanged).toBe(true)
 		expect(selectionOnly.catalogChanged).toBe(false)
