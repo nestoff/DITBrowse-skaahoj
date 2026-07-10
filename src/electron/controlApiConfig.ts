@@ -4,6 +4,7 @@ import type { ControlApiConfig, ControlApiInfo } from "../shared/controlApi.js";
 
 const configFileName = "ditbrowse-control-api-config.json";
 const runtimeFileName = "ditbrowse-control-api.json";
+export const DEFAULT_CONTROL_API_PORT = 52780;
 
 export function controlApiConfigPath(userDataPath: string): string {
   return path.join(userDataPath, configFileName);
@@ -34,7 +35,7 @@ export async function loadControlApiConfig(userDataPath: string): Promise<Contro
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
-      return { port: null };
+      return { port: DEFAULT_CONTROL_API_PORT };
     }
 
     throw error;

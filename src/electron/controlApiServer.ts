@@ -1,23 +1,49 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
+import WebSocket, { WebSocketServer } from "ws";
 import type {
   ControlApiCommand,
   ControlApiErrorCode,
-  ControlApiResponse
+  ControlApiResponse,
+  ControlApiStatus
 } from "../shared/controlApi.js";
+import { parsePositiveCameraNumber } from "../shared/controlApi.js";
+import {
+  CONTROL_PROTOCOL,
+  CONTROL_PROTOCOL_CAPABILITIES,
+  CONTROL_PROTOCOL_VERSION,
+  CONTROL_WEBSOCKET_PATH,
+  isControlProtocolParseError,
+  parseControlProtocolClientMessage,
+  toControlApiCommand,
+  toControlProtocolResult,
+  type ControlProtocolError,
+  type ControlProtocolServerHello,
+  type ControlProtocolServerMessage,
+  type ControlProtocolStatusEvent
+} from "../shared/controlProtocol.js";
 
 const HOST = "127.0.0.1";
 
 interface ControlApiServerOptions {
   dispatch: (command: ControlApiCommand) => Promise<ControlApiResponse>;
   port?: number | null;
+  appVersion?: string;
 }
 
 export interface ControlApiServer {
   host: string;
   port: number;
   baseUrl: string;
+  readonly clientCount: number;
+  publishStatus: (status: ControlApiStatus, revision: number) => void;
   close: () => Promise<void>;
+}
+
+interface ClientState {
+  handshaken: boolean;
+  alive: boolean;
+  missedPongs: number;
 }
 
 function requestId(): string {
@@ -66,6 +92,26 @@ async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
 }
 
+function badCameraNumber(message: string): ControlApiResponse {
+  return { ok: false, error: "bad_request", message };
+}
+
+function cameraCommand(value: unknown): ControlApiCommand | ControlApiResponse {
+  const trimmed = typeof value === "string" ? value.trim() : value;
+  if (typeof trimmed === "string" && !/^\d+$/.test(trimmed)) {
+    return badCameraNumber("Camera number must be a positive integer");
+  }
+
+  const parsed = parsePositiveCameraNumber(
+    typeof trimmed === "string" ? Number(trimmed) : trimmed
+  );
+  if (parsed === null) {
+    return badCameraNumber("Camera number must be a positive integer");
+  }
+
+  return { requestId: requestId(), type: "focusCamera", cameraNumber: parsed };
+}
+
 function commandFromRoute(
   method: string | undefined,
   pathname: string,
@@ -91,17 +137,12 @@ function commandFromRoute(
 
   const simpleFocusMatch = /^\/api\/focus\/([^/]+)$/.exec(pathname);
   if (method === "GET" && simpleFocusMatch) {
-    return {
-      requestId: requestId(),
-      type: "focusCamera",
-      cameraNumber: decodeURIComponent(simpleFocusMatch[1])
-    };
+    return cameraCommand(decodeURIComponent(simpleFocusMatch[1]));
   }
 
   if (method === "GET" && pathname === "/api/focus") {
-    const cameraNumber = searchParams.get("camera") ?? searchParams.get("cameraNumber") ?? "";
-    if (cameraNumber.trim()) {
-      return { requestId: requestId(), type: "focusCamera", cameraNumber };
+    if (searchParams.has("camera") || searchParams.has("cameraNumber")) {
+      return cameraCommand(searchParams.get("camera") ?? searchParams.get("cameraNumber"));
     }
 
     const specifier = searchParams.get("tab") ?? "";
@@ -117,14 +158,12 @@ function commandFromRoute(
   }
 
   if (method === "POST" && pathname === "/api/focus") {
-    const cameraNumber =
-      body && typeof body === "object" && "camera" in body
-        ? String(body.camera)
-        : body && typeof body === "object" && "cameraNumber" in body
-          ? String(body.cameraNumber)
-          : "";
-    if (cameraNumber.trim()) {
-      return { requestId: requestId(), type: "focusCamera", cameraNumber };
+    if (
+      body &&
+      typeof body === "object" &&
+      ("camera" in body || "cameraNumber" in body)
+    ) {
+      return cameraCommand("camera" in body ? body.camera : body.cameraNumber);
     }
 
     const specifier =
@@ -149,7 +188,8 @@ function commandFromRoute(
 
 export async function startControlApiServer({
   dispatch,
-  port = null
+  port = null,
+  appVersion = "0.1.0"
 }: ControlApiServerOptions): Promise<ControlApiServer> {
   const server = http.createServer(async (request, response) => {
     if (request.method === "OPTIONS") {
@@ -177,6 +217,147 @@ export async function startControlApiServer({
     }
   });
 
+  const webSocketServer = new WebSocketServer({ noServer: true });
+  const clients = new Map<WebSocket, ClientState>();
+  let latestStatusEvent: ControlProtocolStatusEvent | null = null;
+  let closed = false;
+
+  const send = (socket: WebSocket, message: ControlProtocolServerMessage): void => {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    }
+  };
+
+  const protocolError = (
+    socket: WebSocket,
+    code: ControlProtocolError["error"]["code"],
+    message: string
+  ): void => {
+    send(socket, { type: "error", error: { code, message } });
+  };
+
+  server.on("upgrade", (request, socket, head) => {
+    let pathname: string;
+    try {
+      pathname = new URL(request.url ?? "/", `http://${HOST}`).pathname;
+    } catch {
+      socket.destroy();
+      return;
+    }
+
+    if (pathname !== CONTROL_WEBSOCKET_PATH) {
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
+      webSocketServer.emit("connection", webSocket, request);
+    });
+  });
+
+  webSocketServer.on("connection", (socket) => {
+    const state: ClientState = { handshaken: false, alive: true, missedPongs: 0 };
+    clients.set(socket, state);
+
+    socket.on("pong", () => {
+      state.alive = true;
+      state.missedPongs = 0;
+    });
+
+    socket.on("close", () => {
+      clients.delete(socket);
+    });
+
+    socket.on("message", async (data) => {
+      let rawMessage: unknown;
+      try {
+        rawMessage = JSON.parse(data.toString()) as unknown;
+      } catch {
+        protocolError(socket, "bad_request", "Message must contain valid JSON");
+        return;
+      }
+
+      const message = parseControlProtocolClientMessage(rawMessage);
+      if (isControlProtocolParseError(message)) {
+        if (message.requestId) {
+          send(socket, {
+            type: "result",
+            requestId: message.requestId,
+            ok: false,
+            error: { code: message.error, message: message.message }
+          });
+        } else {
+          protocolError(socket, "bad_request", message.message);
+        }
+        return;
+      }
+
+      if (message.type === "hello") {
+        if (state.handshaken) {
+          protocolError(socket, "bad_request", "Client has already completed the handshake");
+          return;
+        }
+
+        state.handshaken = true;
+        const hello: ControlProtocolServerHello = {
+          type: "hello",
+          protocol: CONTROL_PROTOCOL,
+          protocolVersion: CONTROL_PROTOCOL_VERSION,
+          server: { name: "DIT Browse", version: appVersion },
+          capabilities: CONTROL_PROTOCOL_CAPABILITIES
+        };
+        send(socket, hello);
+        if (latestStatusEvent) {
+          send(socket, latestStatusEvent);
+        }
+        return;
+      }
+
+      if (!state.handshaken) {
+        send(socket, {
+          type: "result",
+          requestId: message.requestId,
+          ok: false,
+          error: { code: "bad_request", message: "Complete the hello handshake first" }
+        });
+        return;
+      }
+
+      let result: ControlApiResponse;
+      try {
+        result = await dispatch(toControlApiCommand(message));
+      } catch (error) {
+        result = {
+          ok: false,
+          error: "internal_error",
+          message: error instanceof Error ? error.message : "Internal control API error"
+        };
+      }
+      send(socket, toControlProtocolResult(message.requestId, result));
+    });
+  });
+
+  const healthTimer = setInterval(() => {
+    for (const [socket, state] of clients) {
+      if (socket.readyState !== WebSocket.OPEN) {
+        continue;
+      }
+
+      if (!state.alive) {
+        state.missedPongs += 1;
+        if (state.missedPongs >= 2) {
+          socket.terminate();
+          continue;
+        }
+      }
+
+      state.alive = false;
+      socket.ping();
+    }
+  }, 15_000);
+  healthTimer.unref();
+
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(port ?? 0, HOST, () => {
@@ -190,20 +371,45 @@ export async function startControlApiServer({
     throw new Error("Control API server did not bind to a TCP port");
   }
 
-  return {
+  const api: ControlApiServer = {
     host: HOST,
     port: address.port,
     baseUrl: `http://${HOST}:${address.port}`,
-    close: () =>
-      new Promise<void>((resolve, reject) => {
+    get clientCount() {
+      return [...clients.keys()].filter((socket) => socket.readyState === WebSocket.OPEN).length;
+    },
+    publishStatus: (status, revision) => {
+      latestStatusEvent = { type: "event", event: "status", revision, status };
+      for (const [socket, state] of clients) {
+        if (state.handshaken) {
+          send(socket, latestStatusEvent);
+        }
+      }
+    },
+    close: async () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      clearInterval(healthTimer);
+
+      for (const socket of clients.keys()) {
+        socket.terminate();
+      }
+      clients.clear();
+
+      await new Promise<void>((resolve) => webSocketServer.close(() => resolve()));
+      await new Promise<void>((resolve, reject) => {
         server.close((error) => {
           if (error) {
             reject(error);
             return;
           }
-
           resolve();
         });
-      })
+      });
+    }
   };
+
+  return api;
 }

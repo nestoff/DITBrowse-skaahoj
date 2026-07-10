@@ -17,8 +17,16 @@ async function tempUserData(): Promise<string> {
 }
 
 describe("controlApiConfig", () => {
-  it("defaults to an automatic port when no config exists", async () => {
+  it("defaults to the Companion port when no config exists", async () => {
     const userDataPath = await tempUserData();
+
+    await expect(loadControlApiConfig(userDataPath)).resolves.toEqual({ port: 52780 });
+  });
+
+  it("preserves an explicitly saved automatic port", async () => {
+    const userDataPath = await tempUserData();
+
+    await saveControlApiConfig(userDataPath, { port: null });
 
     await expect(loadControlApiConfig(userDataPath)).resolves.toEqual({ port: null });
   });
