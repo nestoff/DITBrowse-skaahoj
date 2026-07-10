@@ -187,10 +187,42 @@ test("camera list supports spreadsheet navigation, copy, paste, and row growth",
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toBe("A\t01\nB\t02");
 
+  await page.getByRole("button", { name: "Copy Table" }).click();
+  const copiedTable = await page.evaluate(() => navigator.clipboard.readText());
+  const copiedRows = copiedTable.split("\n").map((row) => row.split("\t"));
+  expect(copiedRows[0]).toEqual([
+    "Index",
+    "Camera #",
+    "Full URL",
+    "Type",
+    "Lens",
+    "Display Note",
+    "Viewport",
+    "Zoom"
+  ]);
+  expect(copiedTable).not.toContain("Follow Prefix");
+
+  const typeColumn = copiedRows[0].indexOf("Type");
+  const lensColumn = copiedRows[0].indexOf("Lens");
+  copiedRows[1][typeColumn] = "BURANO";
+  copiedRows[1][lensColumn] = "85mm";
+  await page.evaluate(
+    (text) => navigator.clipboard.writeText(text),
+    copiedRows.map((row) => row.join("\t")).join("\n")
+  );
+
+  await page.getByRole("spinbutton", { name: "L zoom", exact: true }).click();
+  await page.keyboard.press("Meta+V");
+  await expect(page.getByLabel("A type")).toHaveValue("BURANO");
+  await expect(page.getByLabel("A lens")).toHaveValue("85mm");
+  await expect(page.getByLabel("A follow prefix")).toBeChecked();
+  await expect(page.getByRole("status")).toContainText("Pasted 96 cells");
+  await expect(page.getByRole("status")).not.toContainText("added");
+
   await page.getByLabel("L index").click();
   await page.evaluate(() =>
     navigator.clipboard.writeText(
-      "Camera #\tIndex\tType\tLens\n12\tL\tVENICE 2\t35mm\n13\tM\tFR7\t50mm\n14\tN\tBURANO\t85mm"
+      "L\t12\t\tVENICE 2\t35mm\nM\t13\t\tFR7\t50mm\nN\t14\t\tBURANO\t85mm"
     )
   );
   await page.keyboard.press("Meta+V");

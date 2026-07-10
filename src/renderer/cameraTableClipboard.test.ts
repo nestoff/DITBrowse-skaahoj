@@ -133,18 +133,19 @@ describe("camera table serialization", () => {
     ).toBe("VENICE 2\t35mm\nFR7\t50mm");
   });
 
-  it("serializes the complete draft with standard headers", () => {
+  it("serializes the complete draft without app-only Follow Prefix state", () => {
     const output = serializeWholeCameraTable(list);
 
     expect(output.split("\n")[0]).toBe(
-      "Follow Prefix\tIndex\tCamera #\tFull URL\tType\tLens\tDisplay Note\tViewport\tZoom"
+      "Index\tCamera #\tFull URL\tType\tLens\tDisplay Note\tViewport\tZoom"
     );
     expect(output.split("\n")[1]).toBe(
-      "TRUE\tA\t01\thttp://10.20.100.01\tVENICE 2\t35mm\tWide\t\t"
+      "A\t01\thttp://10.20.100.01\tVENICE 2\t35mm\tWide\t\t"
     );
     expect(output.split("\n")[2]).toBe(
-      "FALSE\tB\t02\thttp://10.20.100.55/rmt.html\tFR7\t50mm\tClose\t1280x720\t1.05"
+      "B\t02\thttp://10.20.100.55/rmt.html\tFR7\t50mm\tClose\t1280x720\t1.05"
     );
+    expect(output).not.toContain("Follow Prefix");
     expect(CAMERA_TABLE_COLUMNS).toHaveLength(9);
   });
 });
@@ -228,10 +229,10 @@ describe("camera table paste", () => {
     );
   });
 
-  it("maps reordered headers and applies explicit values in deterministic order", () => {
+  it("maps reordered headers from the first row and ignores legacy Follow Prefix values", () => {
     const result = pasteCameraTableText(
       list,
-      { rowIndex: 0, columnIndex: 8 },
+      { rowIndex: 1, columnIndex: 8 },
       "Lens\tCamera #\tIndex\tZoom\tViewport\tFollow Prefix\tUnknown\n35mm\t5\tHero\t125%\t1200X800\tno\tignored"
     );
 
@@ -243,8 +244,9 @@ describe("camera table paste", () => {
       lens: "35mm",
       viewportOverride: { width: 1200, height: 800 },
       zoomOverride: 1.25,
-      usesListPrefix: false
+      usesListPrefix: true
     });
+    expect(result?.selection.anchor.rowIndex).toBe(0);
     expect(result?.issues).toEqual([
       expect.objectContaining({
         sourceRow: 1,
@@ -262,7 +264,7 @@ describe("camera table paste", () => {
       "Name\tAddress\tNotes\tScale\nRemote\t10.20.100.107/index\tStage Right\t105%"
     );
 
-    expect(result?.list.cameras[1]).toMatchObject({
+    expect(result?.list.cameras[0]).toMatchObject({
       name: "Remote",
       url: "http://10.20.100.107/index",
       displayNote: "Stage Right",
@@ -279,7 +281,7 @@ describe("camera table paste", () => {
     );
 
     expect(result?.cellsUpdated).toBe(1);
-    expect(result?.issues).toHaveLength(3);
+    expect(result?.issues).toHaveLength(2);
     expect(result?.list.cameras[0]).toMatchObject({
       cameraType: "FR7",
       viewportOverride: null,
@@ -301,6 +303,21 @@ describe("camera table paste", () => {
       lens: "",
       displayNote: "Stage"
     });
+  });
+
+  it("keeps headerless paste anchored to the selected cell", () => {
+    const result = pasteCameraTableText(
+      list,
+      { rowIndex: 1, columnIndex: 4 },
+      "BURANO\t85mm"
+    );
+
+    expect(result?.list.cameras[0].cameraType).toBe("VENICE 2");
+    expect(result?.list.cameras[1]).toMatchObject({
+      cameraType: "BURANO",
+      lens: "85mm"
+    });
+    expect(result?.selection.anchor).toEqual({ rowIndex: 1, columnIndex: 4 });
   });
 
   it("reports positional cells beyond the final data column", () => {

@@ -25,6 +25,10 @@ export type CameraTableColumnKey = (typeof CAMERA_TABLE_COLUMNS)[number]["key"];
 export type CameraTableSelectionMode = "cells" | "rows" | "columns";
 export type CameraIdFactory = () => string;
 
+const CAMERA_TABLE_SPREADSHEET_COLUMN_INDEXES = CAMERA_TABLE_COLUMNS.flatMap(
+  (column, columnIndex) => (column.key === "usesListPrefix" ? [] : [columnIndex])
+);
+
 export interface CameraTableCell {
   rowIndex: number;
   columnIndex: number;
@@ -297,17 +301,20 @@ export function serializeCameraTableSelection(
 }
 
 export function serializeWholeCameraTable(list: CameraList): string {
-  const headers = CAMERA_TABLE_COLUMNS.map((column) => column.label).join("\t");
+  const headers = CAMERA_TABLE_SPREADSHEET_COLUMN_INDEXES.map(
+    (columnIndex) => CAMERA_TABLE_COLUMNS[columnIndex].label
+  ).join("\t");
   if (list.cameras.length === 0) {
     return headers;
   }
 
-  const rows = serializeRows(list, {
-    rowStart: 0,
-    rowEnd: list.cameras.length - 1,
-    columnStart: 0,
-    columnEnd: CAMERA_TABLE_COLUMN_COUNT - 1
-  });
+  const rows = list.cameras
+    .map((camera) =>
+      CAMERA_TABLE_SPREADSHEET_COLUMN_INDEXES.map((columnIndex) =>
+        cameraTableCellValue(camera, columnIndex)
+      ).join("\t")
+    )
+    .join("\n");
   return `${headers}\n${rows}`;
 }
 
@@ -503,7 +510,11 @@ function assignmentsForHeaderRow(
   headerColumns: Array<number | null>
 ): PasteAssignment[] {
   return headerColumns.flatMap((columnIndex, sourceColumnIndex) => {
-    if (columnIndex === null || sourceColumnIndex >= row.length) {
+    if (
+      columnIndex === null ||
+      sourceColumnIndex >= row.length ||
+      CAMERA_TABLE_COLUMNS[columnIndex].key === "usesListPrefix"
+    ) {
       return [];
     }
     return [{ columnIndex, sourceColumnIndex, value: row[sourceColumnIndex] }];
@@ -539,6 +550,7 @@ export function pasteCameraTableText(
   const mode = recognizedHeaderCount >= 2 ? "headers" : "positional";
   const headerColumns = mode === "headers" ? firstRowColumnIndexes : [];
   const dataRows = mode === "headers" ? rows.slice(1) : rows;
+  const destinationStartRow = mode === "headers" ? 0 : activeCell.rowIndex;
   const issues: CameraTablePasteIssue[] = [];
 
   if (mode === "headers") {
@@ -557,7 +569,7 @@ export function pasteCameraTableText(
   }
 
   let nextList = cloneCameraList(list);
-  const requiredRowCount = Math.min(99, activeCell.rowIndex + dataRows.length);
+  const requiredRowCount = Math.min(99, destinationStartRow + dataRows.length);
   while (nextList.cameras.length < requiredRowCount) {
     nextList = appendSequentialCamera(nextList, createId);
   }
@@ -566,7 +578,11 @@ export function pasteCameraTableText(
 
   const mappedColumns =
     mode === "headers"
-      ? headerColumns.filter((columnIndex): columnIndex is number => columnIndex !== null)
+      ? headerColumns.filter(
+          (columnIndex): columnIndex is number =>
+            columnIndex !== null &&
+            CAMERA_TABLE_COLUMNS[columnIndex].key !== "usesListPrefix"
+        )
       : dataRows.flatMap((row) =>
           row.map((_, sourceColumnIndex) => activeCell.columnIndex + sourceColumnIndex)
         ).filter((columnIndex) => columnIndex < CAMERA_TABLE_COLUMN_COUNT);
@@ -574,10 +590,10 @@ export function pasteCameraTableText(
     mappedColumns.length > 0 ? Math.min(...mappedColumns) : activeCell.columnIndex;
   const selectionColumnEnd =
     mappedColumns.length > 0 ? Math.max(...mappedColumns) : activeCell.columnIndex;
-  let finalDestinationRow = activeCell.rowIndex;
+  let finalDestinationRow = destinationStartRow;
 
   dataRows.forEach((row, dataRowIndex) => {
-    const destinationRow = activeCell.rowIndex + dataRowIndex;
+    const destinationRow = destinationStartRow + dataRowIndex;
     const sourceRow = dataRowIndex + (mode === "headers" ? 2 : 1);
     if (destinationRow >= 99 || !nextList.cameras[destinationRow]) {
       issues.push({
@@ -627,7 +643,7 @@ export function pasteCameraTableText(
     list: nextList,
     selection: createCameraTableSelection(
       "cells",
-      { rowIndex: activeCell.rowIndex, columnIndex: selectionColumnStart },
+      { rowIndex: destinationStartRow, columnIndex: selectionColumnStart },
       { rowIndex: finalDestinationRow, columnIndex: selectionColumnEnd }
     ),
     mode,

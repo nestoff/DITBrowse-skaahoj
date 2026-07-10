@@ -584,7 +584,7 @@ export function CameraListEditor({
                 tooltip={{
                   title: "Copy camera table",
                   description:
-                    "Copies column headers and every draft camera row for Numbers, Excel, or Google Sheets."
+                    "Copies editable camera details with headers for Numbers, Excel, or Google Sheets. Follow Prefix stays in DITBrowse."
                 }}
                 onClick={() => void copyWholeCameraTable()}
               >

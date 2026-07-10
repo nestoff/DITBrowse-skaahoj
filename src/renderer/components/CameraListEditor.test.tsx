@@ -409,7 +409,7 @@ describe("CameraListEditor", () => {
     expect(setData).toHaveBeenCalledWith("text/plain", "A\t01\nB\t02");
   });
 
-  it("pastes spreadsheet headers and rows into the draft before save", () => {
+  it("skips spreadsheet headers, starts at the first row, and preserves Follow Prefix", () => {
     const { onSaveList } = renderEditor();
     const lastIndex = screen.getByLabelText("L index");
     fireEvent.click(lastIndex);
@@ -417,18 +417,26 @@ describe("CameraListEditor", () => {
     fireEvent.paste(lastIndex, {
       clipboardData: {
         getData: () =>
-          "Camera #\tIndex\tType\tLens\n12\tL\tVENICE 2\t35mm\n13\tM\tFR7\t50mm\n14\tN\tBURANO\t85mm"
+          "Index\tCamera #\tType\tLens\tFollow Prefix\nA\t01\tBURANO\t85mm\tFALSE\nB\t02\tFR7\t50mm\tFALSE"
       }
     });
 
     expect(onSaveList).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("M camera number")).toHaveValue("13");
-    expect(screen.getByLabelText("N type")).toHaveValue("BURANO");
-    expect(screen.getByRole("status")).toHaveTextContent("added 2 camera rows");
+    expect(screen.getByLabelText("A type")).toHaveValue("BURANO");
+    expect(screen.getByLabelText("A lens")).toHaveValue("85mm");
+    expect(screen.getByLabelText("A follow prefix")).toBeChecked();
+    expect(screen.getByLabelText("B type")).toHaveValue("FR7");
+    expect(screen.getByRole("status")).toHaveTextContent("Pasted 8 cells");
+    expect(screen.getByRole("status")).not.toHaveTextContent("added");
 
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onSaveList.mock.calls[0][0].cameras).toHaveLength(14);
+    expect(onSaveList.mock.calls[0][0].cameras).toHaveLength(12);
+    expect(onSaveList.mock.calls[0][0].cameras[0]).toMatchObject({
+      cameraType: "BURANO",
+      lens: "85mm",
+      usesListPrefix: true
+    });
   });
 
   it("discards pasted draft rows without saving them", () => {
@@ -437,9 +445,11 @@ describe("CameraListEditor", () => {
     fireEvent.click(lastIndex);
     fireEvent.paste(lastIndex, {
       clipboardData: {
-        getData: () => "Camera #\tIndex\n12\tL\n13\tM"
+        getData: () => "L\t12\nM\t13"
       }
     });
+
+    expect(screen.getByLabelText("M camera number")).toHaveValue("13");
 
     fireEvent.click(screen.getByRole("button", { name: "Discard" }));
     fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
@@ -477,8 +487,9 @@ describe("CameraListEditor", () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
     expect(writeText.mock.calls[0][0]).toMatch(
-      /^Follow Prefix\tIndex\tCamera #\tFull URL\tType\tLens\tDisplay Note\tViewport\tZoom\nTRUE\tA\t01\t/
+      /^Index\tCamera #\tFull URL\tType\tLens\tDisplay Note\tViewport\tZoom\nA\t01\t/
     );
+    expect(writeText.mock.calls[0][0]).not.toContain("Follow Prefix");
     expect(writeText.mock.calls[0][0]).toContain("\tVENICE 2\t");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Copied 12 camera rows with headers"
