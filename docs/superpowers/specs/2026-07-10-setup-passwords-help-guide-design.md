@@ -2,7 +2,7 @@
 
 ## Goal
 
-Create a concise, brand-neutral help guide that helps a first-time DITBrowse operator configure cameras and manage camera logins without needing prior knowledge of the application. The guide is bundled into DITBrowse for offline use and published as a GitHub Wiki from the same canonical content.
+Create a concise, brand-neutral help guide that helps a first-time DITBrowse operator configure cameras and manage camera logins without needing prior knowledge of the application. The guide is a bundled, wiki-style page inside DITBrowse and works without GitHub or an internet connection.
 
 The documentation centers on two tasks:
 
@@ -22,10 +22,8 @@ Copy uses short steps, plain verbs, and the exact labels shown in the applicatio
 The opening section provides:
 
 - A one-paragraph description of DITBrowse.
-- A short setup sequence linking to the Camera Setup and Passwords and Sign-In pages.
+- A short setup sequence linking to the Camera Setup and Passwords and Sign-In sections.
 - A compact overview still of the main camera workspace.
-
-The GitHub Wiki Home page additionally links to the latest notarized Apple-silicon DMG release.
 
 ### Camera Setup
 
@@ -107,64 +105,52 @@ Both the unmodified source capture and the publication-ready annotated image are
 - Use generic camera types such as `Studio Camera` only when demonstrating type matching.
 - Do not use production job names, saved URLs, usernames, or passwords.
 - Do not show a plaintext password in Settings or authentication suggestions.
-- Review every image at original resolution before publication.
+- Review every image at original resolution before it is included in the app.
 
-## In-app Help Guide
+## In-app Help page
 
-DITBrowse gains a **Help** button beside **Camera List** in the main toolbar. It opens a full-window Help Guide overlay that follows the existing Camera List editor pattern rather than squeezing long instructions into a small dialog.
+DITBrowse gains a **Help** button in the main tab row beside **Camera List**. Activating it selects a temporary **Help** tab and replaces the camera grid with a complete, wiki-style Help page inside the main application window. It does not open GitHub, the system browser, a floating dialog, or a separate window.
 
-The overlay provides:
+The Help tab provides:
 
-- A clear **Help Guide** title and close action.
+- A clear **Help Guide** title and a closable **Help** tab in the existing tab row.
 - A compact navigation column for Quick Start, Camera Setup, Passwords and Sign-In, and Troubleshooting.
-- A scrollable reading area with the same headings, steps, captions, and annotated stills used by the Wiki.
-- Keyboard and focus behavior consistent with the rest of the application, including closing with Escape and returning focus to the Help button.
+- A scrollable reading area with headings, steps, captions, and annotated stills.
+- Anchor-style section navigation that behaves like a small local documentation website.
+- Keyboard and focus behavior consistent with the camera tabs.
 - Responsive sizing so text and annotations remain legible without stretching the guide edge to edge on a large display.
 
-The complete guide, styles, and image assets are packaged with the application. Opening or reading Help never requires internet access, GitHub access, or an authenticated repository account. External links, such as the release page, are omitted from the offline Quick Start unless they can be presented as optional links without blocking the guide.
+The Help tab is transient interface state. It is never saved as a camera, never appears in the camera list, does not change the selected camera, and does not affect Companion status. Closing Help returns the operator to the camera or grid view that was active before Help opened.
 
-## Shared content architecture
+The complete guide, styles, and image assets are packaged with the application. Opening or reading Help never requires internet access or an external account.
 
-The implementation keeps one canonical set of guide content and annotated images in the repository. The in-app renderer consumes that content at build time, and a deterministic publication script produces the GitHub Wiki Markdown pages from it. This prevents the in-app wording, callout numbers, image filenames, and Wiki instructions from drifting apart.
+## Content architecture
 
-Guide content is data-only and does not execute arbitrary HTML. Each section declares its title, ordered steps, troubleshooting entries, image, alternative text, caption, and numbered callouts. The in-app component renders those fields natively, while the Wiki exporter converts them to Markdown.
+The implementation keeps one canonical set of guide content and annotated images in the application repository. The renderer consumes that content at build time and presents it as native React content styled like a documentation website.
+
+Guide content is data-only and does not execute arbitrary HTML. Each section declares its title, ordered steps, troubleshooting entries, image, alternative text, caption, and numbered callouts. The in-app component renders those fields natively.
 
 The canonical help assets are versioned with the application. A UI change that affects a documented control requires updating its source capture, annotated still, and associated guide content in the same change.
 
-## GitHub Wiki publication
-
-The repository Wiki is currently disabled. Implementation will:
-
-1. Enable the GitHub Wiki for `Lightlab24/DITBrowse`.
-2. Initialize or clone the repository's wiki Git repository.
-3. Generate and publish `Home.md`, `Camera-Setup.md`, `Passwords-and-Sign-In.md`, `Troubleshooting.md`, and `_Sidebar.md` from the canonical help content.
-4. Store stills under an `images/` directory in the wiki repository and reference them with relative Markdown links.
-5. Link the Home page to the v0.1.1 release page and direct DMG asset.
-
-Because the GitHub repository is private, the Wiki and its images remain limited to users with repository access unless repository visibility changes separately.
-
 ## Verification
 
-Before publication:
+Before release:
 
 - Verify every application label matches v0.1.1.
 - Compare every annotated still with a fresh capture of the installed app.
 - Confirm each arrow terminates at the correct control and each marker matches its caption item.
-- Verify all relative page and image links.
-- Confirm every required still renders in Markdown.
+- Verify all section-navigation links and image paths.
+- Confirm every required still renders in the packaged Help page.
 - Inspect each still at original resolution for credentials or production data.
 - Build the packaged application and confirm the Help Guide works with networking disabled.
-- Confirm the Help overlay is keyboard accessible, scrollable, and readable at the application's minimum supported window size.
-- Confirm opening and closing Help does not change the workspace, camera selection, or saved credentials.
-- Confirm the wiki sidebar reaches all four pages.
-- Confirm the release and DMG links resolve.
-- Read the complete wiki once in task order as a first-time operator.
+- Confirm the Help tab is keyboard accessible, scrollable, and readable at the application's minimum supported window size.
+- Confirm opening, navigating, and closing Help does not change the workspace, camera selection, saved credentials, or Companion status.
+- Read the complete in-app guide once in task order as a first-time operator.
 
-After publication:
+After packaging:
 
-- Read back each page from the wiki Git repository.
-- Confirm the GitHub repository reports Wiki enabled.
-- Confirm the Home page URL is available to an authenticated repository user.
+- Launch the built app from `/Applications` and open every Help section.
+- Confirm the clean and annotated stills in the package match the reviewed source assets.
 
 ## Out of scope
 
@@ -173,4 +159,4 @@ After publication:
 - Network engineering beyond shared prefix and camera-address examples.
 - Developer architecture, API, source-build, and release-process documentation.
 - Camera-manufacturer login screens beyond the generic authentication prompt already presented by DITBrowse.
-- Changing repository visibility.
+- A GitHub Wiki or any externally hosted copy of the guide.
