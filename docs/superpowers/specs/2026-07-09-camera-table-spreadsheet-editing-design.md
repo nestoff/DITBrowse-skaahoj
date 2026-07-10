@@ -12,7 +12,7 @@ This change adds:
 - Active-cell and rectangular range selection.
 - Whole-row and whole-column selection.
 - Spreadsheet-compatible copy and paste.
-- One-command copying of the complete table with headers.
+- One-command copying of the spreadsheet-facing table with headers.
 - Automatic row creation when pasted data exceeds the current list.
 - Header-aware column mapping.
 - Paste validation and a compact result notice.
@@ -22,7 +22,7 @@ It does not change persisted workspace data, camera URL resolution, tab/grid ord
 
 ## Data Columns
 
-Clipboard selection includes only these nine editable data columns, in visual order:
+The editable table contains these nine data columns, in visual order:
 
 1. Follow Prefix
 2. Index
@@ -35,6 +35,8 @@ Clipboard selection includes only these nine editable data columns, in visual or
 9. Zoom
 
 Move and Delete are action columns. They are never copied or pasted.
+
+`Follow Prefix` is app-only control state. A manual cell, row, or column selection can still copy it when the user explicitly includes that visible table cell, but **Copy Table** and header-based spreadsheet imports exclude it. The spreadsheet-facing table therefore contains these eight columns: `Index`, `Camera #`, `Full URL`, `Type`, `Lens`, `Display Note`, `Viewport`, and `Zoom`.
 
 Copied values use these representations:
 
@@ -89,9 +91,9 @@ The table handles the native `copy` event when a camera-table selection exists.
 
 This tab-separated format pastes directly into Numbers, Excel, and Google Sheets. For a one-cell text selection, the copied value is equivalent whether native input copying or table copying handles the event.
 
-A persistent **Copy Table** command appears in the Camera List toolbar beside the row-count controls. It copies one standard header row followed by every current draft camera row, using the same tab-separated format. The headers are, in order: `Follow Prefix`, `Index`, `Camera #`, `Full URL`, `Type`, `Lens`, `Display Note`, `Viewport`, and `Zoom`.
+A persistent **Copy Table** command appears in the Camera List toolbar beside the row-count controls. It copies one standard header row followed by every current draft camera row, using the same tab-separated format. The headers are, in order: `Index`, `Camera #`, `Full URL`, `Type`, `Lens`, `Display Note`, `Viewport`, and `Zoom`.
 
-**Copy Table** always includes every row and all nine data columns, regardless of the current cell selection. It copies the current draft, including unsaved edits and newly added rows, so the spreadsheet matches what is visible in the editor. It does not save the draft or alter the current selection. A short live-region confirmation reports how many camera rows were copied.
+**Copy Table** always includes every row and all eight spreadsheet-facing columns, regardless of the current cell selection. It never includes `Follow Prefix`. It copies the current draft, including unsaved edits and newly added rows, so the spreadsheet matches what is visible in the editor. It does not save the draft or alter the current selection. A short live-region confirmation reports how many camera rows were copied.
 
 ## Paste Formats
 
@@ -107,11 +109,11 @@ When the first clipboard row is ordinary data, the top-left value lands in the a
 
 ### Header-Mapped Paste
 
-The first clipboard row is considered a header row when it contains at least two recognized headers. Matching is case-insensitive and ignores spaces, underscores, `#`, and punctuation. Unknown header columns are skipped and reported rather than forcing positional paste.
+The first clipboard row is considered a header row when it contains at least two recognized headers. Matching is case-insensitive and ignores spaces, underscores, `#`, and punctuation. The header row is metadata only and is never entered into a camera row. Unknown header columns are skipped and reported rather than forcing positional paste.
 
 Recognized aliases are:
 
-- Follow Prefix: `follow prefix`, `follow_prefix`, `uses list prefix`.
+- Follow Prefix: `follow prefix`, `follow_prefix`, `uses list prefix` is recognized only so older exported tables can be read; its values are ignored.
 - Index: `index`, `name`.
 - Camera #: `camera #`, `camera number`, `number`, `suffix`.
 - Full URL: `full url`, `url`, `address`.
@@ -121,7 +123,7 @@ Recognized aliases are:
 - Viewport: `viewport`, `view`, `resolution`.
 - Zoom: `zoom`, `scale`.
 
-In header-mapped mode, the header row is not pasted. Recognized columns map by name regardless of clipboard order, unknown columns are skipped, and data begins at the active row. The active column is ignored because the headers define destinations. Enough sequential camera rows are appended to fit all data rows.
+In header-mapped mode, the header row is skipped. Recognized spreadsheet-facing columns map by name regardless of clipboard order, unknown columns are skipped, and data always begins at the first camera row. The active cell is ignored because the headers define both the destination columns and a complete-table round trip. Enough sequential camera rows are appended to fit all data rows. A recognized `Follow Prefix` column from an older table is silently ignored and leaves each row's current setting unchanged.
 
 ## Value Parsing
 
@@ -129,9 +131,8 @@ Text fields accept any clipboard text. Empty clipboard cells clear text fields.
 
 Special columns parse as follows:
 
-- Follow Prefix accepts `true`, `false`, `yes`, `no`, `1`, `0`, `on`, and `off`, case-insensitively. Blank resets to the default `TRUE` behavior.
 - Camera # uses the existing two-digit camera-number normalization.
-- Full URL uses the existing URL normalization and prefix-following rules.
+- Full URL uses the existing URL normalization and prefix-following rules. This can switch a row to a custom URL, but imported data never writes `Follow Prefix` directly.
 - Viewport accepts `WIDTHxHEIGHT`, with either lowercase or uppercase `x`, and `default` or blank for the list default. Width and height must be positive integers.
 - Zoom accepts decimal scale (`1.05`), whole percent (`105%`), and `default` or blank. The normalized scale must remain between `0.25` and `3`.
 
@@ -141,9 +142,7 @@ For each row, updates apply in deterministic order so explicit spreadsheet data 
 2. Index.
 3. Full URL.
 4. Type, Lens, Display Note, Viewport, and Zoom.
-5. Follow Prefix.
-
-This preserves the rule that an explicit Index overrides the default index derived from Camera #, while an explicit Follow Prefix value defines whether the final URL returns to prefix/suffix behavior.
+This preserves the rule that an explicit Index overrides the default index derived from Camera #. `Follow Prefix` is not an import assignment.
 
 Invalid special values leave only that destination cell unchanged. Other valid cells in the same paste still apply.
 
@@ -190,7 +189,8 @@ The clipboard module must not depend on DOM APIs. React event handlers provide c
 - Paste with no active cell is ignored without changing the draft.
 - Empty clipboard text is ignored.
 - Clipboard rows beyond the final data column are skipped and counted.
-- A first row with at least two recognized headers enters header mode; unknown header columns are skipped and reported. Rows with fewer than two recognized headers paste positionally.
+- A first row with at least two recognized headers enters header mode; that row is skipped, imported data begins at the first camera row, and unknown header columns are skipped and reported. Rows with fewer than two recognized headers paste positionally.
+- A recognized `Follow Prefix` header and all values beneath it are ignored without changing the draft's prefix-following settings.
 - Invalid checkbox, viewport, and zoom values are skipped per cell and reported.
 - Clipboard operations never auto-save.
 - If the browser clipboard write used by **Copy Table** fails, the draft and selection remain unchanged and an inline error asks the user to select a range and use Command+C instead.
@@ -202,12 +202,12 @@ Unit tests will cover:
 - Enter, Shift+Enter, Tab, and Shift+Tab movement with complete text selection.
 - Cell, rectangular, row, and column selection bounds.
 - TSV serialization for each selection mode.
-- Whole-table TSV serialization with the standard header row and every draft row.
+- Whole-table TSV serialization with the eight spreadsheet-facing headers and every draft row, excluding `Follow Prefix`.
 - **Copy Table** success and clipboard-failure feedback without changing selection or saved data.
 - Positional paste and automatic row growth.
-- Header aliases and reordered spreadsheet columns.
+- Header aliases, reordered spreadsheet columns, first-row replacement, and ignored legacy `Follow Prefix` values.
 - Empty cells and CRLF normalization.
-- Follow Prefix, viewport, zoom, URL, Camera #, and Index parsing.
+- Viewport, zoom, URL, Camera #, and Index parsing.
 - Partial paste with invalid-cell reporting.
 - Save and Discard behavior after paste.
 - Absence of the former CSV import UI.
