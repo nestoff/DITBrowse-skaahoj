@@ -1,8 +1,8 @@
-# Camera Setup and Passwords Wiki Design
+# Camera Setup and Passwords Help Guide Design
 
 ## Goal
 
-Create a concise, brand-neutral GitHub Wiki that helps a first-time DITBrowse operator configure cameras and manage camera logins without needing prior knowledge of the application.
+Create a concise, brand-neutral help guide that helps a first-time DITBrowse operator configure cameras and manage camera logins without needing prior knowledge of the application. The guide is bundled into DITBrowse for offline use and published as a GitHub Wiki from the same canonical content.
 
 The documentation centers on two tasks:
 
@@ -15,16 +15,17 @@ The primary reader is an operator setting up DITBrowse for a job. The guide assu
 
 Copy uses short steps, plain verbs, and the exact labels shown in the application. Brand-specific examples and terminology are excluded.
 
-## Wiki structure
+## Guide structure
 
-### Home
+### Quick Start
 
-The Home page provides:
+The opening section provides:
 
 - A one-paragraph description of DITBrowse.
-- A link to the latest notarized Apple-silicon DMG release.
 - A short setup sequence linking to the Camera Setup and Passwords and Sign-In pages.
 - A compact overview still of the main camera workspace.
+
+The GitHub Wiki Home page additionally links to the latest notarized Apple-silicon DMG release.
 
 ### Camera Setup
 
@@ -74,7 +75,7 @@ Each entry follows a symptom, likely cause, and corrective action format.
 
 ## Still-image plan
 
-Fresh stills are captured from the current v0.1.1 interface using a sanitized example workspace. Images use generic camera names and non-production addresses. Password fields are blank or masked; no real credential value is displayed.
+Fresh stills are captured directly from the current DITBrowse interface using a sanitized example workspace. They are not reconstructed mockups. Images use generic camera names and documentation-only addresses. Password fields are blank or masked; no real credential value is displayed.
 
 Required stills:
 
@@ -87,14 +88,48 @@ Required stills:
 
 Stills are cropped to the relevant interface region when that improves readability. Captions explain what the reader should notice rather than repeating the heading.
 
+Every instructional still receives a restrained annotation layer after capture:
+
+- Clear arrows terminate at the exact live control or field being discussed.
+- Numbered markers establish reading order and match numbered caption items below the image.
+- Markers and arrows use high-contrast neutral white and gray styling that remains readable against the dark interface.
+- Red is reserved for destructive sign-out, forgetting, or deletion actions; blue accents are not introduced.
+- Annotations remain outside important labels and values whenever space permits and never obscure the target control.
+- Callout wording uses the exact label visible in the captured application.
+- Each annotated result is compared side by side with the unmodified capture to confirm that the interface remains an accurate representation of the current app.
+
+Both the unmodified source capture and the publication-ready annotated image are retained so annotations can be updated when the interface changes.
+
 ## Screenshot privacy and data rules
 
-- Use documentation-only camera addresses in the private IPv4 ranges.
+- Use addresses reserved for documentation, such as the `192.0.2.0/24` range.
 - Use neutral camera labels such as Camera 1 and Camera 2.
 - Use generic camera types such as `Studio Camera` only when demonstrating type matching.
 - Do not use production job names, saved URLs, usernames, or passwords.
 - Do not show a plaintext password in Settings or authentication suggestions.
 - Review every image at original resolution before publication.
+
+## In-app Help Guide
+
+DITBrowse gains a **Help** button beside **Camera List** in the main toolbar. It opens a full-window Help Guide overlay that follows the existing Camera List editor pattern rather than squeezing long instructions into a small dialog.
+
+The overlay provides:
+
+- A clear **Help Guide** title and close action.
+- A compact navigation column for Quick Start, Camera Setup, Passwords and Sign-In, and Troubleshooting.
+- A scrollable reading area with the same headings, steps, captions, and annotated stills used by the Wiki.
+- Keyboard and focus behavior consistent with the rest of the application, including closing with Escape and returning focus to the Help button.
+- Responsive sizing so text and annotations remain legible without stretching the guide edge to edge on a large display.
+
+The complete guide, styles, and image assets are packaged with the application. Opening or reading Help never requires internet access, GitHub access, or an authenticated repository account. External links, such as the release page, are omitted from the offline Quick Start unless they can be presented as optional links without blocking the guide.
+
+## Shared content architecture
+
+The implementation keeps one canonical set of guide content and annotated images in the repository. The in-app renderer consumes that content at build time, and a deterministic publication script produces the GitHub Wiki Markdown pages from it. This prevents the in-app wording, callout numbers, image filenames, and Wiki instructions from drifting apart.
+
+Guide content is data-only and does not execute arbitrary HTML. Each section declares its title, ordered steps, troubleshooting entries, image, alternative text, caption, and numbered callouts. The in-app component renders those fields natively, while the Wiki exporter converts them to Markdown.
+
+The canonical help assets are versioned with the application. A UI change that affects a documented control requires updating its source capture, annotated still, and associated guide content in the same change.
 
 ## GitHub Wiki publication
 
@@ -102,7 +137,7 @@ The repository Wiki is currently disabled. Implementation will:
 
 1. Enable the GitHub Wiki for `Lightlab24/DITBrowse`.
 2. Initialize or clone the repository's wiki Git repository.
-3. Publish `Home.md`, `Camera-Setup.md`, `Passwords-and-Sign-In.md`, `Troubleshooting.md`, and `_Sidebar.md`.
+3. Generate and publish `Home.md`, `Camera-Setup.md`, `Passwords-and-Sign-In.md`, `Troubleshooting.md`, and `_Sidebar.md` from the canonical help content.
 4. Store stills under an `images/` directory in the wiki repository and reference them with relative Markdown links.
 5. Link the Home page to the v0.1.1 release page and direct DMG asset.
 
@@ -113,9 +148,14 @@ Because the GitHub repository is private, the Wiki and its images remain limited
 Before publication:
 
 - Verify every application label matches v0.1.1.
+- Compare every annotated still with a fresh capture of the installed app.
+- Confirm each arrow terminates at the correct control and each marker matches its caption item.
 - Verify all relative page and image links.
 - Confirm every required still renders in Markdown.
 - Inspect each still at original resolution for credentials or production data.
+- Build the packaged application and confirm the Help Guide works with networking disabled.
+- Confirm the Help overlay is keyboard accessible, scrollable, and readable at the application's minimum supported window size.
+- Confirm opening and closing Help does not change the workspace, camera selection, or saved credentials.
 - Confirm the wiki sidebar reaches all four pages.
 - Confirm the release and DMG links resolve.
 - Read the complete wiki once in task order as a first-time operator.
@@ -132,4 +172,5 @@ After publication:
 - Detailed Companion module documentation.
 - Network engineering beyond shared prefix and camera-address examples.
 - Developer architecture, API, source-build, and release-process documentation.
+- Camera-manufacturer login screens beyond the generic authentication prompt already presented by DITBrowse.
 - Changing repository visibility.
