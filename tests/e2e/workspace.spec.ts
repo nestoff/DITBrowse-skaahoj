@@ -31,6 +31,25 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   await page.getByLabel("Selected tile zoom").fill("0.82");
   await expect(page.getByLabel("Selected tile zoom")).toHaveValue("0.82");
 
+  const selectedResolution = page.getByRole("combobox", {
+    name: "Selected camera resolution"
+  });
+  const applyResolutionToAll = page.getByRole("button", {
+    name: "Apply resolution to all cameras"
+  });
+  await expect(selectedResolution).toHaveValue("1024x768");
+  await expect(selectedResolution.locator("option:checked")).toHaveText("1024×768 · 4:3");
+  await selectedResolution.selectOption("1280x720");
+  await expect(page.locator('webview[data-tile-id="tile-41"]')).toHaveCSS(
+    "width",
+    "1280px"
+  );
+  await applyResolutionToAll.click();
+  await expect(page.locator('webview[data-tile-id="tile-42"]')).toHaveCSS(
+    "width",
+    "1280px"
+  );
+
   await page.getByLabel("Close A").click();
   await expect(page.getByLabel("Close A")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
@@ -86,8 +105,19 @@ test("workspace settings stay compact and centered on wide displays", async ({ p
   });
 });
 
-test("toolbar stays inside the window at supported widths", async ({ page }) => {
+test("toolbar stays inside the window at supported widths", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 2048, height: 1040 });
   await page.goto("/");
+
+  const wideToolbar = page.getByLabel("Browser toolbar");
+  const wideToolbarBox = await wideToolbar.boundingBox();
+  expect((wideToolbarBox?.x ?? 0) + (wideToolbarBox?.width ?? 0)).toBeLessThanOrEqual(
+    2048
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(2048);
+  await wideToolbar.screenshot({
+    path: testInfo.outputPath("neutral-camera-toolbar.png")
+  });
 
   for (const width of [960, 1180, 1440]) {
     await page.setViewportSize({ width, height: 800 });
@@ -98,9 +128,51 @@ test("toolbar stays inside the window at supported widths", async ({ page }) => 
     await expect(page.getByLabel("Focus selected page")).toBeVisible();
     await expect(page.getByLabel("Grid columns")).toBeVisible();
     await expect(page.getByLabel("Selected tile zoom")).toBeVisible();
-    await expect(page.getByLabel("Selected tile viewport")).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Selected camera resolution" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Apply resolution to all cameras" })
+    ).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
+});
+
+test("Camera Session keeps safe reloads on the main page and out of settings", async ({
+  page
+}) => {
+  await page.goto("/");
+
+  const selectedWebview = page.locator('webview[data-tile-id="tile-41"]');
+  await selectedWebview.evaluate((element) => {
+    const webview = element as Electron.WebviewTag;
+    webview.getURL = () => webview.getAttribute("src") ?? "";
+    webview.reload = () => webview.setAttribute("data-e2e-reloaded", "true");
+  });
+
+  await page.getByRole("button", { name: "Camera Session" }).click();
+  const sessionMenu = page.getByRole("menu");
+  const sessionActions = sessionMenu.getByRole("menuitem");
+  await expect(sessionActions).toHaveText([
+    "Reload selected",
+    "Reload all",
+    "Sign out, forget login & reload selected",
+    "Sign out, forget active-list logins & reload all…"
+  ]);
+
+  await sessionMenu
+    .getByRole("menuitem", { name: "Reload selected", exact: true })
+    .click();
+  await expect(sessionMenu).toHaveCount(0);
+  await expect(selectedWebview).toHaveAttribute("data-e2e-reloaded", "true");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
+  const settings = page.getByLabel("Camera workspace settings");
+  await expect(settings).toBeVisible();
+  await expect(settings).not.toContainText(/Sign Out/i);
+  await expect(settings).not.toContainText("Reload Every Camera");
+  await expect(settings).not.toContainText("Forget Selected");
 });
 
 test("selected camera address overrides can return to prefix and suffix style", async ({ page }) => {

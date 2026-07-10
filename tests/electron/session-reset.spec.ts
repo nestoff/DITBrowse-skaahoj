@@ -60,14 +60,14 @@ test("camera reset clears authentication and reloads the base redirect", async (
     ]) {
       await window.setViewportSize(viewport);
       const toolbarBounds = await window.getByLabel("Browser toolbar").boundingBox();
-      const viewportButtonBounds = await window
-        .getByRole("button", { name: "All viewport controls" })
+      const resolutionBounds = await window
+        .getByLabel("Selected camera resolution")
         .boundingBox();
       expect((toolbarBounds?.x ?? 0) + (toolbarBounds?.width ?? 0)).toBeLessThanOrEqual(
         viewport.width
       );
       expect(
-        (viewportButtonBounds?.x ?? 0) + (viewportButtonBounds?.width ?? 0)
+        (resolutionBounds?.x ?? 0) + (resolutionBounds?.width ?? 0)
       ).toBeLessThanOrEqual(viewport.width);
       await expect(
         window.getByRole("textbox", { name: "Address", exact: true })
@@ -87,15 +87,49 @@ test("camera reset clears authentication and reloads the base redirect", async (
     );
 
     await window.getByRole("button", { name: "Camera List", exact: true }).click();
-    await window.getByRole("button", { name: "Sign Out & Reload Camera" }).click();
+    const settingsBeforeReset = window.getByLabel("Camera workspace settings");
+    await expect(settingsBeforeReset).toContainText(camera.url);
+    await window.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(settingsBeforeReset).toBeHidden();
+
+    await window.getByRole("button", { name: "Camera Session", exact: true }).click();
+    await window
+      .getByRole("menuitem", {
+        name: "Sign out, forget login & reload selected",
+        exact: true
+      })
+      .click();
 
     await expect(signInDialog).toBeVisible();
-    await expect(signInDialog.getByLabel("Username")).toHaveValue("admin");
-    await expect(signInDialog.getByLabel("Password")).toHaveValue("secret");
+    await expect(signInDialog.getByLabel("Username")).toHaveValue("");
+    await expect(signInDialog.getByLabel("Password")).toHaveValue("");
 
-    const rootRequests = camera.requests.filter((request) => request.url === "/");
-    expect(rootRequests.length).toBeGreaterThan(1);
-    expect(rootRequests.at(-1)?.authorization).toBe("");
+    await expect
+      .poll(() => camera.requests.filter((request) => request.url === "/").length)
+      .toBeGreaterThan(rootRequestsBeforeResize);
+    const firstResetRootRequest = camera.requests.filter(
+      (request) => request.url === "/"
+    )[rootRequestsBeforeResize];
+    expect(firstResetRootRequest.authorization).toBe("");
+
+    await signInDialog.getByLabel("Save for this camera").uncheck();
+    await signInDialog.getByLabel("Username").fill("admin");
+    await signInDialog.getByLabel("Password").fill("secret");
+    await signInDialog.getByRole("button", { name: "Sign In", exact: true }).click();
+
+    await expect(window.getByRole("status")).toContainText("Cleared camera data");
+    await expect(
+      window.getByRole("textbox", { name: "Address", exact: true })
+    ).toHaveValue(`${camera.url}/rmt.html`);
+    await expect
+      .poll(() => webview.evaluate((element) => (element as Electron.WebviewTag).getURL()))
+      .toBe(`${camera.url}/rmt.html`);
+
+    await window.getByRole("button", { name: "Camera List", exact: true }).click();
+    const settingsAfterReset = window.getByLabel("Camera workspace settings");
+    await expect(settingsAfterReset).not.toContainText(camera.url);
+    await window.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(settingsAfterReset).toBeHidden();
   } finally {
     await app.close();
     await camera.close();
