@@ -1,17 +1,28 @@
-import type { KeyboardEvent, ReactElement } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { GripVertical, Plus, Save, Trash2, Upload, X } from "lucide-react";
-import {
-  defaultIndexForSuffix,
-  isDefaultIndexForSuffix,
-  nextCameraDefaults,
-  normalizeCameraNumberSuffix
-} from "../../shared/cameraIndex";
-import { parseCameraCsv } from "../../shared/csv";
-import type { CameraCsvRow } from "../../shared/csv";
+import type {
+  ClipboardEvent as ReactClipboardEvent,
+  KeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  ReactElement
+} from "react";
+import { useEffect, useRef, useState } from "react";
+import { Copy, GripVertical, Plus, Save, Trash2, X } from "lucide-react";
 import type { CameraEntry, CameraList } from "../../shared/types";
-import { normalizeCameraPrefix, normalizeCameraUrl } from "../../shared/url";
 import { VIEWPORT_PRESETS } from "../../shared/viewport";
+import {
+  CAMERA_TABLE_COLUMNS,
+  CAMERA_TABLE_COLUMN_COUNT,
+  appendSequentialCamera,
+  applyDraftCameraPatch,
+  cameraTableSelectionBounds,
+  cloneCameraList,
+  createCameraTableSelection,
+  isCameraTableCellSelected,
+  pasteCameraTableText,
+  resizeDraftCameraList,
+  serializeCameraTableSelection,
+  serializeWholeCameraTable
+} from "../cameraTableClipboard";
+import type { CameraTableSelection } from "../cameraTableClipboard";
 import type { CameraEntryPatch } from "../state/workspaceReducer";
 import { Button } from "./ui/Button";
 import { Dialog } from "./ui/Dialog";
@@ -19,7 +30,6 @@ import { IconButton } from "./ui/IconButton";
 import { WorkspaceSettings } from "./WorkspaceSettings";
 import type { WorkspaceSettingsProps } from "./WorkspaceSettings";
 
-const CAMERA_TABLE_COLUMN_COUNT = 9;
 const CAMERA_CELL_SELECTOR = "[data-camera-list-cell='true']";
 
 function isEnterNavigationKey(event: KeyboardEvent): boolean {
@@ -32,136 +42,6 @@ function isEnterNavigationKey(event: KeyboardEvent): boolean {
   );
 }
 
-function cloneCameraList(list: CameraList): CameraList {
-  return {
-    ...list,
-    cameras: list.cameras.map((camera) => ({
-      ...camera,
-      viewportOverride: camera.viewportOverride ? { ...camera.viewportOverride } : null
-    }))
-  };
-}
-
-function draftCameraId(): string {
-  return `camera-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
-}
-
-function createDraftCamera(prefix: string, index: string, suffix: string): CameraEntry {
-  const normalizedPrefix = normalizeCameraPrefix(prefix);
-  return {
-    id: draftCameraId(),
-    name: index,
-    url: `${normalizedPrefix}${suffix}`,
-    suffix,
-    prefixOverride: "",
-    usesListPrefix: true,
-    cameraType: "",
-    lens: "",
-    displayNote: "",
-    notes: "",
-    viewportOverride: null,
-    zoomOverride: null
-  };
-}
-
-function createDraftCameraFromCsv(row: CameraCsvRow, prefix: string): CameraEntry {
-  const normalizedPrefix = normalizeCameraPrefix(prefix);
-  const url = row.url ? normalizeCameraUrl(row.url) : `${normalizedPrefix}${row.suffix}`;
-  return {
-    id: draftCameraId(),
-    name: row.name,
-    url,
-    suffix: row.suffix,
-    prefixOverride: "",
-    usesListPrefix: !row.url,
-    cameraType: row.cameraType,
-    lens: row.lens,
-    displayNote: row.displayNote,
-    notes: row.notes,
-    viewportOverride: null,
-    zoomOverride: null
-  };
-}
-
-function appendSequentialCamera(list: CameraList): CameraList {
-  const { index, suffix } = nextCameraDefaults(list.cameras);
-  return {
-    ...list,
-    cameras: [...list.cameras, createDraftCamera(list.defaultPrefix, index, suffix)]
-  };
-}
-
-function resizeDraftCameraList(list: CameraList, count: number): CameraList {
-  const safeCount = Math.max(0, Math.min(99, Math.trunc(count)));
-  if (safeCount === list.cameras.length) {
-    return list;
-  }
-
-  if (safeCount < list.cameras.length) {
-    return {
-      ...list,
-      cameras: list.cameras.slice(0, safeCount)
-    };
-  }
-
-  let next = list;
-  while (next.cameras.length < safeCount) {
-    next = appendSequentialCamera(next);
-  }
-  return next;
-}
-
-function cameraUsesDraftPrefix(camera: CameraEntry): boolean {
-  return camera.usesListPrefix !== false;
-}
-
-function applyDraftCameraPatch(
-  camera: CameraEntry,
-  patch: CameraEntryPatch,
-  listPrefix: string
-): CameraEntry {
-  const normalizedPrefix = normalizeCameraPrefix(listPrefix);
-  const normalizedPatch = {
-    ...patch,
-    ...(patch.suffix !== undefined
-      ? { suffix: normalizeCameraNumberSuffix(patch.suffix) }
-      : {}),
-    ...(patch.url !== undefined ? { url: normalizeCameraUrl(patch.url) } : {})
-  };
-  const shouldUpdateDefaultIndex =
-    "suffix" in normalizedPatch && isDefaultIndexForSuffix(camera.name, camera.suffix);
-  let next: CameraEntry = { ...camera, ...normalizedPatch };
-
-  if (shouldUpdateDefaultIndex) {
-    next = { ...next, name: defaultIndexForSuffix(next.suffix) || next.name };
-  }
-
-  if ("usesListPrefix" in normalizedPatch) {
-    next =
-      normalizedPatch.usesListPrefix === false
-        ? { ...next, usesListPrefix: false }
-        : { ...next, usesListPrefix: true, url: `${normalizedPrefix}${next.suffix}` };
-  } else if ("suffix" in normalizedPatch && cameraUsesDraftPrefix(camera)) {
-    next = { ...next, usesListPrefix: true, url: `${normalizedPrefix}${next.suffix}` };
-  } else if ("url" in normalizedPatch) {
-    const isDerivedUrl =
-      next.url === "" || next.url === normalizedPrefix || next.url === `${normalizedPrefix}${next.suffix}`;
-    next = isDerivedUrl
-      ? { ...next, usesListPrefix: true, url: `${normalizedPrefix}${next.suffix}` }
-      : { ...next, usesListPrefix: false };
-  }
-
-  if (
-    "zoomOverride" in normalizedPatch &&
-    normalizedPatch.zoomOverride !== null &&
-    normalizedPatch.zoomOverride !== undefined
-  ) {
-    next = { ...next, zoomOverride: Number(normalizedPatch.zoomOverride) };
-  }
-
-  return next;
-}
-
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) {
     return items;
@@ -171,6 +51,18 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   const [item] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, item);
   return next;
+}
+
+function cameraViewportValue(camera: CameraEntry): string {
+  return camera.viewportOverride
+    ? `${camera.viewportOverride.width}x${camera.viewportOverride.height}`
+    : "";
+}
+
+interface CameraClipboardNotice {
+  tone: "success" | "partial" | "error";
+  message: string;
+  details: string[];
 }
 
 interface CameraListEditorProps {
@@ -186,18 +78,16 @@ export function CameraListEditor({
   onSaveList,
   onClose
 }: CameraListEditorProps): ReactElement {
-  const [csvText, setCsvText] = useState(
-    "number,url,type,lens,display_note,notes\n42,,ALEXA 35,50mm,Handheld,"
-  );
   const [draftList, setDraftList] = useState<CameraList | null>(
     activeList ? cloneCameraList(activeList) : null
   );
+  const [selection, setSelection] = useState<CameraTableSelection | null>(null);
+  const [clipboardNotice, setClipboardNotice] = useState<CameraClipboardNotice | null>(null);
   const [lastFollowIndex, setLastFollowIndex] = useState<number | null>(null);
   const [draggedCameraId, setDraggedCameraId] = useState<string | null>(null);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [pendingCameraListId, setPendingCameraListId] = useState<string | null>(null);
   const allFollowCheckboxRef = useRef<HTMLInputElement | null>(null);
-  const parsed = useMemo(() => parseCameraCsv(csvText), [csvText]);
   const allRowsFollowPrefix =
     draftList?.cameras.every((camera) => camera.usesListPrefix !== false) ?? false;
   const someRowsFollowPrefix =
@@ -209,6 +99,8 @@ export function CameraListEditor({
 
   useEffect(() => {
     setDraftList(activeList ? cloneCameraList(activeList) : null);
+    setSelection(null);
+    setClipboardNotice(null);
     setLastFollowIndex(null);
     setPendingCameraListId(null);
   }, [activeList]);
@@ -318,18 +210,6 @@ export function CameraListEditor({
     );
   }
 
-  function importRows(rows: CameraCsvRow[]): void {
-    setDraftList((list) =>
-      list
-        ? {
-            ...list,
-            cameras: rows.map((row) => createDraftCameraFromCsv(row, list.defaultPrefix))
-          }
-        : list
-    );
-    setLastFollowIndex(null);
-  }
-
   function moveCamera(cameraId: string, toIndex: number): void {
     setDraftList((list) => {
       if (!list) {
@@ -389,16 +269,54 @@ export function CameraListEditor({
     workspaceSettings.onSelectCameraList(cameraListId);
   }
 
+  function selectCell(rowIndex: number, columnIndex: number, extend: boolean): void {
+    setSelection((current) =>
+      extend && current?.mode === "cells"
+        ? createCameraTableSelection("cells", current.anchor, { rowIndex, columnIndex })
+        : createCameraTableSelection("cells", { rowIndex, columnIndex })
+    );
+  }
+
+  function selectRow(rowIndex: number, extend: boolean): void {
+    setSelection((current) =>
+      extend && current?.mode === "rows"
+        ? createCameraTableSelection("rows", current.anchor, {
+            rowIndex,
+            columnIndex: 0
+          })
+        : createCameraTableSelection("rows", { rowIndex, columnIndex: 0 })
+    );
+  }
+
+  function selectColumn(columnIndex: number, extend: boolean): void {
+    setSelection((current) =>
+      extend && current?.mode === "columns"
+        ? createCameraTableSelection("columns", current.anchor, {
+            rowIndex: 0,
+            columnIndex
+          })
+        : createCameraTableSelection("columns", { rowIndex: 0, columnIndex })
+    );
+  }
+
   function focusCameraCell(
     tableBody: HTMLTableSectionElement,
     rowIndex: number,
     columnIndex: number
   ): boolean {
-    const target = tableBody.querySelector<HTMLElement>(
+    const target = tableBody.querySelector<HTMLInputElement | HTMLSelectElement>(
       `${CAMERA_CELL_SELECTOR}[data-camera-list-row='${rowIndex}'][data-camera-list-column='${columnIndex}']`
     );
-    target?.focus();
-    return Boolean(target);
+    if (!target) {
+      return false;
+    }
+
+    target.focus();
+    if (target instanceof HTMLInputElement && target.type !== "checkbox") {
+      target.select();
+    }
+    setSelection(createCameraTableSelection("cells", { rowIndex, columnIndex }));
+    return true;
   }
 
   function handleCameraTableKeyDown(event: KeyboardEvent<HTMLTableSectionElement>): void {
@@ -460,12 +378,146 @@ export function CameraListEditor({
     focusCameraCell(event.currentTarget, targetRowIndex, targetColumnIndex);
   }
 
-  function cameraCellProps(rowIndex: number, columnIndex: number) {
+  function handleCameraTableCopy(event: ReactClipboardEvent<HTMLTableElement>): void {
+    if (!draftList || !selection) {
+      return;
+    }
+
+    const text = serializeCameraTableSelection(draftList, selection);
+    if (!text) {
+      return;
+    }
+
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", text);
+  }
+
+  function handleCameraTablePaste(event: ReactClipboardEvent<HTMLTableElement>): void {
+    if (!draftList || !selection) {
+      return;
+    }
+
+    const result = pasteCameraTableText(
+      draftList,
+      selection.active,
+      event.clipboardData.getData("text/plain")
+    );
+    if (!result) {
+      return;
+    }
+
+    event.preventDefault();
+    setDraftList(result.list);
+    setSelection(result.selection);
+    setLastFollowIndex(null);
+    setClipboardNotice({
+      tone: result.issues.length > 0 ? "partial" : "success",
+      message: `Pasted ${result.cellsUpdated} cells${
+        result.rowsAdded > 0 ? ` and added ${result.rowsAdded} camera rows` : ""
+      }${result.issues.length > 0 ? `; skipped ${result.issues.length}` : ""}.`,
+      details: result.issues.map(
+        (issue) =>
+          `Row ${issue.cameraRow ?? issue.sourceRow}, ${issue.column}: ${JSON.stringify(
+            issue.value
+          )} - ${issue.message}`
+      )
+    });
+  }
+
+  async function copyWholeCameraTable(): Promise<void> {
+    if (!draftList) {
+      return;
+    }
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard write unavailable");
+      }
+      await navigator.clipboard.writeText(serializeWholeCameraTable(draftList));
+      setClipboardNotice({
+        tone: "success",
+        message: `Copied ${draftList.cameras.length} camera rows with headers.`,
+        details: []
+      });
+    } catch {
+      setClipboardNotice({
+        tone: "error",
+        message: "Copy failed. Select a range and press Command+C instead.",
+        details: []
+      });
+    }
+  }
+
+  function cameraControlProps(rowIndex: number, columnIndex: number) {
     return {
       "data-camera-list-cell": "true",
       "data-camera-list-row": String(rowIndex),
       "data-camera-list-column": String(columnIndex)
     };
+  }
+
+  function cameraCellProps(rowIndex: number, columnIndex: number) {
+    const rowCount = draftList?.cameras.length ?? 0;
+    const bounds = selection
+      ? cameraTableSelectionBounds(selection, rowCount)
+      : null;
+    const selected = isCameraTableCellSelected(
+      selection,
+      rowCount,
+      rowIndex,
+      columnIndex
+    );
+    const active =
+      selected &&
+      selection?.active.rowIndex === rowIndex &&
+      selection.active.columnIndex === columnIndex;
+    const classes = [
+      selected ? "camera-cell-selected" : "",
+      active ? "camera-cell-active" : "",
+      selected && bounds?.rowStart === rowIndex ? "camera-cell-edge-top" : "",
+      selected && bounds?.rowEnd === rowIndex ? "camera-cell-edge-bottom" : "",
+      selected && bounds?.columnStart === columnIndex ? "camera-cell-edge-left" : "",
+      selected && bounds?.columnEnd === columnIndex ? "camera-cell-edge-right" : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return {
+      className: classes || undefined,
+      "aria-selected": selected,
+      onClick: (event: ReactMouseEvent<HTMLTableCellElement>) => {
+        selectCell(rowIndex, columnIndex, event.shiftKey);
+        if (event.target === event.currentTarget) {
+          event.currentTarget
+            .querySelector<HTMLInputElement | HTMLSelectElement>(CAMERA_CELL_SELECTOR)
+            ?.focus();
+        }
+      }
+    };
+  }
+
+  function rowIsSelected(rowIndex: number): boolean {
+    return (
+      selection?.mode === "rows" &&
+      isCameraTableCellSelected(
+        selection,
+        draftList?.cameras.length ?? 0,
+        rowIndex,
+        0
+      )
+    );
+  }
+
+  function columnIsSelected(columnIndex: number): boolean {
+    return (
+      selection?.mode === "columns" &&
+      isCameraTableCellSelected(
+        selection,
+        draftList?.cameras.length ?? 0,
+        0,
+        columnIndex
+      )
+    );
   }
 
   return (
@@ -525,31 +577,79 @@ export function CameraListEditor({
                 />
                 Cameras
               </label>
+              <Button
+                icon={<Copy size={14} strokeWidth={2.2} />}
+                variant="subtle"
+                size="compact"
+                tooltip={{
+                  title: "Copy camera table",
+                  description:
+                    "Copies column headers and every draft camera row for Numbers, Excel, or Google Sheets."
+                }}
+                onClick={() => void copyWholeCameraTable()}
+              >
+                Copy Table
+              </Button>
             </div>
+            {clipboardNotice && (
+              <div
+                className="camera-clipboard-notice"
+                data-tone={clipboardNotice.tone}
+                role={clipboardNotice.tone === "error" ? "alert" : "status"}
+                aria-live={clipboardNotice.tone === "error" ? "assertive" : "polite"}
+              >
+                <span>{clipboardNotice.message}</span>
+                {clipboardNotice.details.length > 0 && (
+                  <ul className="camera-clipboard-issues">
+                    {clipboardNotice.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <div className="camera-table-wrap">
-              <table className="camera-table">
+              <table
+                className="camera-table"
+                onCopy={handleCameraTableCopy}
+                onPaste={handleCameraTablePaste}
+              >
+                <caption className="camera-table-caption">
+                  Click a cell, row handle, or column heading to select it. Shift-click extends a
+                  selection. Press Command+C to copy and Command+V to paste.
+                </caption>
                 <thead>
                   <tr>
                     <th>Move</th>
                     <th>Delete</th>
-                    <th>
-                      <span>Follow Prefix</span>
-                      <input
-                        ref={allFollowCheckboxRef}
-                        type="checkbox"
-                        checked={allRowsFollowPrefix}
-                        aria-label="All follow prefix"
-                        onChange={(event) => updateAllFollowPrefix(event.target.checked)}
-                      />
-                    </th>
-                    <th>Index</th>
-                    <th>Camera #</th>
-                    <th>Full URL</th>
-                    <th>Type</th>
-                    <th>Lens</th>
-                    <th>Display Note</th>
-                    <th>Viewport</th>
-                    <th>Zoom</th>
+                    {CAMERA_TABLE_COLUMNS.map((column, columnIndex) => (
+                      <th key={column.key}>
+                        <div className="camera-column-heading">
+                          <button
+                            type="button"
+                            className="camera-column-select"
+                            aria-label={`Select ${column.label} column`}
+                            aria-pressed={columnIsSelected(columnIndex)}
+                            onClick={(event) =>
+                              selectColumn(columnIndex, event.shiftKey)
+                            }
+                          >
+                            {column.label}
+                          </button>
+                          {columnIndex === 0 && (
+                            <input
+                              ref={allFollowCheckboxRef}
+                              type="checkbox"
+                              checked={allRowsFollowPrefix}
+                              aria-label="All follow prefix"
+                              onChange={(event) =>
+                                updateAllFollowPrefix(event.target.checked)
+                              }
+                            />
+                          )}
+                        </div>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody onKeyDown={handleCameraTableKeyDown}>
@@ -577,12 +677,15 @@ export function CameraListEditor({
                       <td className="camera-row-action-cell">
                         <IconButton
                           className="camera-row-drag"
-                          label={`Move ${camera.name}`}
+                          label={`Select row ${rowIndex + 1}; drag to move ${camera.name}`}
+                          aria-pressed={rowIsSelected(rowIndex)}
                           tooltip={{
-                            title: "Move camera",
-                            description: "Drag this row to change its tab and grid position."
+                            title: "Select or move camera",
+                            description:
+                              "Click to select this row, or drag it to change its tab and grid position."
                           }}
                           icon={<GripVertical size={14} strokeWidth={2.2} />}
+                          onClick={(event) => selectRow(rowIndex, event.shiftKey)}
                         />
                       </td>
                       <td className="camera-row-action-cell">
@@ -597,9 +700,9 @@ export function CameraListEditor({
                           onClick={() => deleteCamera(camera.id)}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 0)}>
                         <input
-                          {...cameraCellProps(rowIndex, 0)}
+                          {...cameraControlProps(rowIndex, 0)}
                           type="checkbox"
                           checked={camera.usesListPrefix !== false}
                           onClick={(event) =>
@@ -615,9 +718,9 @@ export function CameraListEditor({
                           aria-label={`${camera.name} follow prefix`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 1)}>
                         <input
-                          {...cameraCellProps(rowIndex, 1)}
+                          {...cameraControlProps(rowIndex, 1)}
                           value={camera.name}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { name: event.target.value })
@@ -625,9 +728,9 @@ export function CameraListEditor({
                           aria-label={`${camera.name} index`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 2)}>
                         <input
-                          {...cameraCellProps(rowIndex, 2)}
+                          {...cameraControlProps(rowIndex, 2)}
                           value={camera.suffix}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { suffix: event.target.value })
@@ -635,9 +738,9 @@ export function CameraListEditor({
                           aria-label={`${camera.name} camera number`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 3)}>
                         <input
-                          {...cameraCellProps(rowIndex, 3)}
+                          {...cameraControlProps(rowIndex, 3)}
                           value={camera.url}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { url: event.target.value })
@@ -645,9 +748,9 @@ export function CameraListEditor({
                           aria-label={`${camera.name} URL`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 4)}>
                         <input
-                          {...cameraCellProps(rowIndex, 4)}
+                          {...cameraControlProps(rowIndex, 4)}
                           value={camera.cameraType}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { cameraType: event.target.value })
@@ -655,9 +758,9 @@ export function CameraListEditor({
                           aria-label={`${camera.name} type`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 5)}>
                         <input
-                          {...cameraCellProps(rowIndex, 5)}
+                          {...cameraControlProps(rowIndex, 5)}
                           value={camera.lens}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { lens: event.target.value })
@@ -665,9 +768,9 @@ export function CameraListEditor({
                           aria-label={`${camera.name} lens`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 6)}>
                         <input
-                          {...cameraCellProps(rowIndex, 6)}
+                          {...cameraControlProps(rowIndex, 6)}
                           value={camera.displayNote}
                           onChange={(event) =>
                             updateDraftCamera(camera.id, { displayNote: event.target.value })
@@ -675,14 +778,10 @@ export function CameraListEditor({
                           aria-label={`${camera.name} display note`}
                         />
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 7)}>
                         <select
-                          {...cameraCellProps(rowIndex, 7)}
-                          value={
-                            camera.viewportOverride
-                              ? `${camera.viewportOverride.width}x${camera.viewportOverride.height}`
-                              : ""
-                          }
+                          {...cameraControlProps(rowIndex, 7)}
+                          value={cameraViewportValue(camera)}
                           onChange={(event) => {
                             if (!event.target.value) {
                               updateDraftCamera(camera.id, { viewportOverride: null });
@@ -694,6 +793,14 @@ export function CameraListEditor({
                           aria-label={`${camera.name} viewport`}
                         >
                           <option value="">Default</option>
+                          {cameraViewportValue(camera) &&
+                            !VIEWPORT_PRESETS.some(
+                              (preset) => preset.value === cameraViewportValue(camera)
+                            ) && (
+                              <option value={cameraViewportValue(camera)}>
+                                {cameraViewportValue(camera)}
+                              </option>
+                            )}
                           {VIEWPORT_PRESETS.map((preset) => (
                             <option key={preset.value} value={preset.value}>
                               {preset.label}
@@ -701,9 +808,9 @@ export function CameraListEditor({
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td {...cameraCellProps(rowIndex, 8)}>
                         <input
-                          {...cameraCellProps(rowIndex, 8)}
+                          {...cameraControlProps(rowIndex, 8)}
                           type="number"
                           min="0.25"
                           max="3"
@@ -725,36 +832,6 @@ export function CameraListEditor({
             </div>
           </section>
         )}
-        <p className="panel-note">
-          CSV columns: number, url, type, lens, display_note, notes. A full URL wins over camera #.
-        </p>
-        <textarea
-          value={csvText}
-          onChange={(event) => setCsvText(event.target.value)}
-          aria-label="CSV import"
-        />
-        <div className="import-summary">
-          <span>{parsed.validRows.length} valid rows</span>
-          <span>{parsed.errors.length} errors</span>
-        </div>
-        {parsed.errors.length > 0 && (
-          <ul className="import-errors">
-            {parsed.errors.map((error) => (
-              <li key={`${error.rowNumber}-${error.message}`}>
-                Row {error.rowNumber}: {error.message}
-              </li>
-            ))}
-          </ul>
-        )}
-        <Button
-          icon={<Upload size={14} strokeWidth={2.2} />}
-          variant="subtle"
-          size="compact"
-          disabled={parsed.validRows.length === 0}
-          onClick={() => importRows(parsed.validRows)}
-        >
-          Import Valid Rows
-        </Button>
         <WorkspaceSettings
           {...workspaceSettings}
           activeList={activeList}

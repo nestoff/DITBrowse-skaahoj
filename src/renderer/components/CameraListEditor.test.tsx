@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { sampleWorkspace } from "../../shared/sampleData";
 import type { CameraList } from "../../shared/types";
@@ -344,31 +344,174 @@ describe("CameraListEditor", () => {
     });
   });
 
-  it("imports valid CSV rows into the draft and waits for Save Changes", () => {
-    const { onSaveList } = renderEditor();
+  it("selects cell ranges, rows, and columns", () => {
+    renderEditor();
 
-    fireEvent.change(screen.getByLabelText("CSV import"), {
-      target: {
-        value: "number,url,type,lens,display_note,notes\n04,,ALEXA 35,50mm,Studio,imported"
+    const aIndex = screen.getByLabelText("A index");
+    const bNumber = screen.getByLabelText("B camera number");
+    fireEvent.click(aIndex);
+    fireEvent.click(bNumber, { shiftKey: true });
+
+    expect(aIndex.closest("td")).toHaveAttribute("aria-selected", "true");
+    expect(bNumber.closest("td")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("A type").closest("td")).toHaveAttribute(
+      "aria-selected",
+      "false"
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select row 1; drag to move A" })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select row 3; drag to move C" }),
+      { shiftKey: true }
+    );
+    expect(screen.getByLabelText("B lens").closest("td")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByLabelText("A zoom").closest("td")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Select Type column" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select Display Note column" }),
+      { shiftKey: true }
+    );
+    expect(screen.getByLabelText("A type").closest("td")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByLabelText("A lens").closest("td")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByLabelText("L display note").closest("td")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+  });
+
+  it("copies the selected range as TSV", () => {
+    renderEditor();
+    const aIndex = screen.getByLabelText("A index");
+    const bNumber = screen.getByLabelText("B camera number");
+    fireEvent.click(aIndex);
+    fireEvent.click(bNumber, { shiftKey: true });
+    const setData = vi.fn();
+
+    fireEvent.copy(bNumber, {
+      clipboardData: { setData, getData: vi.fn() }
+    });
+
+    expect(setData).toHaveBeenCalledWith("text/plain", "A\t01\nB\t02");
+  });
+
+  it("pastes spreadsheet headers and rows into the draft before save", () => {
+    const { onSaveList } = renderEditor();
+    const lastIndex = screen.getByLabelText("L index");
+    fireEvent.click(lastIndex);
+
+    fireEvent.paste(lastIndex, {
+      clipboardData: {
+        getData: () =>
+          "Camera #\tIndex\tType\tLens\n12\tL\tVENICE 2\t35mm\n13\tM\tFR7\t50mm\n14\tN\tBURANO\t85mm"
       }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Import Valid Rows" }));
 
     expect(onSaveList).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("D index")).toHaveValue("D");
-    expect(screen.getByLabelText("D camera number")).toHaveValue("04");
+    expect(screen.getByLabelText("M camera number")).toHaveValue("13");
+    expect(screen.getByLabelText("N type")).toHaveValue("BURANO");
+    expect(screen.getByRole("status")).toHaveTextContent("added 2 camera rows");
 
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onSaveList.mock.calls[0][0].cameras).toEqual([
-      expect.objectContaining({
-        name: "D",
-        suffix: "04",
-        cameraType: "ALEXA 35",
-        lens: "50mm",
-        displayNote: "Studio"
-      })
-    ]);
+    expect(onSaveList.mock.calls[0][0].cameras).toHaveLength(14);
+  });
+
+  it("discards pasted draft rows without saving them", () => {
+    const { onSaveList, onClose } = renderEditor();
+    const lastIndex = screen.getByLabelText("L index");
+    fireEvent.click(lastIndex);
+    fireEvent.paste(lastIndex, {
+      clipboardData: {
+        getData: () => "Camera #\tIndex\n12\tL\n13\tM"
+      }
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+
+    expect(onSaveList).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a pasted custom viewport visible in the viewport control", () => {
+    renderEditor();
+    const aViewport = screen.getByLabelText("A viewport");
+    fireEvent.click(aViewport);
+    fireEvent.paste(aViewport, {
+      clipboardData: { getData: () => "640x480" }
+    });
+
+    expect(aViewport).toHaveValue("640x480");
+    expect(screen.getByRole("option", { name: "640x480" })).toBeInTheDocument();
+  });
+
+  it("copies the complete draft with headers from Copy Table", async () => {
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+    const { onSaveList } = renderEditor();
+    const aIndex = screen.getByLabelText("A index");
+    fireEvent.click(aIndex);
+    fireEvent.change(screen.getByLabelText("A type"), {
+      target: { value: "VENICE 2" }
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy Table" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(writeText.mock.calls[0][0]).toMatch(
+      /^Follow Prefix\tIndex\tCamera #\tFull URL\tType\tLens\tDisplay Note\tViewport\tZoom\nTRUE\tA\t01\t/
+    );
+    expect(writeText.mock.calls[0][0]).toContain("\tVENICE 2\t");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Copied 12 camera rows with headers"
+    );
+    expect(aIndex.closest("td")).toHaveAttribute("aria-selected", "true");
+    expect(onSaveList).not.toHaveBeenCalled();
+  });
+
+  it("reports Copy Table clipboard failures without changing the draft", async () => {
+    const writeText = vi.fn(async (_text: string) => {
+      throw new Error("denied");
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+    const { onSaveList } = renderEditor();
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy Table" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Copy failed. Select a range and press Command+C instead."
+    );
+    expect(onSaveList).not.toHaveBeenCalled();
+  });
+
+  it("removes the former CSV importer", () => {
+    renderEditor();
+
+    expect(screen.queryByLabelText("CSV import")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Import Valid Rows" })
+    ).not.toBeInTheDocument();
   });
 
   it("moves focus down to the same column when pressing Enter in the list table", () => {
@@ -376,6 +519,7 @@ describe("CameraListEditor", () => {
 
     const firstType = screen.getByLabelText("A type");
     const secondType = screen.getByLabelText("B type");
+    fireEvent.change(secondType, { target: { value: "FR7" } });
     firstType.focus();
 
     act(() => {
@@ -383,6 +527,8 @@ describe("CameraListEditor", () => {
     });
 
     expect(secondType).toHaveFocus();
+    expect(secondType).toHaveProperty("selectionStart", 0);
+    expect(secondType).toHaveProperty("selectionEnd", 3);
   });
 
   it("moves focus down when the keyboard reports keypad Enter or Return", () => {
@@ -421,6 +567,22 @@ describe("CameraListEditor", () => {
     });
 
     expect(cameraNumber).toHaveFocus();
+    expect(cameraNumber).toHaveProperty("selectionStart", 0);
+    expect(cameraNumber).toHaveProperty("selectionEnd", 2);
+  });
+
+  it("moves backward with Shift+Enter and Shift+Tab", () => {
+    renderEditor();
+
+    const secondLens = screen.getByLabelText("B lens");
+    secondLens.focus();
+    fireEvent.keyDown(secondLens, { key: "Enter", shiftKey: true });
+    expect(screen.getByLabelText("A lens")).toHaveFocus();
+
+    const bFollowPrefix = screen.getByLabelText("B follow prefix");
+    bFollowPrefix.focus();
+    fireEvent.keyDown(bFollowPrefix, { key: "Tab", shiftKey: true });
+    expect(screen.getByLabelText("A zoom")).toHaveFocus();
   });
 
   it("keeps the focused cell inside its camera row for row highlight styling", () => {
