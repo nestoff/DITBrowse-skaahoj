@@ -189,6 +189,7 @@ describe("App control API commands", () => {
     render(<App />);
 
     await screen.findByDisplayValue("http://192.168.1.01");
+    await waitFor(() => expect(controlApiCommandHandler).not.toBeNull());
 
     act(() => {
       controlApiCommandHandler?.({ requestId: "focus-1", type: "focusCamera", cameraNumber: 2 });
@@ -223,6 +224,7 @@ describe("App control API commands", () => {
     render(<App />);
 
     await screen.findByDisplayValue("http://192.168.1.01");
+    await waitFor(() => expect(controlApiCommandHandler).not.toBeNull());
 
     act(() => {
       controlApiCommandHandler?.({ requestId: "missing-1", type: "focusCamera", cameraNumber: 99 });
@@ -241,6 +243,7 @@ describe("App control API commands", () => {
     render(<App />);
 
     await screen.findByDisplayValue("http://192.168.1.01");
+    await waitFor(() => expect(controlApiCommandHandler).not.toBeNull());
 
     act(() => {
       controlApiCommandHandler?.({ requestId: "focus-2", type: "focusCamera", cameraNumber: 2 });

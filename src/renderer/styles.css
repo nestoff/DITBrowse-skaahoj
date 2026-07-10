@@ -24,10 +24,9 @@
   --muted: #a0a0a6;
   --quiet: #6f6f76;
   --subtle: #6f6f76;
-  --focus: #7d9dee;
-  --accent: #7d9dee;
-  --accent-strong: #9bb4f5;
-  --accent-cyan: #7d9dee;
+  --focus: #c8c8ce;
+  --accent: #b7b7bd;
+  --accent-strong: #f1f1f2;
   --danger: #e88c86;
   --warning: #d8c85b;
   --radius-control: 10px;
@@ -106,7 +105,7 @@ textarea {
 
 input::selection,
 textarea::selection {
-  background: rgba(79, 115, 220, 0.42);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .button {
@@ -430,7 +429,6 @@ textarea::selection {
 .icon-button:focus-visible,
 .address-bar button:focus-visible,
 .global-zoom-trigger:focus-visible,
-.global-viewport-trigger:focus-visible,
 .zoom-percent-reset:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
@@ -451,7 +449,7 @@ textarea::selection {
 }
 
 .tab.active .tab-index {
-  background: rgba(125, 157, 238, 0.16);
+  background: rgba(255, 255, 255, 0.14);
   color: var(--accent-strong);
 }
 
@@ -583,7 +581,7 @@ textarea::selection {
 
 .address-bar:focus-within {
   border-color: var(--focus);
-  box-shadow: 0 0 0 2px rgba(125, 157, 238, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 .address-bar input {
@@ -598,27 +596,6 @@ textarea::selection {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0;
-}
-
-.selected-tile-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 1 132px;
-  min-width: 72px;
-  max-width: 132px;
-  height: 34px;
-  color: var(--muted);
-  padding: 0 5px;
-}
-
-.selected-tile-status span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 560;
 }
 
 .grid-controls {
@@ -667,7 +644,7 @@ textarea::selection {
 .camera-table input:focus,
 .camera-table select:focus {
   border-color: var(--focus);
-  box-shadow: 0 0 0 2px rgba(125, 157, 238, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 .grid-control select {
@@ -676,6 +653,10 @@ textarea::selection {
   padding: 0 24px 0 9px;
   font-size: 12px;
   font-weight: 560;
+}
+
+.resolution-control select {
+  max-width: 172px;
 }
 
 .zoom-control {
@@ -701,7 +682,7 @@ textarea::selection {
 
 .zoom-percent-input:focus-within {
   border-color: var(--focus);
-  box-shadow: 0 0 0 2px rgba(125, 157, 238, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 .zoom-percent-input input {
@@ -734,8 +715,7 @@ textarea::selection {
   color: var(--text-strong);
 }
 
-.global-zoom-trigger,
-.global-viewport-trigger {
+.global-zoom-trigger {
   min-width: 42px;
   height: 34px;
   border-radius: var(--radius-control);
@@ -745,13 +725,11 @@ textarea::selection {
   font-weight: 590;
 }
 
-.global-zoom-trigger:hover,
-.global-viewport-trigger:hover {
+.global-zoom-trigger:hover {
   background: var(--surface-hover);
 }
 
-.zoom-popover,
-.viewport-popover {
+.zoom-popover {
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-surface);
   background: var(--surface);
@@ -766,28 +744,6 @@ textarea::selection {
   width: 260px;
   max-width: calc(100vw - 16px);
   padding: 12px;
-}
-
-.viewport-popover {
-  position: fixed;
-  z-index: 90;
-  display: grid;
-  gap: 8px;
-  width: 180px;
-  max-width: calc(100vw - 16px);
-  padding: 10px;
-}
-
-.viewport-select {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.viewport-select span {
-  color: var(--text);
 }
 
 .zoom-slider {
@@ -972,7 +928,7 @@ textarea::selection {
 
 .job-inline-field input:focus {
   border-color: var(--focus);
-  box-shadow: 0 0 0 2px rgba(125, 157, 238, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 .new-job-actions {
@@ -1444,12 +1400,12 @@ textarea::selection {
 }
 
 .camera-table tbody tr:focus-within {
-  background: rgba(125, 157, 238, 0.07);
+  background: rgba(255, 255, 255, 0.06);
   box-shadow: inset 2px 0 0 var(--focus);
 }
 
 .camera-table td.camera-cell-selected {
-  background: rgba(125, 157, 238, 0.11);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .camera-table td.camera-cell-edge-top {
@@ -1577,7 +1533,7 @@ textarea::selection {
 }
 
 .camera-row-drag[aria-pressed="true"] {
-  background: rgba(125, 157, 238, 0.12);
+  background: rgba(255, 255, 255, 0.11);
   color: var(--accent-strong);
 }
 
@@ -1794,7 +1750,7 @@ textarea::selection {
 
 .http-auth-field input:focus {
   border-color: var(--focus);
-  box-shadow: 0 0 0 2px rgba(125, 157, 238, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 .http-auth-save {
@@ -1813,10 +1769,6 @@ textarea::selection {
 }
 
 @media (max-width: 1180px) {
-  .selected-tile-status {
-    display: none;
-  }
-
   .grid-controls-icon,
   .grid-control > span {
     display: none;

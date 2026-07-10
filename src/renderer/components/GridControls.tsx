@@ -2,8 +2,6 @@ import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { ViewportSize } from "../../shared/types";
 import {
-  DEFAULT_ASPECT_RATIO_PRESETS,
-  DEFAULT_VIEWPORT,
   VIEWPORT_PRESETS,
   viewportFromValue,
   viewportToValue
@@ -107,13 +105,11 @@ function ZoomPercentInput({
 
 interface GridControlsProps {
   columns: number;
-  defaultViewport: ViewportSize;
   selectedZoom: number;
   globalZoom: number;
   selectedViewport: ViewportSize | null;
   onColumnsChange: (columns: number) => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
-  onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
@@ -122,22 +118,18 @@ interface GridControlsProps {
 
 export function GridControls({
   columns,
-  defaultViewport,
   selectedZoom,
   globalZoom,
   selectedViewport,
   onColumnsChange,
   onRelativeGlobalZoomChange,
-  onDefaultViewportChange,
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
   icon
 }: GridControlsProps): ReactElement {
   const [globalZoomOpen, setGlobalZoomOpen] = useState(false);
-  const [globalViewportOpen, setGlobalViewportOpen] = useState(false);
   const [zoomPopoverStyle, setZoomPopoverStyle] = useState<CSSProperties>({});
-  const [viewportPopoverStyle, setViewportPopoverStyle] = useState<CSSProperties>({});
   const relativeZoomPercent = Math.round(globalZoom * 100);
 
   const popoverStyleFor = (button: HTMLButtonElement | null, width: number): CSSProperties => {
@@ -242,81 +234,31 @@ export function GridControls({
           </div>
         )}
       </div>
-      <label className="grid-control">
-        <span>Default</span>
+      <label className="grid-control resolution-control">
+        <span>Resolution</span>
         <select
-          value={viewportToValue(defaultViewport)}
-          onChange={(event) => onDefaultViewportChange(viewportFromValue(event.target.value))}
-          aria-label="Default aspect ratio"
-        >
-          {DEFAULT_ASPECT_RATIO_PRESETS.map((preset) => (
-            <option key={preset.value} value={preset.value}>
-              {preset.shortLabel}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid-control">
-        <span>View</span>
-        <select
-          value={viewportToValue(selectedViewport ?? DEFAULT_VIEWPORT)}
+          value={selectedViewport ? viewportToValue(selectedViewport) : ""}
+          disabled={!selectedViewport}
           onChange={(event) => onViewportChange(viewportFromValue(event.target.value))}
-          aria-label="Selected tile viewport"
+          aria-label="Selected camera resolution"
         >
           {VIEWPORT_PRESETS.map((preset) => (
             <option key={preset.value} value={preset.value}>
-              {preset.value}
+              {preset.label}
             </option>
           ))}
         </select>
       </label>
-      <div className="grid-control viewport-control">
-        <Button
-          type="button"
-          variant="subtle"
-          size="compact"
-          className="global-viewport-trigger"
-          aria-label="All viewport controls"
-          tooltip={{
-            title: "Viewport for all",
-            description: "Applies one viewport size to every open camera tile."
-          }}
-          aria-expanded={globalViewportOpen}
-          onClick={(event) =>
-            setGlobalViewportOpen((open) => {
-              const nextOpen = !open;
-              if (nextOpen) {
-                setViewportPopoverStyle(popoverStyleFor(event.currentTarget, 180));
-              }
-              return nextOpen;
-            })
-          }
-        >
-          All
-        </Button>
-        {globalViewportOpen && (
-          <div
-            className="viewport-popover"
-            aria-label="All viewport controls panel"
-            style={viewportPopoverStyle}
-          >
-            <label className="viewport-select">
-              <span>All View</span>
-              <select
-                value={viewportToValue(selectedViewport ?? defaultViewport)}
-                onChange={(event) => onGlobalViewportChange(viewportFromValue(event.target.value))}
-                aria-label="All tiles viewport"
-              >
-                {VIEWPORT_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>
-                    {preset.value}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
-      </div>
+      <Button
+        type="button"
+        variant="subtle"
+        size="compact"
+        disabled={!selectedViewport}
+        aria-label="Apply resolution to all cameras"
+        onClick={() => selectedViewport && onGlobalViewportChange(selectedViewport)}
+      >
+        Apply to All
+      </Button>
     </div>
   );
 }

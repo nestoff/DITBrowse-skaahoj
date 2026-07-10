@@ -28,7 +28,6 @@ interface BrowserChromeProps {
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
-  onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
@@ -55,7 +54,6 @@ export function BrowserChrome({
   onReloadAll,
   onColumnsChange,
   onRelativeGlobalZoomChange,
-  onDefaultViewportChange,
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
@@ -101,7 +99,6 @@ export function BrowserChrome({
         columns={workspace.gridColumns}
         defaultZoom={workspace.defaultZoom}
         globalZoom={workspace.globalZoom}
-        defaultViewport={workspace.defaultViewport}
         onNavigate={onNavigate}
         canSaveSelectedUrl={canSaveSelectedUrl}
         onSaveSelectedUrl={onSaveSelectedUrl}
@@ -113,7 +110,6 @@ export function BrowserChrome({
         onReloadAll={onReloadAll}
         onColumnsChange={onColumnsChange}
         onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
-        onDefaultViewportChange={onDefaultViewportChange}
         onGlobalViewportChange={onGlobalViewportChange}
         onZoomChange={onZoomChange}
         onViewportChange={onViewportChange}

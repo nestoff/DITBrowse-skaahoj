@@ -29,7 +29,6 @@ const baseProps = {
   onRelativeGlobalZoomChange: vi.fn(),
   onGlobalViewportChange: vi.fn(),
   onZoomChange: vi.fn(),
-  onDefaultViewportChange: vi.fn(),
   onViewportChange: vi.fn(),
   expansionEnabled: true,
   focusMode: false,
@@ -176,26 +175,41 @@ describe("BrowserChrome", () => {
     expect(onZoomChange).toHaveBeenCalledWith(1);
   });
 
-  it("sets the saved default aspect ratio separately from the selected tile viewport", () => {
-    const onDefaultViewportChange = vi.fn();
+  it("shows one selected-camera resolution control with formatted resolution and ratio labels", () => {
     const onViewportChange = vi.fn();
     render(
       <BrowserChrome
         {...baseProps}
-        onDefaultViewportChange={onDefaultViewportChange}
         onViewportChange={onViewportChange}
       />
     );
 
-    fireEvent.change(screen.getByLabelText("Default aspect ratio"), {
+    const resolution = screen.getByRole("combobox", {
+      name: "Selected camera resolution"
+    });
+    expect(resolution).toBeVisible();
+    expect(resolution).toHaveDisplayValue("1024×768 · 4:3");
+    expect(screen.getAllByRole("combobox", { name: /resolution/i })).toHaveLength(1);
+    expect(
+      screen.getByRole("option", { name: "1024×768 · 4:3" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "1920×1080 · 16:9" })
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Default aspect ratio")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("All viewport controls")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Apply resolution to all cameras" })
+    ).toBeVisible();
+
+    fireEvent.change(resolution, {
       target: { value: "1280x720" }
     });
 
-    expect(onDefaultViewportChange).toHaveBeenCalledWith({ width: 1280, height: 720 });
-    expect(onViewportChange).not.toHaveBeenCalled();
+    expect(onViewportChange).toHaveBeenCalledWith({ width: 1280, height: 720 });
   });
 
-  it("opens all-tiles viewport controls", () => {
+  it("applies the selected camera resolution to every camera", () => {
     const onGlobalViewportChange = vi.fn();
     const selectedViewport = { width: 1280, height: 720 };
     render(
@@ -206,13 +220,35 @@ describe("BrowserChrome", () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText("All viewport controls"));
-    expect(screen.getByLabelText("All viewport controls panel")).toBeVisible();
-    fireEvent.change(screen.getByLabelText("All tiles viewport"), {
-      target: { value: "1920x1080" }
-    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Apply resolution to all cameras" })
+    );
 
-    expect(onGlobalViewportChange).toHaveBeenCalledWith({ width: 1920, height: 1080 });
+    expect(onGlobalViewportChange).toHaveBeenCalledOnce();
+    expect(onGlobalViewportChange).toHaveBeenCalledWith(selectedViewport);
+  });
+
+  it("removes the redundant selected-camera title strip", () => {
+    const { container } = render(<BrowserChrome {...baseProps} />);
+
+    expect(container.querySelector(".selected-tile-status")).not.toBeInTheDocument();
+  });
+
+  it("disables selected-camera resolution controls when no tile is selected", () => {
+    render(
+      <BrowserChrome
+        {...baseProps}
+        workspace={{ ...sampleWorkspace, selectedTileId: null }}
+        selectedTile={null}
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Selected camera resolution" })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Apply resolution to all cameras" })
+    ).toBeDisabled();
   });
 
   it("drags tabs to reorder them", () => {

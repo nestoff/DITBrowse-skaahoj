@@ -8,8 +8,7 @@ import {
   RotateCw,
   Rows3,
   RotateCcw,
-  Save,
-  SquareStack
+  Save
 } from "lucide-react";
 import type { TileState, ViewportSize } from "../../shared/types";
 import { AddressBar } from "./AddressBar";
@@ -22,7 +21,6 @@ interface BrowserToolbarProps {
   columns: number;
   defaultZoom: number;
   globalZoom: number;
-  defaultViewport: ViewportSize;
   onNavigate: (input: string, target: "selected" | "new") => void;
   canSaveSelectedUrl: boolean;
   onSaveSelectedUrl: () => void;
@@ -34,7 +32,6 @@ interface BrowserToolbarProps {
   onReloadAll: () => void;
   onColumnsChange: (columns: number) => void;
   onRelativeGlobalZoomChange: (factor: number) => void;
-  onDefaultViewportChange: (viewport: ViewportSize) => void;
   onGlobalViewportChange: (viewport: ViewportSize) => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportSize) => void;
@@ -48,7 +45,6 @@ export function BrowserToolbar({
   columns,
   defaultZoom,
   globalZoom,
-  defaultViewport,
   onNavigate,
   canSaveSelectedUrl,
   onSaveSelectedUrl,
@@ -60,7 +56,6 @@ export function BrowserToolbar({
   onReloadAll,
   onColumnsChange,
   onRelativeGlobalZoomChange,
-  onDefaultViewportChange,
   onGlobalViewportChange,
   onZoomChange,
   onViewportChange,
@@ -68,8 +63,6 @@ export function BrowserToolbar({
   focusMode,
   onFocusModeToggle
 }: BrowserToolbarProps): ReactElement {
-  const selectedName = selectedTile?.title || selectedTile?.url || "No tile selected";
-
   return (
     <header className="browser-toolbar" aria-label="Browser toolbar">
       <div className="toolbar-group browser-navigation" aria-label="Navigation controls">
@@ -172,19 +165,13 @@ export function BrowserToolbar({
           disabled={!selectedTile || !expansionEnabled}
           onClick={onFocusModeToggle}
         />
-        <span className="selected-tile-status">
-          <SquareStack size={14} strokeWidth={2.2} />
-          <span>{selectedName}</span>
-        </span>
         <GridControls
           columns={columns}
-          defaultViewport={defaultViewport}
           selectedZoom={selectedTile?.zoom ?? defaultZoom}
           globalZoom={globalZoom}
-          selectedViewport={selectedTile?.viewport ?? defaultViewport}
+          selectedViewport={selectedTile?.viewport ?? null}
           onColumnsChange={onColumnsChange}
           onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
-          onDefaultViewportChange={onDefaultViewportChange}
           onGlobalViewportChange={onGlobalViewportChange}
           onZoomChange={onZoomChange}
           onViewportChange={onViewportChange}

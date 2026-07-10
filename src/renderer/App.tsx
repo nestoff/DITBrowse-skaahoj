@@ -520,14 +520,6 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     dispatch({ type: "setGlobalZoomRelative", factor });
   }, []);
 
-  const setDefaultViewport = useCallback((viewport: { width: number; height: number }): void => {
-    dispatch({
-      type: "setDefaultViewport",
-      width: viewport.width,
-      height: viewport.height
-    });
-  }, []);
-
   const setGlobalViewport = useCallback((viewport: { width: number; height: number }): void => {
     dispatch({
       type: "setGlobalViewport",
@@ -917,7 +909,6 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         onReloadAll={() => runAllTileCommand("reload")}
         onColumnsChange={setColumns}
         onRelativeGlobalZoomChange={setRelativeGlobalZoom}
-        onDefaultViewportChange={setDefaultViewport}
         onGlobalViewportChange={setGlobalViewport}
         onZoomChange={setSelectedZoom}
         onViewportChange={setSelectedViewport}
