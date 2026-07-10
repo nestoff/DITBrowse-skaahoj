@@ -3,6 +3,7 @@ import { basename, dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { sign } from "@electron/osx-sign";
 import { notarize } from "@electron/notarize";
+import { isNotarizationRequested } from "./notarization-policy.mjs";
 
 const appPath = resolve(
   process.env.DITBROWSE_APP_PATH ?? "release/DITBrowse-darwin-arm64/DITBrowse.app"
@@ -75,7 +76,14 @@ await sign({
 console.log("Verifying code signature");
 run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath]);
 
-const notaryOptions = notarizeOptions();
+const notarizationRequested = isNotarizationRequested();
+const notaryOptions = notarizationRequested ? notarizeOptions() : null;
+if (notarizationRequested && !notaryOptions) {
+  throw new Error(
+    "DITBROWSE_NOTARIZE=1 was provided, but no supported Apple notarization credentials were found"
+  );
+}
+
 if (notaryOptions) {
   console.log("Submitting app for Apple notarization");
   await notarize({
@@ -84,7 +92,7 @@ if (notaryOptions) {
   });
   console.log("Notarization complete and ticket stapled");
 } else {
-  console.log("Skipping notarization; no Apple notarization credentials were provided");
+  console.log("Skipping notarization; set DITBROWSE_NOTARIZE=1 to opt in");
 }
 
 if (existsSync(zipPath)) {
