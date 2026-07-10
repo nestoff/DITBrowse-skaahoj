@@ -43,6 +43,7 @@ test("camera list opens the full table and settings in one click", async ({ page
 
   const editor = page.getByLabel("Camera list editor");
   const table = page.getByRole("table");
+  const tableWrap = page.locator(".camera-table-wrap");
   const settings = page.getByLabel("Camera workspace settings");
   await expect(editor).toBeVisible();
   await expect(table).toBeVisible();
@@ -50,11 +51,11 @@ test("camera list opens the full table and settings in one click", async ({ page
   await expect(page.getByRole("button", { name: /Move .* left/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Move .* right/ })).toHaveCount(0);
 
-  const tableBox = await table.boundingBox();
+  const tableWrapBox = await tableWrap.boundingBox();
   const settingsBox = await settings.boundingBox();
-  expect(tableBox?.height).toBeGreaterThan(300);
+  expect(tableWrapBox?.height).toBeGreaterThan(300);
   expect(settingsBox?.y).toBeGreaterThan(
-    (tableBox?.y ?? 0) + (tableBox?.height ?? 0)
+    (tableWrapBox?.y ?? 0) + (tableWrapBox?.height ?? 0)
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
     (await page.viewportSize())?.width
@@ -149,16 +150,58 @@ test("clicking the page area of an inactive tile activates its tab", async ({ pa
   await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
 });
 
-test("camera list editor moves down on Enter and across on Tab", async ({ page }) => {
+test("camera list supports spreadsheet navigation, copy, paste, and row growth", async ({
+  page,
+  context
+}) => {
   await page.goto("/");
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(page.url()).origin
+  });
 
   await page.getByRole("button", { name: "Camera List", exact: true }).click();
 
+  await page.getByLabel("B type").fill("FR7");
   await page.getByLabel("A type").focus();
   await page.keyboard.press("Enter");
   await expect(page.getByLabel("B type")).toBeFocused();
+  expect(
+    await page.getByLabel("B type").evaluate((input: HTMLInputElement) => ({
+      start: input.selectionStart,
+      end: input.selectionEnd,
+      length: input.value.length
+    }))
+  ).toEqual({ start: 0, end: 3, length: 3 });
 
-  await page.getByLabel("A index").focus();
-  await page.keyboard.press("Tab");
-  await expect(page.getByLabel("A camera number")).toBeFocused();
+  await page.getByLabel("A index").click();
+  await page.getByLabel("B camera number").click({ modifiers: ["Shift"] });
+  expect(
+    await page
+      .getByLabel("A index")
+      .locator("xpath=..")
+      .evaluate((cell) => getComputedStyle(cell).backgroundColor)
+  ).not.toBe("rgba(0, 0, 0, 0)");
+
+  await page.keyboard.press("Meta+C");
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe("A\t01\nB\t02");
+
+  await page.getByLabel("L index").click();
+  await page.evaluate(() =>
+    navigator.clipboard.writeText(
+      "Camera #\tIndex\tType\tLens\n12\tL\tVENICE 2\t35mm\n13\tM\tFR7\t50mm\n14\tN\tBURANO\t85mm"
+    )
+  );
+  await page.keyboard.press("Meta+V");
+
+  await expect(page.getByLabel("M type")).toHaveValue("FR7");
+  await expect(page.getByLabel("N lens")).toHaveValue("85mm");
+  await expect(page.getByRole("status")).toContainText("added 2 camera rows");
+  await page.getByRole("button", { name: "Save Changes" }).click();
+
+  await expect(page.getByLabel("Tab N")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    (await page.viewportSize())?.width
+  );
 });
