@@ -7,7 +7,7 @@ function json(path: string): Record<string, unknown> {
 }
 
 describe("v1 release versions", () => {
-  it("keeps the app, lockfile, and Companion module at 1.0.0", () => {
+  it("keeps the app at 1.0.1 and the Companion module at 1.0.0", () => {
     const app = json("package.json");
     const lock = json("package-lock.json") as {
       version: string;
@@ -15,9 +15,9 @@ describe("v1 release versions", () => {
     };
     const companion = json("companion-module-lightlab-ditbrowse/package.json");
 
-    expect(app.version).toBe("1.0.0");
-    expect(lock.version).toBe("1.0.0");
-    expect(lock.packages[""]?.version).toBe("1.0.0");
+    expect(app.version).toBe("1.0.1");
+    expect(lock.version).toBe("1.0.1");
+    expect(lock.packages[""]?.version).toBe("1.0.1");
     expect(companion.version).toBe("1.0.0");
   });
 });
