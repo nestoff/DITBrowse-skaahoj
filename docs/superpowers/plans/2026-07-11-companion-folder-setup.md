@@ -1,6 +1,6 @@
 # Companion Developer-Module Folder Setup Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add an explicit, instructional Companion setup dialog that lets a user choose and remember a nonstandard developer-module folder, then installs through the existing safe module installer only after the user requests it.
 
@@ -37,7 +37,7 @@
 - Consumes: Companion's standard `config.json` and a DITBrowse `userData` directory.
 - Produces: `companionModuleConfigPath(userDataPath): string`, `loadCompanionModuleConfig(userDataPath): Promise<CompanionModuleConfig>`, `saveCompanionModuleConfig(userDataPath, config): Promise<void>`, installer method `setManualDeveloperModulesPath(path): Promise<void>`, and status field `pathSource: "companion" | "manual" | null`.
 
-- [ ] **Step 1: Add failing manual-config tests**
+- [x] **Step 1: Add failing manual-config tests**
 
 Create `src/electron/companionModuleConfig.test.ts` with tests that assert:
 
@@ -62,7 +62,7 @@ await expect(
 
 Also assert malformed JSON and non-string paths load as `{ developerModulesPath: null }` without throwing.
 
-- [ ] **Step 2: Run the focused tests and verify they fail**
+- [x] **Step 2: Run the focused tests and verify they fail**
 
 Run:
 
@@ -72,7 +72,7 @@ npx vitest run src/electron/companionModuleConfig.test.ts
 
 Expected: FAIL because the config module does not exist.
 
-- [ ] **Step 3: Implement the DITBrowse-owned config file**
+- [x] **Step 3: Implement the DITBrowse-owned config file**
 
 Create `src/electron/companionModuleConfig.ts` with:
 
@@ -97,7 +97,7 @@ export async function saveCompanionModuleConfig(
 
 `load` returns the null default for `ENOENT`, malformed JSON, arrays, non-string values, empty strings, and relative paths. `save` accepts only `null` or an absolute path, creates `userDataPath`, and writes formatted JSON with a trailing newline.
 
-- [ ] **Step 4: Extend shared status and installer resolution**
+- [x] **Step 4: Extend shared status and installer resolution**
 
 Add to `CompanionModuleInstallStatus`:
 
@@ -125,7 +125,7 @@ return { root: null, source: null };
 
 Every status result includes `pathSource`. `setManualDeveloperModulesPath` rejects non-absolute paths and writes only `{ "developerModulesPath": "<absolute path>" }` to `manualConfigPath`.
 
-- [ ] **Step 5: Test precedence, fallback, and no side effects**
+- [x] **Step 5: Test precedence, fallback, and no side effects**
 
 Extend `src/electron/companionModuleInstaller.test.ts` to prove:
 
@@ -136,7 +136,7 @@ Extend `src/electron/companionModuleInstaller.test.ts` to prove:
 - installing after a manual path is saved uses the same staging and final validation behavior;
 - rollback still restores an outdated module when the final rename fails.
 
-- [ ] **Step 6: Run focused tests and commit**
+- [x] **Step 6: Run focused tests and commit**
 
 Run:
 
@@ -163,7 +163,7 @@ git commit -m "feat: remember companion developer module folder"
 - Consumes: a `BrowserWindow`, `dialog.showOpenDialog`, and `CompanionModuleInstaller`.
 - Produces: `chooseAndInstallCompanionModule(options): Promise<CompanionModuleInstallResult | null>` and renderer API `chooseAndInstallCompanionModule(): Promise<CompanionModuleInstallResult | null>`.
 
-- [ ] **Step 1: Add failing setup-operation tests**
+- [x] **Step 1: Add failing setup-operation tests**
 
 Create `src/electron/companionModuleSetup.test.ts` with injected picker and installer mocks. Assert the picker receives:
 
@@ -177,7 +177,7 @@ Create `src/electron/companionModuleSetup.test.ts` with injected picker and inst
 
 Assert cancellation returns `null` and calls neither `setManualDeveloperModulesPath` nor `install`. Assert one selected folder saves that exact absolute path, then calls `install`, and returns its result.
 
-- [ ] **Step 2: Verify the setup-operation tests fail**
+- [x] **Step 2: Verify the setup-operation tests fail**
 
 Run:
 
@@ -187,7 +187,7 @@ npx vitest run src/electron/companionModuleSetup.test.ts
 
 Expected: FAIL because the setup operation does not exist.
 
-- [ ] **Step 3: Implement the injected setup operation**
+- [x] **Step 3: Implement the injected setup operation**
 
 Create `src/electron/companionModuleSetup.ts`:
 
@@ -205,7 +205,7 @@ export async function chooseAndInstallCompanionModule(
 
 The function opens a directory-only picker. On cancellation or anything other than one selected absolute path, return `null`. Otherwise save the manual path and call the existing installer.
 
-- [ ] **Step 4: Wire main process and preload**
+- [x] **Step 4: Wire main process and preload**
 
 In `src/electron/main.ts`:
 
@@ -224,7 +224,7 @@ chooseAndInstallCompanionModule: () =>
   >;
 ```
 
-- [ ] **Step 5: Run focused IPC/setup tests and commit**
+- [x] **Step 5: Run focused IPC/setup tests and commit**
 
 Run:
 
@@ -253,7 +253,7 @@ git commit -m "feat: choose companion module folder"
 - Consumes: `CompanionModuleInstallStatus.pathSource`, existing `Dialog` and `Button` primitives, and the choose-and-install preload operation.
 - Produces: `CompanionModuleSetupDialog` and `WorkspaceSettingsProps.onChooseAndInstallCompanionModule(): Promise<boolean>`.
 
-- [ ] **Step 1: Add failing dialog and card behavior tests**
+- [x] **Step 1: Add failing dialog and card behavior tests**
 
 Test that the setup dialog contains all exact instruction labels and the two actions **Cancel** and **Choose Folder & Install**. In `WorkspaceSettings.test.tsx`, assert:
 
@@ -266,7 +266,7 @@ Test that the setup dialog contains all exact instruction labels and the two act
 - `pathSource: "manual"` shows **Change Folder** and opens the same dialog;
 - **Cancel** closes without calling setup.
 
-- [ ] **Step 2: Run focused renderer tests and verify they fail**
+- [x] **Step 2: Run focused renderer tests and verify they fail**
 
 Run:
 
@@ -276,7 +276,7 @@ npx vitest run src/renderer/components/CompanionModuleSetupDialog.test.tsx src/r
 
 Expected: FAIL because the dialog and enabled setup behavior do not exist.
 
-- [ ] **Step 3: Implement the setup dialog**
+- [x] **Step 3: Implement the setup dialog**
 
 Create `CompanionModuleSetupDialog.tsx` using the shared `Dialog`. Render a numbered list with Companion's exact labels. Use:
 
@@ -289,7 +289,7 @@ Create `CompanionModuleSetupDialog.tsx` using the shared `Dialog`. Render a numb
 
 Keep errors visible inside the dialog with `role="alert"`.
 
-- [ ] **Step 4: Wire explicit setup behavior into the card and App**
+- [x] **Step 4: Wire explicit setup behavior into the card and App**
 
 In `WorkspaceSettings`:
 
@@ -302,11 +302,11 @@ In `WorkspaceSettings`:
 
 In `App.tsx`, implement `chooseAndInstallCompanionModule(): Promise<boolean>` that sets busy/error state, awaits the preload call, returns `false` for cancellation or error, updates module status and returns `true` for success.
 
-- [ ] **Step 5: Add compact dialog styling**
+- [x] **Step 5: Add compact dialog styling**
 
 Add scoped styles for a maximum-width setup dialog, compact numbered instructions, emphasized Companion UI labels, and a quiet path explanation. Reuse current neutral/orange colors; do not introduce blue accents.
 
-- [ ] **Step 6: Run renderer/App tests and commit**
+- [x] **Step 6: Run renderer/App tests and commit**
 
 Run:
 
@@ -335,7 +335,7 @@ git commit -m "feat: guide companion module setup"
 - Consumes: Tasks 1–3 and existing Apple credentials.
 - Produces: a tested, signed/notarized/stapled local v1.0.1 app with the live workspace preserved.
 
-- [ ] **Step 1: Bump only the DITBrowse app to 1.0.1**
+- [x] **Step 1: Bump only the DITBrowse app to 1.0.1**
 
 Update `src/versionConfig.test.ts` to expect root app and lockfile `1.0.1` while the Companion module remains `1.0.0`. Run:
 
@@ -346,7 +346,7 @@ git add package.json package-lock.json src/versionConfig.test.ts
 git commit -m "release: set app version 1.0.1"
 ```
 
-- [ ] **Step 2: Run the complete verification gate**
+- [x] **Step 2: Run the complete verification gate**
 
 Run:
 
@@ -365,7 +365,7 @@ node --test scripts/notarization-policy.test.mjs scripts/signed-release-policy.t
 
 Expected: every command exits 0.
 
-- [ ] **Step 3: Build and notarize v1.0.1**
+- [x] **Step 3: Build and notarize v1.0.1**
 
 Run:
 
@@ -375,11 +375,11 @@ npm run package:mac:notarized
 
 Verify app and DMG using `codesign --verify`, `spctl --assess`, and `stapler validate`. Mount the DMG and confirm app `1.0.1`, Companion module `1.0.0`, the Applications symlink, matching ICNS, and DarkAqua icon stack.
 
-- [ ] **Step 4: Back up and replace Applications**
+- [x] **Step 4: Back up and replace Applications**
 
 Record the current local API state, quit DITBrowse, move `/Applications/DITBrowse.app` to a new timestamped backup, copy the verified v1.0.1 app with `ditto`, refresh LaunchServices and Dock, relaunch it, and confirm the recorded camera count, selected camera, and expansion mode are preserved.
 
-- [ ] **Step 5: Update verification docs and complete the plan**
+- [x] **Step 5: Update verification docs and complete the plan**
 
 Record the v1.0.1 tests, signature/notarization results, artifact checksums, installed version, backup path, and preserved live state in `docs/verification.md`. Mark every checkbox in this plan `[x]` and commit:
 

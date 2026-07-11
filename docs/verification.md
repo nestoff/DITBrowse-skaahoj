@@ -2,6 +2,47 @@
 
 ## Automated
 
+### DITBrowse v1.0.1 Companion folder setup
+
+Verified July 11, 2026:
+
+```bash
+npm run test                    # 50 files, 408 tests passed
+npm run typecheck               # passed
+npm run test:e2e                # 10 passed, 1 capture-only test skipped
+npm run test:electron           # 1 passed
+npm run build                   # passed
+npm run package:mac:notarized   # signed/notarized app, ZIP, and DMG
+```
+
+The installer now checks Companion configuration without side effects. When no
+developer-module path can be discovered, it shows setup instructions only after the
+user clicks **Set Up Companion**. Canceling the dialog or native directory picker
+changes nothing. A selected absolute folder is stored in DITBrowse's own user-data
+configuration and used only as a fallback; DITBrowse never edits Companion's config.
+
+The focused installer and renderer tests cover configuration precedence, manual-path
+persistence, directory-picker cancellation, transactional installation, rollback,
+the exact Companion Developer setting labels, and the requirement that no popup or
+installation happens automatically. Companion module 1.0.0 retained 14 passing tests,
+lint, typecheck, build, and manifest validation.
+
+The v1.0.1 app and DMG passed `codesign`, `spctl`, `stapler validate`, and mounted-image
+verification. The DMG contains app 1.0.1, Companion module 1.0.0, the Applications
+symlink, matching legacy ICNS, and the DarkAqua Icon Composer image stack.
+
+```text
+5f883407742e8627153388cf5b6adbb3a81b560592aaf1e9451fda057d93645e  DITBrowse-mac-arm64.dmg
+ea0673d5f7b1be28bafc3489dac27bbf22c03b73a0f1061d49de929dc5925113  DITBrowse-mac-arm64.zip
+```
+
+The signed app replaced `/Applications/DITBrowse.app`; the prior copy was preserved at
+`/Users/lightlab/Documents/DITBrowse App Backups/DITBrowse-20260711-124909.app`. The
+live pre-install state remained intact: 11 cameras, selected camera 1, and expansion
+enabled.
+
+### DITBrowse v1.0.0 release
+
 Verified July 11, 2026 for DITBrowse v1.0.0:
 
 ```bash
