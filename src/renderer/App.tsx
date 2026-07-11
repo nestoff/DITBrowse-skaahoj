@@ -29,6 +29,7 @@ import { TileGrid } from "./components/TileGrid";
 import { Button } from "./components/ui/Button";
 import { Dialog } from "./components/ui/Dialog";
 import { StatusNotice } from "./components/ui/StatusNotice";
+import { HelpGuide } from "./help/HelpGuide";
 import {
   resetCameraList,
   resetSelectedCamera,
@@ -168,6 +169,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     hydrateInitialWorkspace
   );
   const [editorOpen, setEditorOpen] = useState(false);
+  const [helpSelected, setHelpSelected] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [expansionEnabled, setExpansionEnabled] = useState(true);
   const [httpAuthQueue, setHttpAuthQueue] = useState<HttpAuthPromptState[]>([]);
@@ -917,7 +919,13 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         selectedTile={selectedTile}
         activeList={activeList ?? null}
         onOpenCameraList={() => setEditorOpen(true)}
-        onSelectTile={selectTile}
+        helpSelected={helpSelected}
+        onOpenHelp={() => setHelpSelected(true)}
+        onCloseHelp={() => setHelpSelected(false)}
+        onSelectTile={(tileId) => {
+          setHelpSelected(false);
+          selectTile(tileId);
+        }}
         onMoveTileToIndex={moveTileToIndex}
         onCloseTile={closeTile}
         onAddTile={addBlankTile}
@@ -940,30 +948,36 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         expansionEnabled={expansionEnabled}
         onFocusModeToggle={toggleFocusMode}
       />
-      {resetBusy && (
-        <StatusNotice tone="progress" message={resetProgressMessage} />
-      )}
-      {!resetBusy && resetNotice && (
-        <StatusNotice
-          tone={resetNotice.tone}
-          message={resetNotice.message}
-          onDismiss={() => setResetNotice(null)}
+      <div
+        className={helpSelected ? "camera-workspace help-hidden" : "camera-workspace"}
+        aria-hidden={helpSelected || undefined}
+      >
+        {resetBusy && (
+          <StatusNotice tone="progress" message={resetProgressMessage} />
+        )}
+        {!resetBusy && resetNotice && (
+          <StatusNotice
+            tone={resetNotice.tone}
+            message={resetNotice.message}
+            onDismiss={() => setResetNotice(null)}
+          />
+        )}
+        <TileGrid
+          tiles={workspace.tiles}
+          cameraNumbersById={cameraNumbersById}
+          globalZoom={workspace.globalZoom}
+          columns={workspace.gridColumns}
+          selectedTileId={workspace.selectedTileId}
+          focusMode={effectiveFocusMode}
+          onSelectTile={selectTile}
+          onUrlCommitted={commitTileNavigationUrl}
+          onCredentialCaptured={saveCapturedCredential}
+          onCredentialRejected={discardTileCredential}
+          credentialsByTileId={credentialsByTileId}
+          webviewPreloadPath={webviewPreloadPath}
         />
-      )}
-      <TileGrid
-        tiles={workspace.tiles}
-        cameraNumbersById={cameraNumbersById}
-        globalZoom={workspace.globalZoom}
-        columns={workspace.gridColumns}
-        selectedTileId={workspace.selectedTileId}
-        focusMode={effectiveFocusMode}
-        onSelectTile={selectTile}
-        onUrlCommitted={commitTileNavigationUrl}
-        onCredentialCaptured={saveCapturedCredential}
-        onCredentialRejected={discardTileCredential}
-        credentialsByTileId={credentialsByTileId}
-        webviewPreloadPath={webviewPreloadPath}
-      />
+      </div>
+      {helpSelected && <HelpGuide />}
       {editorOpen && (
         <CameraListEditor
           activeList={activeList ?? null}

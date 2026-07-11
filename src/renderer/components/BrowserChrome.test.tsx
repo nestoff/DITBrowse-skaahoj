@@ -14,6 +14,9 @@ const baseProps = {
   selectedTile,
   activeList,
   onOpenCameraList: vi.fn(),
+  helpSelected: false,
+  onOpenHelp: vi.fn(),
+  onCloseHelp: vi.fn(),
   onSelectTile: vi.fn(),
   onMoveTileToIndex: vi.fn(),
   onCloseTile: vi.fn(),
@@ -39,6 +42,20 @@ const baseProps = {
 };
 
 describe("BrowserChrome", () => {
+  it("opens Help as an active transient tab without the camera toolbar", () => {
+    const onOpenHelp = vi.fn();
+    const { rerender } = render(
+      <BrowserChrome {...baseProps} onOpenHelp={onOpenHelp} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+    expect(onOpenHelp).toHaveBeenCalledOnce();
+
+    rerender(<BrowserChrome {...baseProps} helpSelected onOpenHelp={onOpenHelp} />);
+    expect(screen.getByLabelText("Tab Help")).toHaveClass("active");
+    expect(screen.queryByLabelText("Browser toolbar")).not.toBeInTheDocument();
+  });
+
   it("renders browser tabs before the toolbar with one shared address field", () => {
     render(<BrowserChrome {...baseProps} />);
 

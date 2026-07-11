@@ -11,6 +11,15 @@ interface TabStripProps {
   onAddTile: () => void;
   onCloseTile: (tileId: string) => void;
   onMoveTileToIndex: (tileId: string, toIndex: number) => void;
+  auxiliaryTab?: AuxiliaryTab;
+}
+
+export interface AuxiliaryTab {
+  id: string;
+  title: string;
+  active: boolean;
+  onSelect: () => void;
+  onClose: () => void;
 }
 
 export function TabStrip({
@@ -19,7 +28,8 @@ export function TabStrip({
   onSelectTile,
   onAddTile,
   onCloseTile,
-  onMoveTileToIndex
+  onMoveTileToIndex,
+  auxiliaryTab
 }: TabStripProps): ReactElement {
   const [draggedTileId, setDraggedTileId] = useState<string | null>(null);
 
@@ -28,10 +38,11 @@ export function TabStrip({
       <div className="tab-list">
         {tiles.map((tile, index) => {
           const label = tile.title || tile.url || "Blank";
+          const active = !auxiliaryTab?.active && tile.id === selectedTileId;
           return (
           <div
             key={tile.id}
-            className={tile.id === selectedTileId ? "tab active" : "tab"}
+            className={active ? "tab active" : "tab"}
             draggable
             aria-label={`Tab ${label}`}
             onDragStart={(event) => {
@@ -67,6 +78,34 @@ export function TabStrip({
           </div>
           );
         })}
+        {auxiliaryTab && (
+          <div
+            className={auxiliaryTab.active ? "tab help-tab active" : "tab help-tab"}
+            aria-label={`Tab ${auxiliaryTab.title}`}
+          >
+            <button
+              type="button"
+              className="tab-select"
+              aria-label={`Select ${auxiliaryTab.title}`}
+              onClick={auxiliaryTab.onSelect}
+            >
+              <span className="tab-index" aria-hidden="true">
+                ?
+              </span>
+              <span className="tab-title">{auxiliaryTab.title}</span>
+            </button>
+            <IconButton
+              className="tab-close"
+              label={`Close ${auxiliaryTab.title}`}
+              tooltip={{
+                title: `Close ${auxiliaryTab.title}`,
+                description: "Returns to the selected camera without changing it."
+              }}
+              icon={<X size={13} strokeWidth={2.3} />}
+              onClick={auxiliaryTab.onClose}
+            />
+          </div>
+        )}
       </div>
       <IconButton
         label="Add tile"

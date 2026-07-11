@@ -159,6 +159,41 @@ describe("App control API commands", () => {
     };
   });
 
+  it("opens Help without unmounting cameras or publishing different device state", async () => {
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    await waitFor(() =>
+      expect(window.ditbrowse.publishControlApiStatus).toHaveBeenCalled()
+    );
+    const publishedBefore = vi.mocked(window.ditbrowse.publishControlApiStatus!).mock
+      .calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    expect(screen.getByLabelText("Help Guide")).toBeVisible();
+    expect(screen.queryByLabelText("Browser toolbar")).not.toBeInTheDocument();
+    expect(document.querySelectorAll("webview")).toHaveLength(12);
+    expect(document.querySelector(".camera-workspace")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    );
+    expect(window.ditbrowse.publishControlApiStatus).toHaveBeenCalledTimes(
+      publishedBefore
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Close Help" }));
+
+    expect(screen.queryByLabelText("Help Guide")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Browser toolbar")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Address" })).toHaveValue(
+      "http://192.168.1.01"
+    );
+    expect(window.ditbrowse.publishControlApiStatus).toHaveBeenCalledTimes(
+      publishedBefore
+    );
+  });
+
   it("mounts no sample cameras before the saved workspace is ready", async () => {
     const loading = deferred<ReturnType<typeof workspaceAt>>();
     window.ditbrowse.loadWorkspace = vi.fn(() => loading.promise);

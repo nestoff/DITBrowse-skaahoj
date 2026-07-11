@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { List } from "lucide-react";
+import { CircleHelp, List } from "lucide-react";
 import type {
   CameraList,
   TileState,
@@ -15,6 +15,9 @@ interface BrowserChromeProps {
   selectedTile: TileState | null;
   activeList: CameraList | null;
   onOpenCameraList: () => void;
+  helpSelected: boolean;
+  onOpenHelp: () => void;
+  onCloseHelp: () => void;
   onSelectTile: (tileId: string) => void;
   onCloseTile: (tileId: string) => void;
   onAddTile: () => void;
@@ -44,6 +47,9 @@ export function BrowserChrome({
   selectedTile,
   activeList,
   onOpenCameraList,
+  helpSelected,
+  onOpenHelp,
+  onCloseHelp,
   onSelectTile,
   onCloseTile,
   onAddTile,
@@ -75,7 +81,7 @@ export function BrowserChrome({
     !!selectedCamera && !!selectedTile?.url && selectedTile.url !== selectedCamera.url;
 
   return (
-    <div className="browser-shell">
+    <div className={helpSelected ? "browser-shell help-selected" : "browser-shell"}>
       <div className="browser-tab-row">
         <TabStrip
           tiles={workspace.tiles}
@@ -84,49 +90,78 @@ export function BrowserChrome({
           onMoveTileToIndex={onMoveTileToIndex}
           onCloseTile={onCloseTile}
           onAddTile={onAddTile}
+          auxiliaryTab={
+            helpSelected
+              ? {
+                  id: "help",
+                  title: "Help",
+                  active: true,
+                  onSelect: onOpenHelp,
+                  onClose: onCloseHelp
+                }
+              : undefined
+          }
         />
-        <Button
-          variant="ghost"
-          size="compact"
-          aria-label="Camera List"
-          tooltip={{
-            title: "Camera List",
-            description: "Opens the editable camera table and workspace settings."
-          }}
-          icon={<List size={15} strokeWidth={2.2} />}
-          className="camera-list-button"
-          onClick={onOpenCameraList}
-        >
-          Camera List
-        </Button>
+        <div className="browser-tab-actions">
+          <Button
+            variant="ghost"
+            size="compact"
+            aria-label="Help"
+            tooltip={{
+              title: "Help",
+              description: "Opens the offline camera setup and password guide."
+            }}
+            icon={<CircleHelp size={15} strokeWidth={2.2} />}
+            className="help-button"
+            onClick={onOpenHelp}
+          >
+            Help
+          </Button>
+          <Button
+            variant="ghost"
+            size="compact"
+            aria-label="Camera List"
+            tooltip={{
+              title: "Camera List",
+              description: "Opens the editable camera table and workspace settings."
+            }}
+            icon={<List size={15} strokeWidth={2.2} />}
+            className="camera-list-button"
+            onClick={onOpenCameraList}
+          >
+            Camera List
+          </Button>
+        </div>
       </div>
-      <BrowserToolbar
-        selectedTile={selectedTile}
-        columns={workspace.gridColumns}
-        defaultZoom={workspace.defaultZoom}
-        globalZoom={workspace.globalZoom}
-        onNavigate={onNavigate}
-        canSaveSelectedUrl={canSaveSelectedUrl}
-        onSaveSelectedUrl={onSaveSelectedUrl}
-        showReturnToPrefix={showReturnToPrefix}
-        onReturnSelectedCameraToPrefix={onReturnSelectedCameraToPrefix}
-        onBack={onBack}
-        onForward={onForward}
-        onReload={onReload}
-        onReloadAll={onReloadAll}
-        hasTiles={workspace.tiles.length > 0}
-        sessionBusy={sessionBusy}
-        onSignOutSelected={onSignOutSelected}
-        onRequestSignOutAll={onRequestSignOutAll}
-        onColumnsChange={onColumnsChange}
-        onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
-        onGlobalViewportChange={onGlobalViewportChange}
-        onZoomChange={onZoomChange}
-        onViewportChange={onViewportChange}
-        expansionEnabled={expansionEnabled}
-        focusMode={focusMode}
-        onFocusModeToggle={onFocusModeToggle}
-      />
+      {!helpSelected && (
+        <BrowserToolbar
+          selectedTile={selectedTile}
+          columns={workspace.gridColumns}
+          defaultZoom={workspace.defaultZoom}
+          globalZoom={workspace.globalZoom}
+          onNavigate={onNavigate}
+          canSaveSelectedUrl={canSaveSelectedUrl}
+          onSaveSelectedUrl={onSaveSelectedUrl}
+          showReturnToPrefix={showReturnToPrefix}
+          onReturnSelectedCameraToPrefix={onReturnSelectedCameraToPrefix}
+          onBack={onBack}
+          onForward={onForward}
+          onReload={onReload}
+          onReloadAll={onReloadAll}
+          hasTiles={workspace.tiles.length > 0}
+          sessionBusy={sessionBusy}
+          onSignOutSelected={onSignOutSelected}
+          onRequestSignOutAll={onRequestSignOutAll}
+          onColumnsChange={onColumnsChange}
+          onRelativeGlobalZoomChange={onRelativeGlobalZoomChange}
+          onGlobalViewportChange={onGlobalViewportChange}
+          onZoomChange={onZoomChange}
+          onViewportChange={onViewportChange}
+          expansionEnabled={expansionEnabled}
+          focusMode={focusMode}
+          onFocusModeToggle={onFocusModeToggle}
+        />
+      )}
     </div>
   );
 }

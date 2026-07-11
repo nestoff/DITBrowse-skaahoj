@@ -504,6 +504,18 @@ textarea::selection {
   background: var(--chrome);
 }
 
+.browser-shell.help-selected {
+  grid-template-rows: 48px;
+}
+
+.camera-workspace {
+  display: contents;
+}
+
+.camera-workspace.help-hidden {
+  display: none;
+}
+
 .browser-tab-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -638,6 +650,22 @@ textarea::selection {
 .add-tab-button,
 .camera-list-button {
   flex: 0 0 auto;
+}
+
+.browser-tab-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.help-button {
+  height: 34px;
+  padding: 0 11px;
+  white-space: nowrap;
+}
+
+.help-tab .tab-index {
+  font-size: 14px;
 }
 
 .camera-list-button {
