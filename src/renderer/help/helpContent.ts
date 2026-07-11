@@ -1,6 +1,9 @@
 import cameraListImage from "./assets/camera-list.png";
 import cameraRowImage from "./assets/camera-row.png";
 import cameraSessionImage from "./assets/camera-session.png";
+import mainLayoutImage from "./assets/main-layout.png";
+import mainNavigationImage from "./assets/main-navigation.png";
+import mainTabsImage from "./assets/main-tabs.png";
 import mainWorkspaceImage from "./assets/main-workspace.png";
 import passwordSettingsImage from "./assets/password-settings.png";
 import signInImage from "./assets/sign-in.png";
@@ -116,6 +119,49 @@ export const helpSections: HelpSection[] = [
           { label: "All relative percentage / reset", outcome: "Sets the precise global factor; double-click % to reset it to 100%.", scope: "All cameras" },
           { label: "Resolution", outcome: "Changes the selected camera's viewport resolution.", scope: "Selected camera", availability: "Disabled when no camera viewport is selected." },
           { label: "Apply to All", outcome: "Copies the selected resolution to every open camera.", scope: "All cameras", availability: "Disabled when no camera viewport is selected." }
+        ]
+      }
+    ],
+    images: [
+      {
+        src: mainTabsImage,
+        alt: "Main tab row annotated at a camera tab, close, Add tile, Help, and Camera List",
+        caption: "The tab row selects and organizes cameras, then opens workspace tools.",
+        callouts: [
+          { number: 1, text: "Camera tab: select the camera; drag the tab to change tab and grid order." },
+          { number: 2, text: "Close tab: remove this open camera without deleting its camera-list row." },
+          { number: 3, text: "Add tile: open a new blank camera browser tile." },
+          { number: 4, text: "Help: open this bundled offline guide." },
+          { number: 5, text: "Camera List: edit the camera list and Workspace Settings." }
+        ]
+      },
+      {
+        src: mainNavigationImage,
+        alt: "Navigation and address toolbar annotated at Back, Forward, Camera Session, Address, open, save, and list-address controls",
+        caption: "Navigation and address controls act on the selected camera unless noted.",
+        callouts: [
+          { number: 1, text: "Back: return the selected camera to its previous page." },
+          { number: 2, text: "Forward: move the selected camera to its next page." },
+          { number: 3, text: "Camera Session: open reload and sign-out actions." },
+          { number: 4, text: "Address: view or edit the selected camera's live URL." },
+          { number: 5, text: "Open address: load the typed address in the selected camera." },
+          { number: 6, text: "Open address in new tile: create a tile and load the typed address there." },
+          { number: 7, text: "Save current URL: store a differing live URL in the camera list." },
+          { number: 8, text: "Use list address: restore shared-prefix plus camera-number addressing." }
+        ]
+      },
+      {
+        src: mainLayoutImage,
+        alt: "Layout toolbar annotated at focus, columns, selected and all-camera zoom, resolution, and Apply to All",
+        caption: "Layout controls distinguish selected-camera changes from all-camera changes.",
+        callouts: [
+          { number: 1, text: "Focus selected page / Show all pages: switch between one camera and the grid." },
+          { number: 2, text: "Cols: set the grid column count for all cameras." },
+          { number: 3, text: "Selected zoom: adjust the slider or exact percentage; double-click % to reset." },
+          { number: 4, text: "All: open the relative zoom controls for every camera." },
+          { number: 5, text: "All relative zoom: adjust every camera from its own saved zoom; double-click % to reset." },
+          { number: 6, text: "Resolution: change the selected camera's viewport resolution." },
+          { number: 7, text: "Apply to All: copy the selected resolution to every open camera." }
         ]
       }
     ]

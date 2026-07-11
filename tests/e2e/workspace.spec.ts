@@ -79,6 +79,13 @@ test("Help opens as a full-page local tab and returns to the selected camera", a
     "href",
     "#help-camera-setup"
   );
+  const mainControlsLink = page.getByRole("link", { name: "Main Page Controls" });
+  await expect(mainControlsLink).toHaveAttribute("href", "#help-main-controls");
+  await mainControlsLink.click();
+  await expect(
+    page.getByRole("heading", { name: "Main Page Controls", exact: true })
+  ).toBeVisible();
+  await expect(page.getByLabel("Main Page Controls reference")).toBeVisible();
 
   for (const width of [960, 1180, 1440]) {
     await page.setViewportSize({ width, height: 800 });
@@ -87,6 +94,7 @@ test("Help opens as a full-page local tab and returns to the selected camera", a
     await expect(
       page.getByRole("heading", { name: "DITBrowse Help Guide" })
     ).toBeVisible();
+    await expect(page.getByLabel("Main Page Controls reference")).toBeVisible();
     expect(
       await page.getByLabel("Help Guide").evaluate((element) => {
         return element.scrollWidth <= element.clientWidth;

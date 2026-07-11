@@ -28,6 +28,10 @@ describe("HelpGuide", () => {
     expect(cameraSetup).toHaveAttribute("href", "#help-camera-setup");
     fireEvent.click(cameraSetup);
     expect(screen.getByRole("heading", { name: "Camera Setup" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Main Page Controls" })).toHaveAttribute(
+      "href",
+      "#help-main-controls"
+    );
   });
 
   it("explains every main workspace control exactly once", () => {
@@ -63,18 +67,21 @@ describe("HelpGuide", () => {
     }
   });
 
-  it("renders six accessible annotated stills with matching numbered captions", () => {
+  it("renders nine accessible annotated stills with matching numbered captions", () => {
     const { container } = render(<HelpGuide />);
 
     const images = screen.getAllByRole("img");
-    expect(images).toHaveLength(6);
+    expect(images).toHaveLength(9);
+    expect(screen.getByAltText(/Main tab row annotated/i)).toBeVisible();
+    expect(screen.getByAltText(/Navigation and address toolbar annotated/i)).toBeVisible();
+    expect(screen.getByAltText(/Layout toolbar annotated/i)).toBeVisible();
     for (const image of images) {
       expect(image).toHaveAttribute("alt");
       expect(image.getAttribute("alt")?.trim()).not.toBe("");
     }
 
     const figures = Array.from(container.querySelectorAll("figure"));
-    expect(figures).toHaveLength(6);
+    expect(figures).toHaveLength(9);
     for (const figure of figures) {
       expect(figure.querySelector("figcaption")).not.toBeNull();
       const calloutNumbers = Array.from(
