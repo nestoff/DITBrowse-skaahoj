@@ -122,6 +122,7 @@ describe("App control API commands", () => {
       onControlApiInfo: vi.fn(() => vi.fn()),
       getCompanionModuleInstallStatus: vi.fn(async () => ({
         state: "missing" as const,
+        pathSource: "companion" as const,
         bundledVersion: "0.1.0",
         installedVersion: null,
         targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
@@ -132,6 +133,7 @@ describe("App control API commands", () => {
         outcome: "installed" as const,
         status: {
           state: "current" as const,
+          pathSource: "companion" as const,
           bundledVersion: "0.1.0",
           installedVersion: "0.1.0",
           targetPath: "/tmp/Devmodules/lightlab-ditbrowse",

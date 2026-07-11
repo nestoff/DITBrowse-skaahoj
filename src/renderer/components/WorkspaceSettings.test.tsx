@@ -34,6 +34,7 @@ function createProps(
     onSetControlApiPort: vi.fn(async () => undefined),
     companionModuleStatus: {
       state: "missing",
+      pathSource: "companion",
       bundledVersion: "0.1.0",
       installedVersion: null,
       targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
@@ -151,6 +152,7 @@ describe("WorkspaceSettings", () => {
           {...createProps({
             companionModuleStatus: {
               state,
+              pathSource: state === "not_configured" ? null : "companion",
               bundledVersion: "0.1.0",
               installedVersion,
               targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
@@ -217,6 +219,7 @@ describe("WorkspaceSettings", () => {
         {...createProps({
           companionModuleStatus: {
             state: "current",
+            pathSource: "companion",
             bundledVersion: "0.1.0",
             installedVersion: "0.1.0",
             targetPath: "/tmp/Devmodules/lightlab-ditbrowse",

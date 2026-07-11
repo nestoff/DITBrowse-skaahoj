@@ -11,6 +11,7 @@ export type CompanionModuleInstallState =
 
 export interface CompanionModuleInstallStatus {
   state: CompanionModuleInstallState;
+  pathSource: "companion" | "manual" | null;
   bundledVersion: string | null;
   installedVersion: string | null;
   targetPath: string | null;

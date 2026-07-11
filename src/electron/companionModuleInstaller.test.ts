@@ -25,6 +25,7 @@ interface ModuleFixtureOptions {
 
 let rootPath: string;
 let configPath: string;
+let manualConfigPath: string;
 let bundledModulePath: string;
 let developerModulesPath: string;
 
@@ -85,6 +86,7 @@ function createInstaller(
 ) {
   return createCompanionModuleInstaller({
     configPath,
+    manualConfigPath,
     bundledModulePath,
     ...options
   });
@@ -110,6 +112,7 @@ async function temporaryEntries(): Promise<string[]> {
 beforeEach(async () => {
   rootPath = await mkdtemp(path.join(os.tmpdir(), "ditbrowse-companion-installer-"));
   configPath = path.join(rootPath, "Library/Application Support/companion/config.json");
+  manualConfigPath = path.join(rootPath, "DITBrowse/companion-module.json");
   bundledModulePath = path.join(rootPath, "bundled", COMPANION_MODULE_ID);
   developerModulesPath = path.join(rootPath, "Documents/Companion/Devmodules");
   await writeModuleFixture(bundledModulePath, "0.2.0");
@@ -246,6 +249,44 @@ describe("companionModuleInstaller", () => {
       state: "not_configured",
       canInstall: false
     });
+  });
+
+  it("uses a saved manual path when Companion configuration is unavailable", async () => {
+    const manualDeveloperModulesPath = path.join(rootPath, "Manual Companion Modules");
+    await rm(configPath, { force: true });
+    const installer = createInstaller();
+
+    await installer.setManualDeveloperModulesPath(manualDeveloperModulesPath);
+    await expect(installer.getStatus()).resolves.toMatchObject({
+      state: "missing",
+      pathSource: "manual",
+      targetPath: path.join(manualDeveloperModulesPath, COMPANION_MODULE_ID),
+      canInstall: true
+    });
+    await expect(lstat(manualDeveloperModulesPath)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await expect(installer.install()).resolves.toMatchObject({
+      outcome: "installed",
+      status: { state: "current", pathSource: "manual" }
+    });
+  });
+
+  it("prefers a valid Companion configuration over the saved manual path", async () => {
+    const manualDeveloperModulesPath = path.join(rootPath, "Manual Companion Modules");
+    const installer = createInstaller();
+    await installer.setManualDeveloperModulesPath(manualDeveloperModulesPath);
+
+    await expect(installer.getStatus()).resolves.toMatchObject({
+      state: "missing",
+      pathSource: "companion",
+      targetPath: path.join(developerModulesPath, COMPANION_MODULE_ID)
+    });
+  });
+
+  it("rejects a relative manual developer-module path", async () => {
+    await expect(
+      createInstaller().setManualDeveloperModulesPath("relative/modules")
+    ).rejects.toThrow(/absolute/i);
   });
 
   it("does not overwrite foreign or malformed installed modules", async () => {

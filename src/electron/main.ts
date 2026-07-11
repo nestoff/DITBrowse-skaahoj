@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
 import { resetCameraSessionData, resetListSessionData } from "./session.js";
 import { createCompanionModuleInstaller } from "./companionModuleInstaller.js";
+import { companionModuleConfigPath } from "./companionModuleConfig.js";
 import {
   loadControlApiConfig,
   normalizeControlApiPort,
@@ -253,6 +254,7 @@ const createWindow = async (): Promise<void> => {
       "companion",
       "config.json"
     ),
+    manualConfigPath: companionModuleConfigPath(userDataPath),
     bundledModulePath: app.isPackaged
       ? path.join(process.resourcesPath, "companion-module", COMPANION_MODULE_ID)
       : path.join(

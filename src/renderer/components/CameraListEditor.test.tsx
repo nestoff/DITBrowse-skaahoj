@@ -34,6 +34,7 @@ function createWorkspaceSettings(
     onSetControlApiPort: vi.fn(async () => undefined),
     companionModuleStatus: {
       state: "current",
+      pathSource: "companion",
       bundledVersion: "0.1.0",
       installedVersion: "0.1.0",
       targetPath: "/tmp/Devmodules/lightlab-ditbrowse",

@@ -6,6 +6,10 @@ import {
   type CompanionModuleInstallResult,
   type CompanionModuleInstallStatus
 } from "../shared/companionModule.js";
+import {
+  loadCompanionModuleConfig,
+  saveCompanionModuleConfig
+} from "./companionModuleConfig.js";
 
 interface CompanionConfig {
   enable_developer?: unknown;
@@ -24,6 +28,7 @@ interface ParsedSemver {
 
 export interface CompanionModuleInstallerOptions {
   configPath: string;
+  manualConfigPath: string;
   bundledModulePath: string;
   rename?: typeof fs.rename;
 }
@@ -31,6 +36,7 @@ export interface CompanionModuleInstallerOptions {
 export interface CompanionModuleInstaller {
   getStatus(): Promise<CompanionModuleInstallStatus>;
   install(): Promise<CompanionModuleInstallResult>;
+  setManualDeveloperModulesPath(developerModulesPath: string): Promise<void>;
 }
 
 const semverPattern =
@@ -221,12 +227,21 @@ async function pathExists(filePath: string): Promise<boolean> {
 }
 
 function status(
-  values: Omit<CompanionModuleInstallStatus, "installedVersion" | "targetPath"> &
-    Partial<Pick<CompanionModuleInstallStatus, "installedVersion" | "targetPath">>
+  values: Omit<
+    CompanionModuleInstallStatus,
+    "installedVersion" | "targetPath" | "pathSource"
+  > &
+    Partial<
+      Pick<
+        CompanionModuleInstallStatus,
+        "installedVersion" | "targetPath" | "pathSource"
+      >
+    >
 ): CompanionModuleInstallStatus {
   return {
     installedVersion: null,
     targetPath: null,
+    pathSource: null,
     ...values
   };
 }
@@ -249,36 +264,54 @@ export function createCompanionModuleInstaller(
       });
     }
 
-    let companionConfig: CompanionConfig;
+    let developerModulesPath: string | null = null;
+    let pathSource: CompanionModuleInstallStatus["pathSource"] = null;
+    let companionConfigError = "";
     try {
-      companionConfig = await readJsonObject(options.configPath, "Companion configuration");
+      const companionConfig = (await readJsonObject(
+        options.configPath,
+        "Companion configuration"
+      )) as CompanionConfig;
+      if (
+        companionConfig.enable_developer === true &&
+        typeof companionConfig.dev_modules_path === "string" &&
+        path.isAbsolute(companionConfig.dev_modules_path)
+      ) {
+        developerModulesPath = companionConfig.dev_modules_path;
+        pathSource = "companion";
+      } else {
+        companionConfigError =
+          "Enable developer modules and select an absolute developer-module path in Companion.";
+      }
     } catch (error) {
+      companionConfigError = `Companion developer modules are not configured: ${errorMessage(error)}`;
+    }
+
+    if (!developerModulesPath) {
+      const manualConfig = await loadCompanionModuleConfig(
+        path.dirname(options.manualConfigPath)
+      );
+      if (manualConfig.developerModulesPath) {
+        developerModulesPath = manualConfig.developerModulesPath;
+        pathSource = "manual";
+      }
+    }
+
+    if (!developerModulesPath) {
       return status({
         state: "not_configured",
         bundledVersion: bundledMetadata.version,
-        message: `Companion developer modules are not configured: ${errorMessage(error)}`,
+        message: companionConfigError,
         canInstall: false
       });
     }
 
-    if (
-      companionConfig.enable_developer !== true ||
-      typeof companionConfig.dev_modules_path !== "string" ||
-      !path.isAbsolute(companionConfig.dev_modules_path)
-    ) {
-      return status({
-        state: "not_configured",
-        bundledVersion: bundledMetadata.version,
-        message: "Enable developer modules and select an absolute developer-module path in Companion.",
-        canInstall: false
-      });
-    }
-
-    const targetPath = path.join(companionConfig.dev_modules_path, COMPANION_MODULE_ID);
+    const targetPath = path.join(developerModulesPath, COMPANION_MODULE_ID);
     try {
       if (!(await pathExists(targetPath))) {
         return status({
           state: "missing",
+          pathSource,
           bundledVersion: bundledMetadata.version,
           targetPath,
           message: "DIT Browse Companion module is not installed.",
@@ -296,6 +329,7 @@ export function createCompanionModuleInstaller(
       if (comparison < 0) {
         return status({
           state: "outdated",
+          pathSource,
           bundledVersion: bundledMetadata.version,
           installedVersion: installedMetadata.version,
           targetPath,
@@ -306,6 +340,7 @@ export function createCompanionModuleInstaller(
       if (comparison > 0) {
         return status({
           state: "newer",
+          pathSource,
           bundledVersion: bundledMetadata.version,
           installedVersion: installedMetadata.version,
           targetPath,
@@ -315,6 +350,7 @@ export function createCompanionModuleInstaller(
       }
       return status({
         state: "current",
+        pathSource,
         bundledVersion: bundledMetadata.version,
         installedVersion: installedMetadata.version,
         targetPath,
@@ -324,12 +360,24 @@ export function createCompanionModuleInstaller(
     } catch (error) {
       return status({
         state: "invalid",
+        pathSource,
         bundledVersion: bundledMetadata.version,
         targetPath,
         message: `The existing ${COMPANION_MODULE_ID} folder is not a valid DIT Browse Companion module: ${errorMessage(error)}`,
         canInstall: false
       });
     }
+  };
+
+  const setManualDeveloperModulesPath = async (
+    developerModulesPath: string
+  ): Promise<void> => {
+    if (!path.isAbsolute(developerModulesPath)) {
+      throw new Error("Companion developer-module path must be absolute");
+    }
+    await saveCompanionModuleConfig(path.dirname(options.manualConfigPath), {
+      developerModulesPath
+    });
   };
 
   const install = async (): Promise<CompanionModuleInstallResult> => {
@@ -432,5 +480,5 @@ export function createCompanionModuleInstaller(
     }
   };
 
-  return { getStatus, install };
+  return { getStatus, install, setManualDeveloperModulesPath };
 }
