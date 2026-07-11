@@ -39,6 +39,8 @@ interface AnnotationGeometry {
 
 interface CaptureOptions {
   maxHeight?: number;
+  extraBottom?: number;
+  annotationBandHeight?: number;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -63,7 +65,10 @@ async function captureStill(
   }
   const cropBox = {
     ...measuredCropBox,
-    height: Math.min(measuredCropBox.height, options.maxHeight ?? measuredCropBox.height)
+    height: Math.min(
+      measuredCropBox.height + (options.extraBottom ?? 0),
+      options.maxHeight ?? measuredCropBox.height + (options.extraBottom ?? 0)
+    )
   };
   const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
   const screenshotClip = {
@@ -140,7 +145,7 @@ async function captureStill(
   }
 
   await page.evaluate(
-    ({ box, items }) => {
+    ({ box, items, annotationBandHeight }) => {
       document.getElementById("help-capture-annotations")?.remove();
       const namespace = "http://www.w3.org/2000/svg";
       const svg = document.createElementNS(namespace, "svg");
@@ -177,6 +182,17 @@ async function captureStill(
         defs.append(marker);
       }
       svg.append(defs);
+
+      if (annotationBandHeight > 0) {
+        const band = document.createElementNS(namespace, "rect");
+        band.setAttribute("x", "0");
+        band.setAttribute("y", String(box.height - annotationBandHeight));
+        band.setAttribute("width", String(box.width));
+        band.setAttribute("height", String(annotationBandHeight));
+        band.setAttribute("fill", "#09090a");
+        band.setAttribute("fill-opacity", "0.94");
+        svg.append(band);
+      }
 
       for (const item of items) {
         const color = item.destructive ? "#e6817c" : "#f1f1f1";
@@ -220,7 +236,7 @@ async function captureStill(
 
       document.body.append(svg);
     },
-    { box: cropBox, items: geometry }
+    { box: cropBox, items: geometry, annotationBandHeight: options.annotationBandHeight ?? 0 }
   );
 
   await page.screenshot({
@@ -377,6 +393,24 @@ test("captures sanitized annotated Help stills from the real interface", async (
     { number: 3, target: page.getByRole("button", { name: "Camera Session" }), edge: "bottom" }
   ]);
 
+  const firstCameraTab = page.getByRole("button", { name: /^1 A/ });
+  await captureStill(page, "main-tabs", page.locator(".browser-tab-row"), [
+    {
+      number: 1,
+      target: firstCameraTab,
+      edge: "bottom",
+      targetRatio: 0.35
+    },
+    {
+      number: 2,
+      target: page.getByRole("button", { name: /^Close A/ }),
+      edge: "bottom"
+    },
+    { number: 3, target: page.getByRole("button", { name: "Add tile", exact: true }), edge: "bottom" },
+    { number: 4, target: page.getByRole("button", { name: "Help", exact: true }), edge: "bottom" },
+    { number: 5, target: page.getByRole("button", { name: "Camera List", exact: true }), edge: "bottom" }
+  ], { extraBottom: 64, annotationBandHeight: 58 });
+
   await page.getByRole("button", { name: "Camera List", exact: true }).click();
   const editor = page.getByLabel("Camera list editor");
   await expect(editor).toBeVisible();
@@ -424,6 +458,97 @@ test("captures sanitized annotated Help stills from the real interface", async (
 
   await page.getByRole("button", { name: "Discard" }).click();
   await expect(editor).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
+  await expect(editor).toBeVisible();
+  await page.getByLabel("A follow prefix").uncheck();
+  await page.getByLabel("A URL").fill("http://192.0.2.41");
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+
+  const address = page.getByRole("textbox", { name: "Address", exact: true });
+  await page.locator(".tile-slot.selected webview").evaluate((element) => {
+    const navigationEvent = new Event("did-navigate");
+    Object.defineProperty(navigationEvent, "url", { value: "http://192.0.2.42" });
+    Object.defineProperty(navigationEvent, "isMainFrame", { value: true });
+    element.dispatchEvent(navigationEvent);
+  });
+  await expect(address).toHaveValue("http://192.0.2.42");
+  const useListAddress = page.getByRole("button", {
+    name: "Go back to prefix and suffix style",
+    exact: true
+  });
+  const saveCurrentUrl = page.getByRole("button", {
+    name: "Save current URL to camera list",
+    exact: true
+  });
+  await expect(useListAddress).toBeVisible();
+  await expect(saveCurrentUrl).toBeEnabled();
+
+  const navigationRegion = await createCaptureRegion(
+    page,
+    "help-navigation-capture-region",
+    [page.locator(".browser-navigation"), page.locator(".browser-toolbar-main")],
+    8
+  );
+  await captureStill(page, "main-navigation", navigationRegion, [
+    { number: 1, target: page.getByRole("button", { name: "Back", exact: true }), edge: "bottom" },
+    { number: 2, target: page.getByRole("button", { name: "Forward", exact: true }), edge: "bottom" },
+    { number: 3, target: page.getByRole("button", { name: "Camera Session", exact: true }), edge: "bottom" },
+    { number: 4, target: address, edge: "bottom", targetRatio: 0.42 },
+    { number: 5, target: page.getByRole("button", { name: "Open address", exact: true }), edge: "bottom" },
+    { number: 6, target: page.getByRole("button", { name: "Open address in new tile", exact: true }), edge: "bottom" },
+    { number: 7, target: saveCurrentUrl, edge: "bottom" },
+    { number: 8, target: useListAddress, edge: "bottom" }
+  ], { extraBottom: 64, annotationBandHeight: 58 });
+  await navigationRegion.evaluate((element) => element.remove());
+
+  const globalZoomButton = page.getByRole("button", {
+    name: "Global zoom controls",
+    exact: true
+  });
+  await globalZoomButton.click();
+  const globalZoomPanel = page.getByLabel("Global zoom controls panel");
+  await expect(globalZoomPanel).toBeVisible();
+  const layoutRegion = await createCaptureRegion(
+    page,
+    "help-layout-capture-region",
+    [page.locator(".browser-layout-controls"), globalZoomPanel],
+    8
+  );
+  await captureStill(page, "main-layout", layoutRegion, [
+    { number: 1, target: page.getByRole("button", { name: "Focus selected page", exact: true }), edge: "bottom" },
+    { number: 2, target: page.getByLabel("Grid columns"), edge: "bottom" },
+    {
+      number: 3,
+      target: page.locator(".zoom-control"),
+      edge: "bottom",
+      targetRatio: 0.32,
+      startRatio: { x: 0.43, y: 0.91 },
+      viaRatios: [
+        { x: 0.05, y: 0.91 },
+        { x: 0.05, y: 0.28 },
+        { x: 0.32, y: 0.28 }
+      ]
+    },
+    {
+      number: 4,
+      target: globalZoomButton,
+      edge: "bottom",
+      startRatio: { x: 0.57, y: 0.91 },
+      viaRatios: [
+        { x: 0.62, y: 0.91 },
+        { x: 0.62, y: 0.29 },
+        { x: 0.53, y: 0.29 }
+      ]
+    },
+    { number: 5, target: globalZoomPanel, edge: "right" },
+    { number: 6, target: page.getByLabel("Selected camera resolution"), edge: "bottom" },
+    { number: 7, target: page.getByRole("button", { name: "Apply resolution to all cameras", exact: true }), edge: "bottom" }
+  ], { extraBottom: 48, annotationBandHeight: 42 });
+  await layoutRegion.evaluate((element) => element.remove());
+  await globalZoomButton.click();
+
   await page.evaluate(() => {
     window.__helpAuthCallback?.({
       requestId: "help-auth",
