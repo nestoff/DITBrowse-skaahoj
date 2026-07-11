@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { HelpGuide } from "./HelpGuide";
 
@@ -28,5 +28,35 @@ describe("HelpGuide", () => {
     expect(cameraSetup).toHaveAttribute("href", "#help-camera-setup");
     fireEvent.click(cameraSetup);
     expect(screen.getByRole("heading", { name: "Camera Setup" })).toBeVisible();
+  });
+
+  it("renders six accessible annotated stills with matching numbered captions", () => {
+    const { container } = render(<HelpGuide />);
+
+    const images = screen.getAllByRole("img");
+    expect(images).toHaveLength(6);
+    for (const image of images) {
+      expect(image).toHaveAttribute("alt");
+      expect(image.getAttribute("alt")?.trim()).not.toBe("");
+    }
+
+    const figures = Array.from(container.querySelectorAll("figure"));
+    expect(figures).toHaveLength(6);
+    for (const figure of figures) {
+      expect(figure.querySelector("figcaption")).not.toBeNull();
+      const calloutNumbers = Array.from(
+        figure.querySelectorAll<HTMLElement>(".help-callout-number")
+      ).map((marker) => marker.textContent);
+      expect(new Set(calloutNumbers).size).toBe(calloutNumbers.length);
+    }
+
+    const sessionFigure = screen
+      .getByAltText(/Camera Session menu/i)
+      .closest("figure");
+    expect(sessionFigure).not.toBeNull();
+    expect(within(sessionFigure!).getByText("Reload selected")).toBeVisible();
+    expect(
+      within(sessionFigure!).getByText("Sign out, forget login & reload selected")
+    ).toBeVisible();
   });
 });

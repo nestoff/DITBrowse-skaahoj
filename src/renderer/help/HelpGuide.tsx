@@ -43,6 +43,27 @@ export function HelpGuide(): ReactElement {
                   ))}
                 </div>
               )}
+              {section.images?.map((image) => (
+                <figure key={image.src} className="help-figure">
+                  <img src={image.src} alt={image.alt} />
+                  <figcaption>
+                    <p>{image.caption}</p>
+                    <ol className="help-callouts">
+                      {image.callouts.map((callout) => (
+                        <li
+                          key={callout.number}
+                          className={callout.destructive ? "destructive" : undefined}
+                        >
+                          <span className="help-callout-number" aria-hidden="true">
+                            {callout.number}
+                          </span>
+                          <span>{callout.text}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </figcaption>
+                </figure>
+              ))}
               {section.troubleshooting?.map((item) => (
                 <article key={item.symptom} className="help-troubleshooting-item">
                   <h3>{item.symptom}</h3>

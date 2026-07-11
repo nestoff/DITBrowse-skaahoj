@@ -494,6 +494,76 @@ textarea::selection {
   margin: 4px 0;
 }
 
+.help-figure {
+  width: min(100%, 960px);
+  margin: 28px 0 36px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.help-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid var(--line-soft);
+  background: #09090a;
+}
+
+.help-figure figcaption {
+  padding: 14px 16px 16px;
+}
+
+.help-figure figcaption > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.help-callouts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 16px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-callouts li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.help-callout-number {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #f1f1f1;
+  border-radius: 50%;
+  background: #1b1b1d;
+  color: #f1f1f1;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.help-callouts li.destructive {
+  color: var(--danger);
+}
+
+.help-callouts li.destructive .help-callout-number {
+  border-color: #e6817c;
+  color: #e6817c;
+}
+
 .browser-shell {
   position: relative;
   z-index: 10;
@@ -2086,6 +2156,10 @@ textarea::selection {
 
   .help-guide-scroll {
     padding: 28px 18px 56px;
+  }
+
+  .help-callouts {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .browser-tab-row {
