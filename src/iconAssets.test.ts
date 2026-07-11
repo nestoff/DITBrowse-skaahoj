@@ -1,9 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const iconDirectory = resolve(process.cwd(), "assets/icon");
 const sourceSvgPath = resolve(iconDirectory, "ditbrowse-icon-source.svg");
+const runOnMac = process.platform === "darwin" ? it : it.skip;
 
 describe("Camera Wall icon assets", () => {
   it("uses the approved vector geometry and palette as its single source", () => {
@@ -27,5 +36,40 @@ describe("Camera Wall icon assets", () => {
       "#EDE9DF"
     ]);
     expect(svg).not.toMatch(/<(?:text|image|linearGradient|radialGradient|filter)\b/);
+  });
+
+  runOnMac("builds every required PNG and ICNS from the vector master", () => {
+    const outputRoot = mkdtempSync(resolve(tmpdir(), "ditbrowse-icon-"));
+    try {
+      execFileSync(process.execPath, [
+        resolve(process.cwd(), "scripts/build-mac-icon.mjs"),
+        "--output-root",
+        outputRoot
+      ]);
+
+      const expectedFiles = [
+        "ditbrowse-icon-source.png",
+        "ditbrowse-icon-1024.png",
+        "ditbrowse.icns",
+        "ditbrowse.iconset/icon_16x16.png",
+        "ditbrowse.iconset/icon_16x16@2x.png",
+        "ditbrowse.iconset/icon_32x32.png",
+        "ditbrowse.iconset/icon_32x32@2x.png",
+        "ditbrowse.iconset/icon_128x128.png",
+        "ditbrowse.iconset/icon_128x128@2x.png",
+        "ditbrowse.iconset/icon_256x256.png",
+        "ditbrowse.iconset/icon_256x256@2x.png",
+        "ditbrowse.iconset/icon_512x512.png",
+        "ditbrowse.iconset/icon_512x512@2x.png"
+      ];
+
+      for (const relativePath of expectedFiles) {
+        const outputPath = resolve(outputRoot, relativePath);
+        expect(existsSync(outputPath), relativePath).toBe(true);
+        expect(statSync(outputPath).size, relativePath).toBeGreaterThan(0);
+      }
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
   });
 });

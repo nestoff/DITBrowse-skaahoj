@@ -48,4 +48,15 @@ describe("macOS package configuration", () => {
     );
     expect(packageScript).toContain("--extra-resource=resources/companion-module");
   });
+
+  it("regenerates the icon from its vector master before macOS packaging", () => {
+    const scripts = packageManifest().scripts ?? {};
+    const packageScript = scripts["package:mac"] ?? "";
+
+    expect(scripts["build:mac-icon"]).toBe("node scripts/build-mac-icon.mjs");
+    expect(packageScript).toContain("npm run build:mac-icon");
+    expect(packageScript.indexOf("npm run build:mac-icon")).toBeLessThan(
+      packageScript.indexOf("electron-packager")
+    );
+  });
 });
