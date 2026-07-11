@@ -50,4 +50,4 @@ try {
   rmSync(stagingRoot, { recursive: true, force: true });
 }
 
-console.log(`Built unsigned DITBrowse DMG at ${outputPath}`);
+console.log(`Built DITBrowse DMG at ${outputPath}`);

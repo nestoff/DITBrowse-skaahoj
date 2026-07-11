@@ -11,6 +11,9 @@ const appPath = resolve(
 const zipPath = resolve(
   process.env.DITBROWSE_ZIP_PATH ?? "release/DITBrowse-darwin-arm64/DITBrowse-mac-arm64.zip"
 );
+const dmgPath = resolve(
+  process.env.DITBROWSE_DMG_PATH ?? "release/DITBrowse-darwin-arm64/DITBrowse-mac-arm64.dmg"
+);
 const identity =
   process.env.DITBROWSE_SIGN_IDENTITY ??
   "Developer ID Application: Adam Lighterman (8BWXULM784)";
@@ -103,5 +106,35 @@ console.log(`Creating ${zipPath}`);
 run("ditto", ["-c", "-k", "--keepParent", basename(appPath), zipPath], {
   cwd: dirname(appPath)
 });
+
+console.log(`Building ${dmgPath}`);
+run(process.execPath, [
+  resolve("scripts/build-mac-dmg.mjs"),
+  "--app-path",
+  appPath,
+  "--output",
+  dmgPath
+]);
+
+console.log("Signing DMG");
+run("codesign", [
+  "--force",
+  "--timestamp",
+  "--sign",
+  identity,
+  dmgPath
+]);
+run("codesign", ["--verify", "--verbose=2", dmgPath]);
+
+if (notaryOptions) {
+  console.log("Notarizing DMG");
+  await notarize({
+    appPath: dmgPath,
+    ...notaryOptions
+  });
+  console.log("DMG notarization complete and ticket stapled");
+} else {
+  console.log("Skipping DMG notarization; set DITBROWSE_NOTARIZE=1 to opt in");
+}
 
 console.log("Signed release is ready");
