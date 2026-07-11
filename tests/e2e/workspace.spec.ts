@@ -55,6 +55,57 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
 });
 
+test("Help opens as a full-page local tab and returns to the selected camera", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const selectedAddress = await page
+    .getByRole("textbox", { name: "Address" })
+    .inputValue();
+  await page.getByRole("button", { name: "Help", exact: true }).click();
+
+  await expect(page.getByLabel("Help Guide")).toBeVisible();
+  await expect(page.getByLabel("Browser toolbar")).toHaveCount(0);
+  await expect(page.getByLabel("Tab Help")).toHaveClass(/active/);
+  await expect(page.locator("webview")).toHaveCount(12);
+  await expect(page.locator(".camera-workspace")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
+  await expect(page.locator(".camera-workspace")).toBeHidden();
+  await expect(page.getByRole("link", { name: "Camera Setup" })).toHaveAttribute(
+    "href",
+    "#help-camera-setup"
+  );
+
+  for (const width of [960, 1180, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expect(page.getByLabel("Help Guide")).toBeVisible();
+    await expect(page.getByLabel("Help sections")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "DITBrowse Help Guide" })
+    ).toBeVisible();
+    expect(
+      await page.getByLabel("Help Guide").evaluate((element) => {
+        return element.scrollWidth <= element.clientWidth;
+      })
+    ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+      width
+    );
+  }
+
+  await page.getByLabel("Close Help").click();
+  await expect(page.getByLabel("Help Guide")).toHaveCount(0);
+  await expect(page.getByLabel("Browser toolbar")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue(
+    selectedAddress
+  );
+  await expect(page.locator("webview")).toHaveCount(12);
+});
+
 test("camera list opens the full table and settings in one click", async ({ page }) => {
   await page.goto("/");
 
