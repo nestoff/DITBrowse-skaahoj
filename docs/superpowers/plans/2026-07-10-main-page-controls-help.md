@@ -1,6 +1,6 @@
 # Main Page Controls Help Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Explain every DITBrowse main-workspace control inside the existing offline Help tab with a complete typed reference and three compact annotated stills.
 
@@ -33,7 +33,7 @@
 - Produces: `HelpControlScope`, `HelpControl`, `HelpControlGroup`, and `HelpSection.controlGroups`.
 - Consumes: the existing `helpSections` data model and `HelpGuide` renderer.
 
-- [ ] **Step 1: Add a failing completeness test**
+- [x] **Step 1: Add a failing completeness test**
 
 Add this test to `HelpGuide.test.tsx`:
 
@@ -72,13 +72,13 @@ it("explains every main workspace control exactly once", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run: `npx vitest run src/renderer/help/HelpGuide.test.tsx`
 
 Expected: FAIL because `Main Page Controls reference` does not exist.
 
-- [ ] **Step 3: Extend the content model**
+- [x] **Step 3: Extend the content model**
 
 Add these exact types in `helpContent.ts`:
 
@@ -100,7 +100,7 @@ export interface HelpControlGroup {
 
 Add `controlGroups?: HelpControlGroup[]` to `HelpSection` and add `"main-controls"` to the `id` union.
 
-- [ ] **Step 4: Add the Main Page Controls section with complete data**
+- [x] **Step 4: Add the Main Page Controls section with complete data**
 
 Insert `main-controls` after Quick Start with three groups and the 22 labels from Step 1. Use the exact outcomes below:
 
@@ -152,7 +152,7 @@ Insert `main-controls` after Quick Start with three groups and the 22 labels fro
 }
 ```
 
-- [ ] **Step 5: Render grouped control-reference cards**
+- [x] **Step 5: Render grouped control-reference cards**
 
 In `HelpGuide.tsx`, render `section.controlGroups` inside:
 
@@ -180,13 +180,13 @@ In `HelpGuide.tsx`, render `section.controlGroups` inside:
 
 Style compact neutral cards with a 170px label column, a visible scope pill, wrapping availability notes, and one-column rows below 760px.
 
-- [ ] **Step 6: Run tests and typecheck**
+- [x] **Step 6: Run tests and typecheck**
 
 Run: `npx vitest run src/renderer/help/HelpGuide.test.tsx && npm run typecheck`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/renderer/help/helpContent.ts src/renderer/help/HelpGuide.tsx src/renderer/help/HelpGuide.test.tsx src/renderer/styles.css
@@ -210,7 +210,7 @@ git commit -m "docs: explain every main workspace control"
 - Consumes: `captureStill` and `createCaptureRegion` from the existing capture workflow.
 - Produces: three clean/annotated PNG pairs generated from current DITBrowse components.
 
-- [ ] **Step 1: Capture the tab row**
+- [x] **Step 1: Capture the tab row**
 
 Immediately after the existing main-workspace capture, capture `.browser-tab-row` as `main-tabs` with callouts for:
 
@@ -222,7 +222,7 @@ Immediately after the existing main-workspace capture, capture `.browser-tab-row
 
 Use `getByRole` with exact accessible names and keep callout markers outside labels.
 
-- [ ] **Step 2: Create the conditional navigation state**
+- [x] **Step 2: Create the conditional navigation state**
 
 Within the sanitized capture only:
 
@@ -234,7 +234,7 @@ Within the sanitized capture only:
 
 Assert `Use list address` is visible and `Save current URL to camera list` is enabled.
 
-- [ ] **Step 3: Capture navigation and address controls**
+- [x] **Step 3: Capture navigation and address controls**
 
 Create a capture region covering `.browser-navigation` and `.browser-toolbar-main`, then capture `main-navigation` with eight callouts:
 
@@ -247,7 +247,7 @@ Create a capture region covering `.browser-navigation` and `.browser-toolbar-mai
 7. Save current URL to camera list.
 8. Use list address.
 
-- [ ] **Step 4: Capture layout and global zoom controls**
+- [x] **Step 4: Capture layout and global zoom controls**
 
 Click the exact `Global zoom controls` button, assert `Global zoom controls panel` is visible, create a capture region covering `.browser-layout-controls` plus `.zoom-popover`, and capture `main-layout` with seven grouped callouts:
 
@@ -259,13 +259,13 @@ Click the exact `Global zoom controls` button, assert `Global zoom controls pane
 6. Selected camera resolution.
 7. Apply resolution to all cameras.
 
-- [ ] **Step 5: Generate and inspect all pairs**
+- [x] **Step 5: Generate and inspect all pairs**
 
 Run: `npm run capture:help-stills`
 
 Expected: PASS and nine source/annotated pairs total. Inspect the three new pairs at original resolution for exact UI, readable arrows, no label coverage, and no production data.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/e2e/help-stills.spec.ts docs/help/source-stills src/renderer/help/assets
@@ -286,19 +286,19 @@ git commit -m "docs: add annotated main controls stills"
 - Consumes: `main-tabs.png`, `main-navigation.png`, and `main-layout.png` from Task 2.
 - Produces: nine total Help figures and an accessible Main Page Controls sidebar link.
 
-- [ ] **Step 1: Extend figure and navigation tests**
+- [x] **Step 1: Extend figure and navigation tests**
 
 Change the expected Help image count from 6 to 9. Assert the three new alt texts exist and `Main Page Controls` links to `#help-main-controls`.
 
-- [ ] **Step 2: Attach the three images to `main-controls`**
+- [x] **Step 2: Attach the three images to `main-controls`**
 
 Import the PNGs and add `images` with captions and callouts matching Task 2 exactly. Keep one caption list per image and preserve the marker numbers used in the raster annotations.
 
-- [ ] **Step 3: Extend browser-level Help coverage**
+- [x] **Step 3: Extend browser-level Help coverage**
 
 In `workspace.spec.ts`, assert the Main Page Controls link exists, click it, and verify the `Main Page Controls` heading and `Main Page Controls reference` are visible with no horizontal overflow at 960, 1180, and 1440 widths.
 
-- [ ] **Step 4: Run the full verification gate**
+- [x] **Step 4: Run the full verification gate**
 
 Run:
 
@@ -312,7 +312,7 @@ npm run build
 
 Expected: every command exits 0 and Vite lists nine Help PNG assets.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/renderer/help/helpContent.ts src/renderer/help/HelpGuide.test.tsx tests/e2e/workspace.spec.ts src/renderer/styles.css
@@ -332,25 +332,25 @@ git commit -m "docs: complete main controls help"
 - Consumes: verified guide and nine bundled Help images.
 - Produces: running local replacement app with the expanded guide.
 
-- [ ] **Step 1: Package without Developer ID signing or notarization**
+- [x] **Step 1: Package without Developer ID signing or notarization**
 
 Run: `npm run package:mac`
 
 Expected: package succeeds. Do not run `package:mac:signed`, `package:mac:notarized`, or `scripts/sign-and-notarize-mac.mjs`.
 
-- [ ] **Step 2: Verify all nine assets inside `app.asar`**
+- [x] **Step 2: Verify all nine assets inside `app.asar`**
 
 List `dist-renderer/assets` inside the packaged asar and confirm the six existing plus `main-tabs`, `main-navigation`, and `main-layout` PNGs.
 
-- [ ] **Step 3: Back up and replace Applications**
+- [x] **Step 3: Back up and replace Applications**
 
 Quit DITBrowse, move the current `/Applications/DITBrowse.app` to a timestamped backup, copy the new packaged app with `ditto`, and launch `/Applications/DITBrowse.app`.
 
-- [ ] **Step 4: Verify the running installation**
+- [x] **Step 4: Verify the running installation**
 
 Confirm the process path is `/Applications/DITBrowse.app/Contents/MacOS/DITBrowse`, the local status endpoint is online with the existing camera count, and the installed Help page shows Main Page Controls plus all nine images.
 
-- [ ] **Step 5: Mark the plan complete and commit tracking**
+- [x] **Step 5: Mark the plan complete and commit tracking**
 
 Change every checkbox in this plan to `[x]`, commit the plan update, and report the backup path, tests, installed path, and explicit not-notarized status.
 
