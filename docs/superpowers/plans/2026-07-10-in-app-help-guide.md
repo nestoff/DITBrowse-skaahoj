@@ -56,7 +56,7 @@
 - Produces: `HelpSection`, `HelpTroubleshootingItem`, `helpSections`, and `HelpGuide(): ReactElement`.
 - Consumes: existing typography, surface, line, danger, and focus CSS variables from `styles.css`.
 
-- [ ] **Step 1: Write the failing component tests**
+- [x] **Step 1: Write the failing component tests**
 
 Create `src/renderer/help/HelpGuide.test.tsx`:
 
@@ -88,13 +88,13 @@ describe("HelpGuide", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [x] **Step 2: Run the test and verify it fails**
 
 Run: `npx vitest run src/renderer/help/HelpGuide.test.tsx`
 
 Expected: FAIL because `./HelpGuide` does not exist.
 
-- [ ] **Step 3: Define the complete data-only guide content**
+- [x] **Step 3: Define the complete data-only guide content**
 
 Create `src/renderer/help/helpContent.ts` with these exact public types and section IDs:
 
@@ -195,7 +195,7 @@ export const helpSections: HelpSection[] = [
 ];
 ```
 
-- [ ] **Step 4: Implement the native Help page**
+- [x] **Step 4: Implement the native Help page**
 
 Create `src/renderer/help/HelpGuide.tsx` as a semantic `article` with:
 
@@ -251,13 +251,13 @@ export function HelpGuide(): ReactElement {
 
 Add CSS that makes `.help-guide` a two-column `minmax(180px, 230px) minmax(0, 1fr)` grid, constrains the reading column to `880px`, uses `overflow-y: auto`, assigns `scroll-margin-top: 24px` to sections, and collapses the sidebar to a horizontal sticky navigation row below `760px`.
 
-- [ ] **Step 5: Run component tests and typecheck**
+- [x] **Step 5: Run component tests and typecheck**
 
 Run: `npx vitest run src/renderer/help/HelpGuide.test.tsx && npm run typecheck`
 
 Expected: both commands PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/renderer/help/helpContent.ts src/renderer/help/HelpGuide.tsx src/renderer/help/HelpGuide.test.tsx src/renderer/styles.css
@@ -281,7 +281,7 @@ git commit -m "feat: add native camera setup help guide"
 - Consumes: `HelpGuide(): ReactElement` from Task 1.
 - Produces: `AuxiliaryTab` and the `BrowserChrome` props `helpSelected`, `onOpenHelp`, and `onCloseHelp`.
 
-- [ ] **Step 1: Write failing TabStrip tests for a generic transient tab**
+- [x] **Step 1: Write failing TabStrip tests for a generic transient tab**
 
 Add tests that pass this exact auxiliary-tab object:
 
@@ -297,13 +297,13 @@ const auxiliaryTab = {
 
 Assert that `Tab Help` has class `active`, the previously selected camera tab does not, clicking `Tab Help` calls `onSelect`, and clicking `Close Help` calls `onClose` without invoking camera callbacks.
 
-- [ ] **Step 2: Run the TabStrip test and verify it fails**
+- [x] **Step 2: Run the TabStrip test and verify it fails**
 
 Run: `npx vitest run src/renderer/components/TabStrip.test.tsx`
 
 Expected: FAIL because `TabStripProps` does not accept `auxiliaryTab`.
 
-- [ ] **Step 3: Add the generic auxiliary-tab interface**
+- [x] **Step 3: Add the generic auxiliary-tab interface**
 
 In `TabStrip.tsx`, export and consume:
 
@@ -326,7 +326,7 @@ const active = cameraTabsActive && tile.id === selectedTileId;
 
 Use `aria-label="Tab Help"` for the wrapper and `aria-label="Close Help"` for its close button.
 
-- [ ] **Step 4: Write failing BrowserChrome and App tests**
+- [x] **Step 4: Write failing BrowserChrome and App tests**
 
 Add BrowserChrome assertions that:
 
@@ -340,13 +340,13 @@ With `helpSelected={true}`, assert `Tab Help` is active and `Browser toolbar` is
 
 In `App.test.tsx`, open Help, assert `Help Guide` appears, and assert all existing `webview` elements remain mounted inside an `aria-hidden="true"` camera workspace so opening Help cannot reload camera sessions. Click the original camera tab and assert the same selected address returns. Capture the last `publishControlApiStatus` call before opening Help and assert no new status is published solely because Help opened or closed.
 
-- [ ] **Step 5: Run the integration tests and verify they fail**
+- [x] **Step 5: Run the integration tests and verify they fail**
 
 Run: `npx vitest run src/renderer/components/TabStrip.test.tsx src/renderer/components/BrowserChrome.test.tsx src/renderer/App.test.tsx`
 
 Expected: FAIL because Help props, state, and content switching do not exist.
 
-- [ ] **Step 6: Integrate Help as transient renderer state**
+- [x] **Step 6: Integrate Help as transient renderer state**
 
 Add `const [helpSelected, setHelpSelected] = useState(false);` to `App.tsx`. Pass these exact behaviors:
 
@@ -398,7 +398,7 @@ In the main content area of `App.tsx`, wrap the existing notices and `TileGrid` 
 
 Do not dispatch a workspace action, change `selectedTileIdRef`, or call the control API when Help state changes.
 
-- [ ] **Step 7: Style the transient Help tab and selected layout**
+- [x] **Step 7: Style the transient Help tab and selected layout**
 
 Add `.help-button` beside `.camera-list-button`, `.help-tab .tab-index` for the neutral Help icon, and:
 
@@ -424,13 +424,13 @@ Add `.help-button` beside `.camera-list-button`, `.help-tab .tab-index` for the 
 
 Ensure the Help button remains visible at 760px and the camera tab strip remains horizontally scrollable.
 
-- [ ] **Step 8: Run tests and typecheck**
+- [x] **Step 8: Run tests and typecheck**
 
 Run: `npx vitest run src/renderer/components/TabStrip.test.tsx src/renderer/components/BrowserChrome.test.tsx src/renderer/App.test.tsx && npm run typecheck`
 
 Expected: all tests PASS and TypeScript reports no errors.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/renderer/components/TabStrip.tsx src/renderer/components/TabStrip.test.tsx src/renderer/components/BrowserChrome.tsx src/renderer/components/BrowserChrome.test.tsx src/renderer/App.tsx src/renderer/App.test.tsx src/renderer/styles.css
@@ -448,7 +448,7 @@ git commit -m "feat: open help as an in-app tab"
 - Consumes: Help button, transient `Tab Help`, Help Guide, and unchanged camera workspace from Task 2.
 - Produces: browser-level regression coverage for sizing and return-to-camera behavior.
 
-- [ ] **Step 1: Write the failing Playwright workflow**
+- [x] **Step 1: Write the failing Playwright workflow**
 
 Add this test to `tests/e2e/workspace.spec.ts`:
 
@@ -479,23 +479,23 @@ test("Help opens as a full-page local tab and returns to the selected camera", a
 });
 ```
 
-- [ ] **Step 2: Run the browser test and confirm its initial result**
+- [x] **Step 2: Run the browser test and confirm its initial result**
 
 Run: `npx playwright test tests/e2e/workspace.spec.ts --grep "Help opens"`
 
 Expected before Task 2 is merged: FAIL because Help is absent. Expected after Task 2: PASS.
 
-- [ ] **Step 3: Add supported-width coverage**
+- [x] **Step 3: Add supported-width coverage**
 
 Within the same test, loop through widths `960`, `1180`, and `1440`; at each width assert `.help-guide` has no horizontal overflow and the sidebar/navigation plus `Help Guide` heading remain visible.
 
-- [ ] **Step 4: Run the complete renderer E2E suite**
+- [x] **Step 4: Run the complete renderer E2E suite**
 
 Run: `npm run test:e2e`
 
 Expected: all Playwright tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/e2e/workspace.spec.ts
@@ -526,7 +526,7 @@ git commit -m "test: cover in-app help workflow"
 - Consumes: current real DITBrowse DOM, existing sample workspace types, and Playwright locators.
 - Produces: six clean PNGs, six annotated PNGs, and `npm run capture:help-stills`.
 
-- [ ] **Step 1: Add a disabled-by-default capture test and package script**
+- [x] **Step 1: Add a disabled-by-default capture test and package script**
 
 Add this script:
 
@@ -549,7 +549,7 @@ const cleanDirectory = path.join(root, "docs/help/source-stills");
 const annotatedDirectory = path.join(root, "src/renderer/help/assets");
 ```
 
-- [ ] **Step 2: Define a sanitized workspace before React mounts**
+- [x] **Step 2: Define a sanitized workspace before React mounts**
 
 Import `sampleWorkspace`, create this fixture in the Playwright process, and pass it to `addInitScript`:
 
@@ -628,7 +628,7 @@ await page.addInitScript(({ workspace }) => {
 
 Declare `__helpAuthCallback` in the test file's `Window` interface and invoke it with `{ requestId: "help-auth", url: "http://192.0.2.01", host: "192.0.2.01", port: 80 }` to open the real sign-in dialog.
 
-- [ ] **Step 3: Implement an exact SVG-arrow annotation helper**
+- [x] **Step 3: Implement an exact SVG-arrow annotation helper**
 
 Use this public shape:
 
@@ -660,7 +660,7 @@ async function captureStill(
 
 Calculate the arrow endpoint from the target's requested edge and place the numbered circle 52px away from that endpoint, clamped inside the crop. Set every line's `marker-end` to the matching neutral or destructive arrowhead.
 
-- [ ] **Step 4: Capture the six required real interface states**
+- [x] **Step 4: Capture the six required real interface states**
 
 Use one 1600×1000 viewport and actual accessible locators:
 
@@ -673,17 +673,17 @@ Use one 1600×1000 viewport and actual accessible locators:
 
 Assert every locator is visible before capture. Fail immediately if page text includes any known production address, job name, username, or password used by the installed workspace.
 
-- [ ] **Step 5: Run the capture pipeline**
+- [x] **Step 5: Run the capture pipeline**
 
 Run: `npm run capture:help-stills`
 
 Expected: one Playwright test PASS; six source PNGs and six annotated PNGs are created at the exact paths above.
 
-- [ ] **Step 6: Inspect all twelve images at original resolution**
+- [x] **Step 6: Inspect all twelve images at original resolution**
 
 Open each source/annotated pair. Verify the underlying interface is identical, each arrow terminates at the intended control, numbers are ordered, annotations do not cover labels, red appears only on destructive actions, and no production data appears.
 
-- [ ] **Step 7: Commit the deterministic capture workflow and assets**
+- [x] **Step 7: Commit the deterministic capture workflow and assets**
 
 ```bash
 git add package.json tests/e2e/help-stills.spec.ts docs/help/source-stills src/renderer/help/assets
@@ -704,17 +704,17 @@ git commit -m "docs: add annotated in-app help stills"
 - Consumes: six annotated PNG imports from Task 4.
 - Produces: `HelpImage` metadata and accessible rendered figures.
 
-- [ ] **Step 1: Extend tests for all six annotated figures**
+- [x] **Step 1: Extend tests for all six annotated figures**
 
 Add assertions that `getAllByRole("img")` has length 6, every image has non-empty alternative text, every figure has a visible caption, callout numbers are unique within each figure, and the Camera Session caption contains both `Reload selected` and `Sign out, forget login & reload selected`.
 
-- [ ] **Step 2: Run the HelpGuide test and verify it fails**
+- [x] **Step 2: Run the HelpGuide test and verify it fails**
 
 Run: `npx vitest run src/renderer/help/HelpGuide.test.tsx`
 
 Expected: FAIL because no figures are rendered.
 
-- [ ] **Step 3: Add typed image and callout metadata**
+- [x] **Step 3: Add typed image and callout metadata**
 
 Define:
 
@@ -735,7 +735,7 @@ export interface HelpImage {
 
 Add `images?: HelpImage[]` to `HelpSection`. Import the six PNGs and attach them to the relevant sections. Callout text must use the exact visible labels and number order used by `help-stills.spec.ts`.
 
-- [ ] **Step 4: Render accessible figures**
+- [x] **Step 4: Render accessible figures**
 
 For each image render:
 
@@ -758,13 +758,13 @@ For each image render:
 
 Style figures with a maximum width of `960px`, neutral borders, preserved image aspect ratio, and compact caption rows. The list marker must visually match the numbered circle in the annotated PNG.
 
-- [ ] **Step 5: Run focused and full verification**
+- [x] **Step 5: Run focused and full verification**
 
 Run: `npx vitest run src/renderer/help/HelpGuide.test.tsx && npm run test && npm run typecheck && npm run test:e2e`
 
 Expected: all commands PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/renderer/help/helpContent.ts src/renderer/help/HelpGuide.tsx src/renderer/help/HelpGuide.test.tsx src/renderer/styles.css
@@ -784,7 +784,7 @@ git commit -m "feat: illustrate the in-app help guide"
 - Consumes: completed Help implementation and bundled assets from Tasks 1–5.
 - Produces: verified unsigned installed application with offline Help.
 
-- [ ] **Step 1: Run the complete quality gate**
+- [x] **Step 1: Run the complete quality gate**
 
 Run:
 
@@ -798,13 +798,13 @@ npm run build
 
 Expected: every command exits 0.
 
-- [ ] **Step 2: Build without signing or notarization**
+- [x] **Step 2: Build without signing or notarization**
 
 Run: `npm run package:mac`
 
 Expected: `release/DITBrowse-darwin-arm64/DITBrowse.app` exists. Do not run `package:mac:signed`, `package:mac:notarized`, or `scripts/sign-and-notarize-mac.mjs`.
 
-- [ ] **Step 3: Verify Help assets are packaged**
+- [x] **Step 3: Verify Help assets are packaged**
 
 Run:
 
@@ -814,15 +814,15 @@ find release/DITBrowse-darwin-arm64/DITBrowse.app -path '*dist/assets*' -type f 
 
 Expected: the renderer bundle and six hashed Help PNG assets are present.
 
-- [ ] **Step 4: Preserve the installed app and replace it**
+- [x] **Step 4: Preserve the installed app and replace it**
 
 Quit the running DITBrowse process. Create `/Users/lightlab/Documents/DITBrowse App Backups` if needed, copy the existing `/Applications/DITBrowse.app` to `DITBrowse-$(date +%Y%m%d-%H%M%S).app`, remove only the old `/Applications/DITBrowse.app`, and copy the new build with `ditto`.
 
-- [ ] **Step 5: Launch and inspect the installed build**
+- [x] **Step 5: Launch and inspect the installed build**
 
 Launch `/Applications/DITBrowse.app`, open Help, visit all four sections, inspect every annotated still, close Help, and confirm the previous camera/grid view returns unchanged. Verify the local control endpoint still reports online and that no code-signing or notarization command was run.
 
-- [ ] **Step 6: Record final status**
+- [x] **Step 6: Record final status**
 
 Run: `git status --short --branch`
 
