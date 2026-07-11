@@ -21,14 +21,14 @@ const appPath = appPathArgument
   ? path.resolve(appPathArgument)
   : path.resolve("release/DITBrowse-darwin-arm64/DITBrowse.app");
 const sourceIconPath = path.resolve("assets/icon/ditbrowse.icns");
-const assetCatalogPath = path.resolve("assets/icon/DITBrowse.xcassets");
+const composerIconPath = path.resolve("assets/icon/DITBrowse.icon");
 const resourcesPath = path.join(appPath, "Contents", "Resources");
 const destinationIconPath = path.join(resourcesPath, "DITBrowse.icns");
 const infoPlistPath = path.join(appPath, "Contents", "Info.plist");
 const temporaryRoot = mkdtempSync(path.join(tmpdir(), "ditbrowse-actool-"));
 const partialInfoPath = path.join(temporaryRoot, "asset-info.plist");
 
-for (const requiredPath of [appPath, sourceIconPath, assetCatalogPath, infoPlistPath]) {
+for (const requiredPath of [appPath, sourceIconPath, composerIconPath, infoPlistPath]) {
   if (!existsSync(requiredPath)) {
     throw new Error(`Missing icon packaging input: ${requiredPath}`);
   }
@@ -56,7 +56,6 @@ function setPlistValue(key, value, type = "json") {
 
 try {
   mkdirSync(resourcesPath, { recursive: true });
-  copyFileSync(sourceIconPath, destinationIconPath);
   execFileSync("/usr/bin/xcrun", [
     "actool",
     "--compile",
@@ -66,7 +65,7 @@ try {
     "--minimum-deployment-target",
     "12.0",
     "--app-icon",
-    "AppIcon",
+    "DITBrowse",
     "--standalone-icon-behavior",
     "all",
     "--output-partial-info-plist",
@@ -74,7 +73,7 @@ try {
     "--warnings",
     "--errors",
     "--notices",
-    assetCatalogPath
+    composerIconPath
   ]);
 
   const partialInfo = JSON.parse(
@@ -86,8 +85,8 @@ try {
       partialInfoPath
     ], { encoding: "utf8" })
   );
-  if (partialInfo.CFBundleIconName !== "AppIcon") {
-    throw new Error("actool did not emit CFBundleIconName=AppIcon");
+  if (partialInfo.CFBundleIconName !== "DITBrowse") {
+    throw new Error("actool did not emit CFBundleIconName=DITBrowse");
   }
   const compiledAssetsPath = path.join(resourcesPath, "Assets.car");
   if (!existsSync(compiledAssetsPath)) {
@@ -97,6 +96,9 @@ try {
   for (const [key, value] of Object.entries(partialInfo)) {
     setPlistValue(key, value);
   }
+  // Keep the hand-built ICNS as the legacy fallback. actool emits its own
+  // standalone ICNS, so copy ours after compilation to make the fallback exact.
+  copyFileSync(sourceIconPath, destinationIconPath);
   setPlistValue("CFBundleIconFile", "DITBrowse.icns", "string");
 
   const now = new Date();

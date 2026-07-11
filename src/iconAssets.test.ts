@@ -63,11 +63,8 @@ describe("Camera Wall icon assets", () => {
         "ditbrowse.iconset/icon_256x256@2x.png",
         "ditbrowse.iconset/icon_512x512.png",
         "ditbrowse.iconset/icon_512x512@2x.png",
-        "DITBrowse.xcassets/AppIcon.appiconset/Contents.json",
-        "DITBrowse.xcassets/AppIcon.appiconset/appicon_16x16.png",
-        "DITBrowse.xcassets/AppIcon.appiconset/appicon_16x16-dark.png",
-        "DITBrowse.xcassets/AppIcon.appiconset/appicon_512x512@2x.png",
-        "DITBrowse.xcassets/AppIcon.appiconset/appicon_512x512@2x-dark.png"
+        "DITBrowse.icon/icon.json",
+        "DITBrowse.icon/Assets/ditbrowse-icon-source.svg"
       ];
 
       for (const relativePath of expectedFiles) {
@@ -76,41 +73,32 @@ describe("Camera Wall icon assets", () => {
         expect(statSync(outputPath).size, relativePath).toBeGreaterThan(0);
       }
 
-      const appIconSetPath = resolve(outputRoot, "DITBrowse.xcassets/AppIcon.appiconset");
-      const contents = JSON.parse(
-        readFileSync(resolve(appIconSetPath, "Contents.json"), "utf8")
+      const composerIconPath = resolve(outputRoot, "DITBrowse.icon");
+      const composer = JSON.parse(
+        readFileSync(resolve(composerIconPath, "icon.json"), "utf8")
       ) as {
-        images: Array<{
-          filename: string;
-          idiom: string;
-          scale: string;
-          size: string;
-          appearances?: Array<{ appearance: string; value: string }>;
+        "fill-specializations": Array<{
+          appearance?: string;
+          value: { solid: string };
         }>;
+        groups: Array<{ translucency: { enabled: boolean; value: number } }>;
       };
 
-      expect(contents.images).toHaveLength(20);
-      const defaults = contents.images.filter((image) => !image.appearances);
-      const dark = contents.images.filter(
-        (image) =>
-          image.appearances?.length === 1 &&
-          image.appearances[0]?.appearance === "luminosity" &&
-          image.appearances[0]?.value === "dark"
-      );
-      expect(defaults).toHaveLength(10);
-      expect(dark).toHaveLength(10);
-
-      for (const defaultImage of defaults) {
-        const darkImage = dark.find(
-          (image) => image.size === defaultImage.size && image.scale === defaultImage.scale
-        );
-        expect(darkImage).toBeDefined();
-        expect(
-          readFileSync(resolve(appIconSetPath, defaultImage.filename)).equals(
-            readFileSync(resolve(appIconSetPath, darkImage!.filename))
-          )
-        ).toBe(true);
-      }
+      expect(composer["fill-specializations"]).toEqual([
+        {
+          value: { solid: "extended-srgb:1.00000,1.00000,1.00000,1.00000" }
+        },
+        {
+          appearance: "dark",
+          value: { solid: "extended-srgb:1.00000,1.00000,1.00000,1.00000" }
+        }
+      ]);
+      expect(composer.groups[0]?.translucency).toEqual({ enabled: false, value: 0 });
+      expect(
+        readFileSync(resolve(composerIconPath, "Assets/ditbrowse-icon-source.svg")).equals(
+          readFileSync(sourceSvgPath)
+        )
+      ).toBe(true);
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
     }
@@ -151,7 +139,14 @@ describe("Camera Wall icon assets", () => {
           "-",
           resolve(contentsPath, "Info.plist")
         ], { encoding: "utf8" }).trim()
-      ).toBe("AppIcon");
+      ).toBe("DITBrowse");
+      const compiledAssetInfo = execFileSync("/usr/bin/xcrun", [
+        "assetutil",
+        "--info",
+        resolve(contentsPath, "Resources/Assets.car")
+      ], { encoding: "utf8" });
+      expect(compiledAssetInfo).toContain('"Appearance" : "NSAppearanceNameDarkAqua"');
+      expect(compiledAssetInfo).toContain('"AssetType" : "IconImageStack"');
       expect(() =>
         execFileSync("/usr/bin/codesign", [
           "--verify",

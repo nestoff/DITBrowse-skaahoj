@@ -26,6 +26,7 @@ const sourcePngPath = path.join(outputRoot, "ditbrowse-icon-source.png");
 const png1024Path = path.join(outputRoot, "ditbrowse-icon-1024.png");
 const iconsetPath = path.join(outputRoot, "ditbrowse.iconset");
 const icnsPath = path.join(outputRoot, "ditbrowse.icns");
+const composerIconPath = path.join(outputRoot, "DITBrowse.icon");
 
 mkdirSync(outputRoot, { recursive: true });
 rmSync(iconsetPath, { recursive: true, force: true });
@@ -72,45 +73,51 @@ for (const [fileName, size] of iconsetEntries) {
   ]);
 }
 
-const assetCatalogPath = path.join(outputRoot, "DITBrowse.xcassets");
-const appIconSetPath = path.join(assetCatalogPath, "AppIcon.appiconset");
-rmSync(assetCatalogPath, { recursive: true, force: true });
-mkdirSync(appIconSetPath, { recursive: true });
-
-const appIconImages = [];
-for (const [iconsetFileName, pixelSize] of iconsetEntries) {
-  const scale = iconsetFileName.includes("@2x") ? "2x" : "1x";
-  const pointSize = pixelSize / Number(scale[0]);
-  const suffix = scale === "2x" ? "@2x" : "";
-  const defaultFileName = `appicon_${pointSize}x${pointSize}${suffix}.png`;
-  const darkFileName = `appicon_${pointSize}x${pointSize}${suffix}-dark.png`;
-  const sourcePath = path.join(iconsetPath, String(iconsetFileName));
-
-  copyFileSync(sourcePath, path.join(appIconSetPath, defaultFileName));
-  copyFileSync(sourcePath, path.join(appIconSetPath, darkFileName));
-  appIconImages.push(
-    {
-      filename: defaultFileName,
-      idiom: "mac",
-      scale,
-      size: `${pointSize}x${pointSize}`
-    },
-    {
-      appearances: [{ appearance: "luminosity", value: "dark" }],
-      filename: darkFileName,
-      idiom: "mac",
-      scale,
-      size: `${pointSize}x${pointSize}`
-    }
-  );
-}
-
+rmSync(composerIconPath, { recursive: true, force: true });
+mkdirSync(path.join(composerIconPath, "Assets"), { recursive: true });
+copyFileSync(
+  sourceSvgPath,
+  path.join(composerIconPath, "Assets", "ditbrowse-icon-source.svg")
+);
 writeFileSync(
-  path.join(appIconSetPath, "Contents.json"),
+  path.join(composerIconPath, "icon.json"),
   `${JSON.stringify(
     {
-      images: appIconImages,
-      info: { author: "xcode", version: 1 }
+      "fill-specializations": [
+        {
+          value: {
+            solid: "extended-srgb:1.00000,1.00000,1.00000,1.00000"
+          }
+        },
+        {
+          appearance: "dark",
+          value: {
+            solid: "extended-srgb:1.00000,1.00000,1.00000,1.00000"
+          }
+        }
+      ],
+      groups: [
+        {
+          layers: [
+            {
+              "image-name": "ditbrowse-icon-source.svg",
+              name: "ditbrowse-icon-source"
+            }
+          ],
+          shadow: {
+            kind: "neutral",
+            opacity: 0.5
+          },
+          translucency: {
+            enabled: false,
+            value: 0
+          }
+        }
+      ],
+      "supported-platforms": {
+        circles: ["watchOS"],
+        squares: "shared"
+      }
     },
     null,
     2
