@@ -3,7 +3,8 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
-  rmSync
+  rmSync,
+  writeFileSync
 } from "node:fs";
 import path from "node:path";
 
@@ -70,6 +71,51 @@ for (const [fileName, size] of iconsetEntries) {
     path.join(iconsetPath, String(fileName))
   ]);
 }
+
+const assetCatalogPath = path.join(outputRoot, "DITBrowse.xcassets");
+const appIconSetPath = path.join(assetCatalogPath, "AppIcon.appiconset");
+rmSync(assetCatalogPath, { recursive: true, force: true });
+mkdirSync(appIconSetPath, { recursive: true });
+
+const appIconImages = [];
+for (const [iconsetFileName, pixelSize] of iconsetEntries) {
+  const scale = iconsetFileName.includes("@2x") ? "2x" : "1x";
+  const pointSize = pixelSize / Number(scale[0]);
+  const suffix = scale === "2x" ? "@2x" : "";
+  const defaultFileName = `appicon_${pointSize}x${pointSize}${suffix}.png`;
+  const darkFileName = `appicon_${pointSize}x${pointSize}${suffix}-dark.png`;
+  const sourcePath = path.join(iconsetPath, String(iconsetFileName));
+
+  copyFileSync(sourcePath, path.join(appIconSetPath, defaultFileName));
+  copyFileSync(sourcePath, path.join(appIconSetPath, darkFileName));
+  appIconImages.push(
+    {
+      filename: defaultFileName,
+      idiom: "mac",
+      scale,
+      size: `${pointSize}x${pointSize}`
+    },
+    {
+      appearances: [{ appearance: "luminosity", value: "dark" }],
+      filename: darkFileName,
+      idiom: "mac",
+      scale,
+      size: `${pointSize}x${pointSize}`
+    }
+  );
+}
+
+writeFileSync(
+  path.join(appIconSetPath, "Contents.json"),
+  `${JSON.stringify(
+    {
+      images: appIconImages,
+      info: { author: "xcode", version: 1 }
+    },
+    null,
+    2
+  )}\n`
+);
 
 execFileSync("/usr/bin/iconutil", [
   "-c",
