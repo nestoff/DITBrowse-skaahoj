@@ -45,6 +45,7 @@ function createProps(
     companionModuleError: "",
     onRefreshCompanionModuleStatus: vi.fn(async () => undefined),
     onInstallCompanionModule: vi.fn(async () => undefined),
+    onChooseAndInstallCompanionModule: vi.fn(async () => false),
     ...overrides
   };
 }
@@ -140,7 +141,7 @@ describe("WorkspaceSettings", () => {
     ["current", "Installed", true],
     ["newer", "Newer Version Installed", true],
     ["invalid", "Install Unavailable", true],
-    ["not_configured", "Install Unavailable", true]
+    ["not_configured", "Set Up Companion", false]
   ] as const)(
     "renders the %s Companion module state",
     (state, buttonName, disabled) => {
@@ -203,6 +204,61 @@ describe("WorkspaceSettings", () => {
       />
     );
     expect(screen.getByRole("button", { name: "Installing…" })).toBeDisabled();
+  });
+
+  it("opens setup only after Set Up Companion is clicked", async () => {
+    const onChooseAndInstallCompanionModule = vi.fn(async () => false);
+    render(
+      <WorkspaceSettings
+        {...createProps({
+          companionModuleStatus: {
+            state: "not_configured",
+            pathSource: null,
+            bundledVersion: "1.0.0",
+            installedVersion: null,
+            targetPath: null,
+            message: "Companion developer modules are not configured.",
+            canInstall: false
+          },
+          onChooseAndInstallCompanionModule
+        })}
+      />
+    );
+
+    expect(onChooseAndInstallCompanionModule).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: "Set Up the Companion Module" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Set Up Companion" }));
+    expect(screen.getByRole("dialog", { name: "Set Up the Companion Module" })).toBeVisible();
+    expect(onChooseAndInstallCompanionModule).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose Folder & Install" }));
+    await waitFor(() => expect(onChooseAndInstallCompanionModule).toHaveBeenCalledOnce());
+    expect(screen.getByRole("dialog", { name: "Set Up the Companion Module" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Set Up the Companion Module" })).toBeNull();
+  });
+
+  it("offers the same setup dialog to change a manual folder", () => {
+    render(
+      <WorkspaceSettings
+        {...createProps({
+          companionModuleStatus: {
+            state: "current",
+            pathSource: "manual",
+            bundledVersion: "1.0.0",
+            installedVersion: "1.0.0",
+            targetPath: "/tmp/Companion Modules/lightlab-ditbrowse",
+            message: "DIT Browse Companion module 1.0.0 is installed.",
+            canInstall: false
+          }
+        })}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Change Folder" }));
+    expect(screen.getByRole("dialog", { name: "Set Up the Companion Module" })).toBeVisible();
   });
 
   it("shows installer errors and reload guidance", () => {

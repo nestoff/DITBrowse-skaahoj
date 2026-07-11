@@ -2031,6 +2031,68 @@ textarea::selection {
   gap: 6px;
 }
 
+.companion-setup-dialog {
+  width: min(520px, 100%);
+}
+
+.companion-setup-steps {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: companion-step;
+}
+
+.companion-setup-steps li {
+  position: relative;
+  min-height: 28px;
+  padding: 6px 8px 6px 38px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  counter-increment: companion-step;
+}
+
+.companion-setup-steps li::before {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(226, 112, 56, 0.42);
+  border-radius: 5px;
+  color: #e27038;
+  font-size: 10px;
+  font-weight: 700;
+  content: counter(companion-step);
+}
+
+.companion-setup-steps strong {
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.companion-setup-note,
+.companion-setup-error {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.companion-setup-note {
+  color: var(--quiet);
+}
+
+.companion-setup-error {
+  color: var(--danger);
+}
+
 .workspace-command-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;

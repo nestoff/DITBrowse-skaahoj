@@ -253,6 +253,32 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     }
   }, []);
 
+  const chooseAndInstallCompanionModule = useCallback(async (): Promise<boolean> => {
+    const chooseAndInstall = window.ditbrowse?.chooseAndInstallCompanionModule;
+    if (!chooseAndInstall) {
+      setCompanionModuleError("Companion module folder setup is unavailable in this build.");
+      return false;
+    }
+
+    setCompanionModuleBusy(true);
+    setCompanionModuleError("");
+    try {
+      const result = await chooseAndInstall();
+      if (!result) {
+        return false;
+      }
+      setCompanionModuleStatus(result.status);
+      return true;
+    } catch (error) {
+      setCompanionModuleError(
+        error instanceof Error ? error.message : "Could not set up the Companion module."
+      );
+      return false;
+    } finally {
+      setCompanionModuleBusy(false);
+    }
+  }, []);
+
   useDebouncedWorkspaceSave({ loaded: true, workspace, saveWorkspace });
 
   const controlApiStatus = useMemo(
@@ -1002,7 +1028,8 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
             companionModuleBusy,
             companionModuleError,
             onRefreshCompanionModuleStatus: refreshCompanionModuleStatus,
-            onInstallCompanionModule: installCompanionModule
+            onInstallCompanionModule: installCompanionModule,
+            onChooseAndInstallCompanionModule: chooseAndInstallCompanionModule
           }}
           onClose={() => setEditorOpen(false)}
           onSaveList={saveCameraListDraft}

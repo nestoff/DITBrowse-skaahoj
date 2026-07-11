@@ -141,6 +141,18 @@ describe("App control API commands", () => {
           canInstall: false
         }
       })),
+      chooseAndInstallCompanionModule: vi.fn(async () => ({
+        outcome: "installed" as const,
+        status: {
+          state: "current" as const,
+          pathSource: "manual" as const,
+          bundledVersion: "0.1.0",
+          installedVersion: "0.1.0",
+          targetPath: "/tmp/Devmodules/lightlab-ditbrowse",
+          message: "DIT Browse Companion module 0.1.0 is installed.",
+          canInstall: false
+        }
+      })),
       onControlApiCommand: vi.fn((callback) => {
         controlApiCommandHandler = callback;
         return vi.fn();
@@ -383,6 +395,40 @@ describe("App control API commands", () => {
       expect(window.ditbrowse.installCompanionModule).toHaveBeenCalledOnce();
     });
     expect(await screen.findByRole("button", { name: "Installed" })).toBeDisabled();
+  });
+
+  it("opens Companion folder setup only after the user requests it", async () => {
+    vi.mocked(window.ditbrowse.getCompanionModuleInstallStatus!).mockResolvedValue({
+      state: "not_configured",
+      pathSource: null,
+      bundledVersion: "0.1.0",
+      installedVersion: null,
+      targetPath: null,
+      message: "Companion developer modules are not configured.",
+      canInstall: false
+    });
+    render(<App />);
+
+    await screen.findByDisplayValue("http://192.168.1.01");
+    expect(window.ditbrowse.chooseAndInstallCompanionModule).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Camera List" }));
+
+    const setupButton = await screen.findByRole("button", { name: "Set Up Companion" });
+    expect(window.ditbrowse.chooseAndInstallCompanionModule).not.toHaveBeenCalled();
+    fireEvent.click(setupButton);
+    expect(
+      screen.getByRole("dialog", { name: "Set Up the Companion Module" })
+    ).toBeVisible();
+    expect(window.ditbrowse.chooseAndInstallCompanionModule).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose Folder & Install" }));
+    await waitFor(() => {
+      expect(window.ditbrowse.chooseAndInstallCompanionModule).toHaveBeenCalledOnce();
+    });
+    expect(await screen.findByRole("button", { name: "Installed" })).toBeDisabled();
+    expect(
+      screen.queryByRole("dialog", { name: "Set Up the Companion Module" })
+    ).toBeNull();
   });
 
   it("reloads only the selected webview from the host Command+R shortcut", async () => {

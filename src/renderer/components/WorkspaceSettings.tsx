@@ -11,6 +11,7 @@ import type {
 } from "../../shared/types";
 import { JobListSelector } from "./JobListSelector";
 import { Button } from "./ui/Button";
+import { CompanionModuleSetupDialog } from "./CompanionModuleSetupDialog";
 
 export interface WorkspaceSettingsProps {
   jobs: Job[];
@@ -39,6 +40,7 @@ export interface WorkspaceSettingsProps {
   companionModuleError: string;
   onRefreshCompanionModuleStatus: () => Promise<void>;
   onInstallCompanionModule: () => Promise<void>;
+  onChooseAndInstallCompanionModule: () => Promise<boolean>;
 }
 
 function companionInstallButtonLabel(
@@ -57,6 +59,8 @@ function companionInstallButtonLabel(
       return "Installed";
     case "newer":
       return "Newer Version Installed";
+    case "not_configured":
+      return "Set Up Companion";
     default:
       return "Install Unavailable";
   }
@@ -84,13 +88,15 @@ export function WorkspaceSettings({
   companionModuleBusy,
   companionModuleError,
   onRefreshCompanionModuleStatus,
-  onInstallCompanionModule
+  onInstallCompanionModule,
+  onChooseAndInstallCompanionModule
 }: WorkspaceSettingsProps): ReactElement {
   const [portDraft, setPortDraft] = useState("");
   const [portError, setPortError] = useState("");
   const [presetUsername, setPresetUsername] = useState("");
   const [presetPassword, setPresetPassword] = useState("");
   const [presetCameraType, setPresetCameraType] = useState("");
+  const [companionSetupOpen, setCompanionSetupOpen] = useState(false);
 
   useEffect(() => {
     setPortDraft(controlApiInfo?.configuredPort ? String(controlApiInfo.configuredPort) : "");
@@ -364,11 +370,32 @@ export function WorkspaceSettings({
               variant="subtle"
               size="compact"
               icon={<Download size={13} strokeWidth={2.2} />}
-              disabled={companionModuleBusy || !companionModuleStatus?.canInstall}
-              onClick={() => void onInstallCompanionModule()}
+              disabled={
+                companionModuleBusy ||
+                (companionModuleStatus?.state !== "not_configured" &&
+                  !companionModuleStatus?.canInstall)
+              }
+              onClick={() => {
+                if (companionModuleStatus?.state === "not_configured") {
+                  setCompanionSetupOpen(true);
+                  return;
+                }
+                void onInstallCompanionModule();
+              }}
             >
               {companionInstallButtonLabel(companionModuleStatus, companionModuleBusy)}
             </Button>
+            {companionModuleStatus?.pathSource === "manual" && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="compact"
+                disabled={companionModuleBusy}
+                onClick={() => setCompanionSetupOpen(true)}
+              >
+                Change Folder
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -382,6 +409,14 @@ export function WorkspaceSettings({
           </div>
         </div>
       </div>
+      {companionSetupOpen && (
+        <CompanionModuleSetupDialog
+          busy={companionModuleBusy}
+          error={companionModuleError}
+          onClose={() => setCompanionSetupOpen(false)}
+          onChoose={onChooseAndInstallCompanionModule}
+        />
+      )}
     </section>
   );
 }

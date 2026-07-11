@@ -45,6 +45,7 @@ function createWorkspaceSettings(
     companionModuleError: "",
     onRefreshCompanionModuleStatus: vi.fn(async () => undefined),
     onInstallCompanionModule: vi.fn(async () => undefined),
+    onChooseAndInstallCompanionModule: vi.fn(async () => false),
     ...overrides
   };
 }
