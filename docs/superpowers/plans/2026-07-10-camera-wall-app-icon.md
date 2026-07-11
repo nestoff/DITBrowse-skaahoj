@@ -31,7 +31,7 @@
 - Produces: the canonical `1024 × 1024` SVG consumed by the raster build script in Task 2.
 - Validates: exact colors, geometry element counts, forbidden visual features, and a square artboard.
 
-- [ ] **Step 1: Write the failing vector contract test**
+- [x] **Step 1: Write the failing vector contract test**
 
 Create `src/iconAssets.test.ts`:
 
@@ -69,7 +69,7 @@ describe("Camera Wall icon assets", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -79,7 +79,7 @@ npx vitest run src/iconAssets.test.ts
 
 Expected: FAIL because `assets/icon/ditbrowse-icon-source.svg` does not exist.
 
-- [ ] **Step 3: Add the exact approved SVG master**
+- [x] **Step 3: Add the exact approved SVG master**
 
 Create `assets/icon/ditbrowse-icon-source.svg`:
 
@@ -96,7 +96,7 @@ Create `assets/icon/ditbrowse-icon-source.svg`:
 </svg>
 ```
 
-- [ ] **Step 4: Run the vector contract and typecheck**
+- [x] **Step 4: Run the vector contract and typecheck**
 
 Run:
 
@@ -106,7 +106,7 @@ npx vitest run src/iconAssets.test.ts && npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the vector master**
+- [x] **Step 5: Commit the vector master**
 
 ```bash
 git add assets/icon/ditbrowse-icon-source.svg src/iconAssets.test.ts
@@ -140,7 +140,7 @@ git commit -m "feat: add camera wall icon master"
 - Consumes: `assets/icon/ditbrowse-icon-source.svg` from Task 1.
 - Produces: `npm run build:mac-icon`, canonical raster assets, a complete iconset, and `assets/icon/ditbrowse.icns` for `apply-mac-icon.mjs`.
 
-- [ ] **Step 1: Extend the tests with the failing raster-pipeline contract**
+- [x] **Step 1: Extend the tests with the failing raster-pipeline contract**
 
 Append this test inside `describe("Camera Wall icon assets", ...)` in `src/iconAssets.test.ts` and add `execFileSync`, `mkdtempSync`, `rmSync`, and `tmpdir` imports:
 
@@ -210,7 +210,7 @@ it("regenerates the icon from its vector master before macOS packaging", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused tests and verify they fail**
+- [x] **Step 2: Run the focused tests and verify they fail**
 
 Run:
 
@@ -220,7 +220,7 @@ npx vitest run src/iconAssets.test.ts src/packageConfig.test.ts
 
 Expected: FAIL because `scripts/build-mac-icon.mjs` and `build:mac-icon` do not exist.
 
-- [ ] **Step 3: Add the dependency-free icon build script**
+- [x] **Step 3: Add the dependency-free icon build script**
 
 Create `scripts/build-mac-icon.mjs`:
 
@@ -311,7 +311,7 @@ copyFileSync(png1024Path, sourcePngPath);
 console.log(`Built Camera Wall icon assets at ${outputRoot}`);
 ```
 
-- [ ] **Step 4: Wire icon generation into package scripts**
+- [x] **Step 4: Wire icon generation into package scripts**
 
 Add this script in `package.json`:
 
@@ -333,7 +333,7 @@ npm run build:mac-icon && npm run build && npm run stage:companion-module
 
 Do not change `package:mac:signed` or `package:mac:notarized`.
 
-- [ ] **Step 5: Run the focused tests and build the tracked assets**
+- [x] **Step 5: Run the focused tests and build the tracked assets**
 
 Run:
 
@@ -344,7 +344,7 @@ npm run build:mac-icon
 
 Expected: tests PASS and the script reports `Built Camera Wall icon assets at .../assets/icon`.
 
-- [ ] **Step 6: Verify generated dimensions and ICNS contents**
+- [x] **Step 6: Verify generated dimensions and ICNS contents**
 
 Run:
 
@@ -358,7 +358,7 @@ rm -rf /tmp/ditbrowse-icon-verification.iconset
 
 Expected: both canonical PNGs are `1024 × 1024`, and the ICNS expands into the expected macOS icon representations.
 
-- [ ] **Step 7: Commit the deterministic icon pipeline and outputs**
+- [x] **Step 7: Commit the deterministic icon pipeline and outputs**
 
 ```bash
 git add package.json scripts/build-mac-icon.mjs src/iconAssets.test.ts src/packageConfig.test.ts assets/icon
@@ -379,7 +379,7 @@ git commit -m "feat: build camera wall macOS icon"
 - Consumes: the generated `assets/icon/ditbrowse.icns` from Task 2 and the existing `scripts/apply-mac-icon.mjs` integration.
 - Produces: a running unsigned/ad-hoc app installation with the Camera Wall icon and unchanged camera workspace.
 
-- [ ] **Step 1: Inspect the raster master at large and small sizes**
+- [x] **Step 1: Inspect the raster master at large and small sizes**
 
 Use the image viewer at original detail on:
 
@@ -401,7 +401,7 @@ Confirm:
 
 If the 16px aperture or base is muddy, stop before packaging. Adjust only whole-pixel `x`, `y`, `width`, `height`, `r`, stroke width, or endpoint values in the SVG master, rebuild every generated asset, rerun the focused icon tests, and repeat inspection at all four sizes. Do not edit a generated PNG independently.
 
-- [ ] **Step 2: Run the complete verification gate**
+- [x] **Step 2: Run the complete verification gate**
 
 Run:
 
@@ -415,7 +415,7 @@ npm run build
 
 Expected: every command exits 0.
 
-- [ ] **Step 3: Package without signing or notarization**
+- [x] **Step 3: Package without signing or notarization**
 
 Run:
 
@@ -425,7 +425,7 @@ npm run package:mac
 
 Expected: `release/DITBrowse-darwin-arm64/DITBrowse.app` exists. Do not run `package:mac:signed`, `package:mac:notarized`, or `scripts/sign-and-notarize-mac.mjs`.
 
-- [ ] **Step 4: Verify the packaged icon integration and ad-hoc status**
+- [x] **Step 4: Verify the packaged icon integration and ad-hoc status**
 
 Run:
 
@@ -443,11 +443,11 @@ Signature=adhoc
 TeamIdentifier=not set
 ```
 
-- [ ] **Step 5: Back up and replace Applications**
+- [x] **Step 5: Back up and replace Applications**
 
 Quit DITBrowse, wait for `/Applications/DITBrowse.app/Contents/MacOS/DITBrowse` to stop, move the current application to a timestamped path under `/Users/lightlab/Documents/DITBrowse App Backups`, copy the new build with `ditto`, and launch `/Applications/DITBrowse.app`.
 
-- [ ] **Step 6: Verify the running installation**
+- [x] **Step 6: Verify the running installation**
 
 Poll `http://127.0.0.1:7502/api/status` and confirm:
 
@@ -457,7 +457,7 @@ Poll `http://127.0.0.1:7502/api/status` and confirm:
 - the installed `DITBrowse.icns` matches `assets/icon/ditbrowse.icns`;
 - `Signature=adhoc` and `TeamIdentifier=not set`.
 
-- [ ] **Step 7: Complete plan tracking and commit**
+- [x] **Step 7: Complete plan tracking and commit**
 
 Change every checkbox in this plan to `[x]`, then run:
 
