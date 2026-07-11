@@ -1,12 +1,16 @@
 # White Icon Variants and DMG Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Keep the Camera Wall shell pure white in explicit macOS Default and Dark icon appearances, then build, verify, install, and deliver an unsigned/ad-hoc DITBrowse app and DMG.
 
-**Architecture:** Extend the existing SVG-to-ICNS build into a generated macOS asset catalog with byte-identical Default and Dark entries. Compile that catalog into the Electron app with Xcode `actool`, merge its emitted app-icon metadata, retain ICNS as a fallback, and add a separate deterministic `hdiutil` DMG builder.
+**Architecture:** Extend the existing SVG-to-ICNS build with a deterministic Apple Icon Composer `.icon` document whose Default and Dark fill specializations are both pure white. Compile that document into the Electron app with Xcode `actool`, audit the emitted `DarkAqua` icon stack, retain ICNS as a fallback, and add a separate deterministic `hdiutil` DMG builder.
 
 **Tech Stack:** SVG, Node.js ESM, Vitest, Xcode 26 `actool`, macOS `sips`, `iconutil`, `plutil`, `hdiutil`, Electron Packager.
+
+## Implementation correction
+
+The initial `DITBrowse.xcassets/AppIcon.appiconset` implementation below was completed and tested, but a post-build `assetutil` audit proved that `actool` silently omitted its Dark appearance stack for a macOS app icon. The final implementation therefore replaces that catalog with `assets/icon/DITBrowse.icon`, generated from the same SVG master. The bundle integration test now requires both `NSAppearanceNameDarkAqua` and `IconImageStack` in the compiled `Assets.car`. `CFBundleIconName` is `DITBrowse`. The earlier appiconset snippets remain below as the historical first implementation; they are superseded by this correction and commit `c89cf23`.
 
 ## Global Constraints
 
@@ -41,7 +45,7 @@
 - Consumes: the existing Camera Wall geometry and `build:mac-icon` command.
 - Produces: one white vector master, legacy ICNS outputs, and a complete `AppIcon.appiconset` with identical Default and Dark files.
 
-- [ ] **Step 1: Write the failing white-variant contract tests**
+- [x] **Step 1: Write the failing white-variant contract tests**
 
 In `src/iconAssets.test.ts`, change the approved palette assertion from `#EDE9DF` to `#FFFFFF`, then extend the macOS build test after `expectedFiles` validation:
 
@@ -93,7 +97,7 @@ Add these paths to `expectedFiles`:
 "DITBrowse.xcassets/AppIcon.appiconset/appicon_512x512@2x-dark.png"
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -103,7 +107,7 @@ npx vitest run src/iconAssets.test.ts
 
 Expected: FAIL because the SVG still uses `#EDE9DF` and no asset catalog exists.
 
-- [ ] **Step 3: Make the SVG shell pure white**
+- [x] **Step 3: Make the SVG shell pure white**
 
 In `assets/icon/ditbrowse-icon-source.svg`, change only:
 
@@ -117,7 +121,7 @@ to:
 fill="#FFFFFF"
 ```
 
-- [ ] **Step 4: Extend the icon builder with explicit Default and Dark entries**
+- [x] **Step 4: Extend the icon builder with explicit Default and Dark entries**
 
 Add `writeFileSync` to the `node:fs` import in `scripts/build-mac-icon.mjs`. After generating `iconsetEntries`, create the asset catalog with this implementation:
 
@@ -170,7 +174,7 @@ writeFileSync(
 
 This code runs after all iconset PNGs exist and before the final success log.
 
-- [ ] **Step 5: Build and verify the white assets**
+- [x] **Step 5: Build and verify the white assets**
 
 Run:
 
@@ -181,7 +185,7 @@ npm run build:mac-icon
 
 Expected: tests PASS; SVG, PNG, iconset, ICNS, and asset catalog regenerate successfully.
 
-- [ ] **Step 6: Inspect white Default and Dark outputs**
+- [x] **Step 6: Inspect white Default and Dark outputs**
 
 Inspect at original detail:
 
@@ -194,7 +198,7 @@ assets/icon/DITBrowse.xcassets/AppIcon.appiconset/appicon_32x32-dark.png
 
 Confirm both variants have the same white shell, charcoal feeds, orange active feed, aperture dot, and monitor base.
 
-- [ ] **Step 7: Commit the explicit appearance assets**
+- [x] **Step 7: Commit the explicit appearance assets**
 
 ```bash
 git add assets/icon scripts/build-mac-icon.mjs src/iconAssets.test.ts
@@ -213,7 +217,7 @@ git commit -m "feat: add white macOS icon variants"
 - Consumes: `assets/icon/DITBrowse.xcassets` and `assets/icon/ditbrowse.icns` from Task 1.
 - Produces: `Assets.car`, standalone asset-catalog icon files, `CFBundleIconName=AppIcon`, and the ICNS fallback in a packaged app.
 
-- [ ] **Step 1: Add a failing bundle-integration test**
+- [x] **Step 1: Add a failing bundle-integration test**
 
 Add `mkdirSync` and `writeFileSync` to the `node:fs` imports in `src/iconAssets.test.ts`, then add this macOS-only test:
 
@@ -260,7 +264,7 @@ runOnMac("applies explicit icon appearances to a macOS app bundle", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -270,7 +274,7 @@ npx vitest run src/iconAssets.test.ts
 
 Expected: FAIL because `apply-mac-icon.mjs` does not accept `--app-path` or compile `Assets.car`.
 
-- [ ] **Step 3: Extend `apply-mac-icon.mjs` with asset-catalog compilation**
+- [x] **Step 3: Extend `apply-mac-icon.mjs` with asset-catalog compilation**
 
 Replace `scripts/apply-mac-icon.mjs` with an implementation that:
 
@@ -395,7 +399,7 @@ try {
 
 Keep `plutil` merge logic generic so every top-level key from `actool` is preserved.
 
-- [ ] **Step 4: Run focused tests and typecheck**
+- [x] **Step 4: Run focused tests and typecheck**
 
 Run:
 
@@ -405,7 +409,7 @@ npx vitest run src/iconAssets.test.ts && npm run typecheck
 
 Expected: PASS with a temporary test bundle containing ICNS, `Assets.car`, and `CFBundleIconName=AppIcon`.
 
-- [ ] **Step 5: Commit asset-catalog bundle integration**
+- [x] **Step 5: Commit asset-catalog bundle integration**
 
 ```bash
 git add scripts/apply-mac-icon.mjs src/iconAssets.test.ts
@@ -426,7 +430,7 @@ git commit -m "feat: package explicit macOS icon appearances"
 - Consumes: an ad-hoc packaged `DITBrowse.app`.
 - Produces: `npm run package:mac:dmg` and a compressed `DITBrowse-mac-arm64.dmg` containing the app and Applications symlink.
 
-- [ ] **Step 1: Add failing DMG command and behavior tests**
+- [x] **Step 1: Add failing DMG command and behavior tests**
 
 Add this test to `src/packageConfig.test.ts`:
 
@@ -502,7 +506,7 @@ describe("unsigned macOS DMG packaging", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused tests and verify they fail**
+- [x] **Step 2: Run the focused tests and verify they fail**
 
 Run:
 
@@ -512,7 +516,7 @@ npx vitest run src/packageConfig.test.ts src/dmgPackaging.test.ts
 
 Expected: FAIL because the script and `package:mac:dmg` command do not exist.
 
-- [ ] **Step 3: Add the deterministic DMG builder**
+- [x] **Step 3: Add the deterministic DMG builder**
 
 Create `scripts/build-mac-dmg.mjs`:
 
@@ -572,7 +576,7 @@ try {
 console.log(`Built unsigned DITBrowse DMG at ${outputPath}`);
 ```
 
-- [ ] **Step 4: Add the unsigned DMG package command**
+- [x] **Step 4: Add the unsigned DMG package command**
 
 Add to `package.json`:
 
@@ -580,7 +584,7 @@ Add to `package.json`:
 "package:mac:dmg": "npm run package:mac && node scripts/build-mac-dmg.mjs"
 ```
 
-- [ ] **Step 5: Run focused tests and typecheck**
+- [x] **Step 5: Run focused tests and typecheck**
 
 Run:
 
@@ -591,7 +595,7 @@ npm run typecheck
 
 Expected: PASS; the temporary DMG mounts with the fake app and Applications symlink.
 
-- [ ] **Step 6: Commit the DMG workflow**
+- [x] **Step 6: Commit the DMG workflow**
 
 ```bash
 git add scripts/build-mac-dmg.mjs src/dmgPackaging.test.ts src/packageConfig.test.ts package.json
@@ -613,11 +617,11 @@ git commit -m "feat: add unsigned macOS dmg workflow"
 - Consumes: Tasks 1–3.
 - Produces: verified ad-hoc app and unsigned DMG plus the running installed replacement.
 
-- [ ] **Step 1: Record the installed baseline**
+- [x] **Step 1: Record the installed baseline**
 
 Read `http://127.0.0.1:7502/api/status` and record `ok`, camera count, selected camera, and expansion mode. Expected camera count: `12`.
 
-- [ ] **Step 2: Run the complete verification gate**
+- [x] **Step 2: Run the complete verification gate**
 
 Run:
 
@@ -631,7 +635,7 @@ npm run build
 
 Expected: every command exits 0.
 
-- [ ] **Step 3: Build the app and DMG without signing or notarization**
+- [x] **Step 3: Build the app and DMG without signing or notarization**
 
 Run only:
 
@@ -641,7 +645,7 @@ npm run package:mac:dmg
 
 Do not run `package:mac:signed`, `package:mac:notarized`, `codesign --sign`, `notarytool`, or `stapler`.
 
-- [ ] **Step 4: Verify the packaged app icon assets and signature**
+- [x] **Step 4: Verify the packaged app icon assets and signature**
 
 Confirm:
 
@@ -653,21 +657,21 @@ cmp assets/icon/ditbrowse.icns release/DITBrowse-darwin-arm64/DITBrowse.app/Cont
 codesign -dv --verbose=2 release/DITBrowse-darwin-arm64/DITBrowse.app 2>&1 | rg 'Signature|TeamIdentifier'
 ```
 
-Expected: `DITBrowse.icns`, `AppIcon`, present `Assets.car`, matching ICNS, `Signature=adhoc`, and `TeamIdentifier=not set`.
+Expected: `DITBrowse.icns`, `DITBrowse`, present `Assets.car` with a DarkAqua icon stack, matching ICNS, `Signature=adhoc`, and `TeamIdentifier=not set`.
 
-- [ ] **Step 5: Mount and verify the final DMG**
+- [x] **Step 5: Mount and verify the final DMG**
 
 Verify `hdiutil verify`, mount read-only, confirm `DITBrowse.app`, `Applications` symlink, `Assets.car`, matching ICNS, and staged Companion module resource. Detach cleanly. Confirm `codesign -dv` reports that the DMG itself is not signed.
 
-- [ ] **Step 6: Back up and replace Applications**
+- [x] **Step 6: Back up and replace Applications**
 
 Quit DITBrowse, wait for the running process to stop, move the installed app to a timestamped backup under `/Users/lightlab/Documents/DITBrowse App Backups`, copy the new app with `ditto`, and launch `/Applications/DITBrowse.app`.
 
-- [ ] **Step 7: Verify the installed app**
+- [x] **Step 7: Verify the installed app**
 
-Confirm the running executable is `/Applications/DITBrowse.app/Contents/MacOS/DITBrowse`, the API reports `ok=true` with camera count `12`, installed `Assets.car` exists, installed ICNS matches the source, `CFBundleIconName=AppIcon`, and the installed signature remains ad-hoc with no Team Identifier.
+Confirm the running executable is `/Applications/DITBrowse.app/Contents/MacOS/DITBrowse`, the API reports `ok=true` with camera count `12`, installed `Assets.car` contains a DarkAqua icon stack, installed ICNS matches the source, `CFBundleIconName=DITBrowse`, and the installed signature remains ad-hoc with no Team Identifier.
 
-- [ ] **Step 8: Mark plan complete and commit**
+- [x] **Step 8: Mark plan complete and commit**
 
 Change every checkbox to `[x]`, then run:
 

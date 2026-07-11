@@ -12,9 +12,9 @@ The app interface itself is intentionally dark and must remain unchanged. This p
 
 ## Approaches Considered
 
-### Explicit Default and Dark asset-catalog variants — approved
+### Explicit Default and Dark Icon Composer variants — approved
 
-Compile a macOS asset catalog whose Default and Dark app-icon entries use identical pure-white Camera Wall artwork. Package the resulting `Assets.car` and app-icon Info.plist metadata beside the existing ICNS fallback.
+Create an Apple Icon Composer `.icon` document whose Default and Dark fill specializations both use the same pure-white Camera Wall artwork. Compile it into `Assets.car` and package its app-icon Info.plist metadata beside the existing ICNS fallback.
 
 This is the recommended solution because Apple documents explicit appearance variants and notes that the system generates variants that an app omits.
 
@@ -56,16 +56,16 @@ Default and Dark variants use identical artwork and identical colors. No blue, c
 - the complete legacy macOS iconset
 - `ditbrowse.icns`
 
-The build additionally creates `assets/icon/DITBrowse.xcassets/AppIcon.appiconset` with complete macOS Default and Dark image entries at 16, 32, 128, 256, and 512 points for both 1x and 2x scales. Both appearance sets are generated from the same white SVG master.
+The build additionally creates `assets/icon/DITBrowse.icon`. Its embedded SVG is byte-identical to the source master, and its Default and Dark fill specializations are both pure white.
 
-`Contents.json` marks the second set with the `luminosity: dark` appearance. No tinted or mono override is provided because the user is correcting the automatic Dark appearance shown in the supplied Dock screenshot; an explicitly chosen system tint remains a user customization.
+Icon Composer supplies the scalable renditions used by current macOS, including a real `NSAppearanceNameDarkAqua` icon image stack. No separate tinted or mono override is provided because the user is correcting the automatic Dark appearance shown in the supplied Dock screenshot; an explicitly chosen system tint remains a user customization.
 
 ## Bundle Integration
 
 After Electron Packager creates the app, `scripts/apply-mac-icon.mjs` will:
 
 1. Preserve the current ICNS copy and `CFBundleIconFile=DITBrowse.icns` fallback.
-2. Compile `DITBrowse.xcassets` with Xcode 26's `actool` for the macOS platform.
+2. Compile `DITBrowse.icon` with Xcode 26's `actool` for the macOS platform.
 3. Copy the compiled `Assets.car` and any standalone icon output into the app's Resources directory.
 4. Merge the app-icon keys emitted by `actool`'s partial Info.plist into the packaged `Info.plist`, including the primary asset-catalog icon name.
 5. Fail packaging if `actool` is unavailable, reports an error, omits `Assets.car`, or does not emit primary app-icon metadata.
@@ -77,16 +77,16 @@ This preserves compatibility with older macOS versions through ICNS while giving
 Automated tests will verify:
 
 - the SVG uses `#FFFFFF`, `#202022`, and `#E27038` only;
-- every Default app-icon entry has a matching Dark entry;
-- Default and Dark files are byte-identical for each size and scale;
-- `Contents.json` uses `luminosity: dark` only on Dark entries;
+- the Icon Composer document uses pure white for both Default and Dark fill specializations;
+- its embedded SVG is byte-identical to the vector master;
 - `package:mac` still rebuilds icons before packaging;
-- the packaging integration requires and compiles the asset catalog;
-- the packaged app contains matching `DITBrowse.icns`, `Assets.car`, and asset-catalog app-icon Info.plist metadata;
+- the packaging integration requires and compiles the Icon Composer document;
+- `assetutil` confirms the packaged `Assets.car` contains `NSAppearanceNameDarkAqua` `IconImageStack` renditions;
+- the packaged app contains matching `DITBrowse.icns`, `Assets.car`, and app-icon Info.plist metadata;
 - the packaged and installed app remain ad-hoc signed with no Team Identifier;
 - the installed API returns the existing camera count after replacement.
 
-Visual QA will inspect 1024, 128, 32, and 16 pixel Default and Dark outputs against the supplied Dock screenshot. The shell must remain white and the orange active feed must remain recognizable.
+Visual QA will inspect the vector-derived preview and the compiled asset output against the supplied Dock screenshot. The shell must remain white and the orange active feed must remain recognizable.
 
 ## Unsigned Application and DMG
 
