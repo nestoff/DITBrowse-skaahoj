@@ -41,6 +41,10 @@ Release checksums:
 6726127e4cd726367ebc174b05cdcd643caef7399910a164bd92db72999b5a79  DITBrowse-mac-arm64.zip
 ```
 
+The signed v1.0.0 app was installed at `/Applications/DITBrowse.app` after backing
+up the prior app. Its local API returned `ok=true` with the live pre-install state
+preserved: 11 cameras, selected camera 11, and expansion enabled.
+
 ## Companion Integration
 
 Verified July 11, 2026 for Companion module v1.0.0:

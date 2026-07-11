@@ -40,7 +40,7 @@ Before publishing, run the full unit, type, browser, Electron, and production-bu
 - `spctl` accepts the DMG;
 - `stapler validate` accepts the DMG;
 - the mounted DMG contains the signed app, `/Applications` symlink, Companion module, legacy ICNS, and the real DarkAqua Icon Composer stack;
-- the installed app launches from `/Applications` and retains the 12-camera workspace.
+- the installed app launches from `/Applications` and retains the live workspace recorded immediately before replacement.
 
 ## GitHub Publication
 
@@ -66,7 +66,7 @@ Provide clickable local paths to the final DMG and ZIP. The DMG path is also the
 
 - DITBrowse and its Companion module report version 1.0.0.
 - The app and DMG are Developer ID-signed, notarized, and stapled.
-- The v1 app is running from `/Applications` with all 12 cameras preserved.
+- The v1 app is running from `/Applications` with the current 11-camera workspace, selected camera 11, and expansion setting preserved.
 - The current branch and v1.0.0 tag are pushed to GitHub.
 - A new public GitHub v1.0.0 release contains the verified DMG, ZIP, and Companion package.
 - The prior v0.1.1 release remains unchanged.

@@ -1,6 +1,6 @@
 # DITBrowse v1.0.0 Signed Release Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Release DITBrowse and its Companion module as v1.0.0 with a Developer ID-signed, Apple-notarized and stapled app and DMG, install the verified app, and publish the artifacts on GitHub.
 
@@ -16,7 +16,7 @@
 - Harden and timestamp the app; timestamp the DMG.
 - Notarize and staple both the app and DMG.
 - Preserve the white Default/Dark Icon Composer app icon and legacy ICNS fallback.
-- Preserve the existing 12-camera workspace when replacing `/Applications/DITBrowse.app`.
+- Preserve the live workspace recorded immediately before replacing `/Applications/DITBrowse.app`; the release baseline was 11 cameras, selected camera 11, with expansion enabled.
 - Publish a new `v1.0.0` tag and release; do not modify the existing v0.1.1 release.
 - Stop rather than overwrite an unexpected existing `v1.0.0` tag or release.
 
@@ -34,7 +34,7 @@
 - Consumes: root and Companion package manifests.
 - Produces: `version=1.0.0` for the Electron bundle, staged Companion package, tag, and release metadata.
 
-- [ ] **Step 1: Add the failing version contract test**
+- [x] **Step 1: Add the failing version contract test**
 
 Create `src/versionConfig.test.ts`:
 
@@ -64,7 +64,7 @@ describe("v1 release versions", () => {
 });
 ```
 
-- [ ] **Step 2: Run the version test and verify it fails**
+- [x] **Step 2: Run the version test and verify it fails**
 
 Run:
 
@@ -74,7 +74,7 @@ npx vitest run src/versionConfig.test.ts
 
 Expected: FAIL because the app is `0.1.1` and the Companion module is `0.1.0`.
 
-- [ ] **Step 3: Update both package versions**
+- [x] **Step 3: Update both package versions**
 
 Run at the repository root:
 
@@ -85,7 +85,7 @@ npm --prefix companion-module-lightlab-ditbrowse version 1.0.0 --no-git-tag-vers
 
 Expected: root `package.json` and `package-lock.json` report `1.0.0`; the Companion `package.json` reports `1.0.0`.
 
-- [ ] **Step 4: Verify and commit the version bump**
+- [x] **Step 4: Verify and commit the version bump**
 
 Run:
 
@@ -111,7 +111,7 @@ Expected: both checks pass and the version commit is created.
 - Consumes: `DITBROWSE_NOTARIZE=1`, Apple notarization credentials, the Developer ID identity, and the packaged `.app`.
 - Produces: `DITBrowse-mac-arm64.zip` containing the signed app and a Developer ID-signed/notarized/stapled `DITBrowse-mac-arm64.dmg`.
 
-- [ ] **Step 1: Add a failing signed-release contract test**
+- [x] **Step 1: Add a failing signed-release contract test**
 
 Create `scripts/signed-release-policy.test.mjs`:
 
@@ -135,7 +135,7 @@ test("the production release builds, signs, and notarizes the DMG", () => {
 });
 ```
 
-- [ ] **Step 2: Verify the contract test fails**
+- [x] **Step 2: Verify the contract test fails**
 
 Run:
 
@@ -145,7 +145,7 @@ node --test scripts/signed-release-policy.test.mjs
 
 Expected: FAIL because the release script currently signs only the app.
 
-- [ ] **Step 3: Extend the signed-release script**
+- [x] **Step 3: Extend the signed-release script**
 
 In `scripts/sign-and-notarize-mac.mjs`:
 
@@ -177,7 +177,7 @@ console.log("DMG notarization complete and ticket stapled");
 
 Keep the no-notarization path capable of producing a Developer ID-signed app and DMG, but require `package:mac:notarized` for the GitHub release.
 
-- [ ] **Step 4: Make the standalone DMG log signature-neutral**
+- [x] **Step 4: Make the standalone DMG log signature-neutral**
 
 In `scripts/build-mac-dmg.mjs`, replace:
 
@@ -193,7 +193,7 @@ console.log(`Built DITBrowse DMG at ${outputPath}`);
 
 The standalone `package:mac:dmg` flow remains unsigned/ad-hoc; the production release script signs its output afterward.
 
-- [ ] **Step 5: Run release policy tests and commit**
+- [x] **Step 5: Run release policy tests and commit**
 
 Run:
 
@@ -220,7 +220,7 @@ Expected: all release-policy and DMG tests pass.
 - Consumes: Tasks 1–2 and the configured Apple signing identity and credentials.
 - Produces: locally verified v1 release artifacts ready for installation and upload.
 
-- [ ] **Step 1: Run the complete source verification gate**
+- [x] **Step 1: Run the complete source verification gate**
 
 Run:
 
@@ -238,7 +238,7 @@ npm --prefix companion-module-lightlab-ditbrowse run companion-module-check
 
 Expected: every command exits 0.
 
-- [ ] **Step 2: Confirm the v1 GitHub namespace is unused**
+- [x] **Step 2: Confirm the v1 GitHub namespace is unused**
 
 Run:
 
@@ -249,7 +249,7 @@ gh release view v1.0.0
 
 Expected: no local tag and GitHub reports no release. Stop if either exists.
 
-- [ ] **Step 3: Build, sign, notarize, and staple**
+- [x] **Step 3: Build, sign, notarize, and staple**
 
 Run:
 
@@ -259,15 +259,15 @@ npm run package:mac:notarized
 
 Expected: app and DMG notarization submissions are accepted and stapling succeeds.
 
-- [ ] **Step 4: Verify the signed app**
+- [x] **Step 4: Verify the signed app**
 
 Run `codesign --verify --deep --strict`, `codesign -dv --verbose=4`, `spctl --assess --type execute`, and `stapler validate` against the app. Confirm version `1.0.0`, `Authority=Developer ID Application: Adam Lighterman (8BWXULM784)`, `TeamIdentifier=8BWXULM784`, hardened runtime, timestamp, and Apple acceptance.
 
-- [ ] **Step 5: Verify and mount the signed DMG**
+- [x] **Step 5: Verify and mount the signed DMG**
 
 Run `hdiutil verify`, `codesign --verify`, `codesign -dv --verbose=4`, `spctl --assess --type open`, and `stapler validate` against the DMG. Mount read-only and verify the contained app, Applications symlink, Companion `1.0.0` package metadata, ICNS equality, DarkAqua `IconImageStack`, and Developer ID app signature; then detach cleanly.
 
-- [ ] **Step 6: Update verification documentation and commit**
+- [x] **Step 6: Update verification documentation and commit**
 
 Update `docs/verification.md` with the v1.0.0 date, current test totals, signed/notarized app and DMG results, and artifact paths. Commit:
 
@@ -289,15 +289,15 @@ git commit -m "docs: verify v1 signed release"
 - Consumes: verified Task 3 app, ZIP, DMG, and Companion `.tgz`.
 - Produces: running local v1 app and public GitHub v1.0.0 release.
 
-- [ ] **Step 1: Back up and install the v1 app**
+- [x] **Step 1: Back up and install the v1 app**
 
 Record the current API state, quit DITBrowse, move the existing app to a timestamped backup, copy the signed v1 app with `ditto`, refresh LaunchServices and Dock, and relaunch `/Applications/DITBrowse.app`.
 
-- [ ] **Step 2: Verify the installed v1 app and preserved workspace**
+- [x] **Step 2: Verify the installed v1 app and preserved workspace**
 
-Confirm the running executable is under `/Applications/DITBrowse.app`, `CFBundleShortVersionString=1.0.0`, strict Developer ID verification passes, `spctl` and `stapler validate` pass, and the API returns `ok=true`, 12 cameras, the prior selected camera, and the prior expansion setting.
+Confirm the running executable is under `/Applications/DITBrowse.app`, `CFBundleShortVersionString=1.0.0`, strict Developer ID verification passes, `spctl` and `stapler validate` pass, and the API returns `ok=true`, 11 cameras, selected camera 11, and expansion enabled—the live values recorded immediately before replacement.
 
-- [ ] **Step 3: Mark this plan complete and commit the release state**
+- [x] **Step 3: Mark this plan complete and commit the release state**
 
 Change every checkbox in this file to `[x]`, then commit:
 
@@ -308,7 +308,7 @@ git commit -m "docs: complete v1 signed release plan"
 
 This commit is the immutable verified release commit used by the tag.
 
-- [ ] **Step 4: Push the branch and update the draft PR**
+- [x] **Step 4: Push the branch and update the draft PR**
 
 Run:
 
@@ -319,7 +319,7 @@ gh pr view 1 --json url,state,isDraft
 
 Expected: the branch is current on GitHub and draft PR 1 remains available for review.
 
-- [ ] **Step 5: Create and push the v1.0.0 tag**
+- [x] **Step 5: Create and push the v1.0.0 tag**
 
 Run:
 
@@ -328,7 +328,7 @@ git tag -a v1.0.0 -m "DITBrowse v1.0.0"
 git push origin v1.0.0
 ```
 
-- [ ] **Step 6: Publish the GitHub release and assets**
+- [x] **Step 6: Publish the GitHub release and assets**
 
 Create a public release targeting `v1.0.0` with title `DITBrowse v1.0.0`, release notes summarizing the camera-wall workspace, saved-password/sign-in workflow, in-app annotated Help guide, Companion integration, white appearance-aware icon, and signed/notarized macOS distribution. Upload:
 
