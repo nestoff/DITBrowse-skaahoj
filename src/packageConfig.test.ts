@@ -59,4 +59,13 @@ describe("macOS package configuration", () => {
       packageScript.indexOf("electron-packager")
     );
   });
+
+  it("builds the DMG only from the ad-hoc package workflow", () => {
+    const scripts = packageManifest().scripts ?? {};
+    expect(scripts["package:mac:dmg"]).toBe(
+      "npm run package:mac && node scripts/build-mac-dmg.mjs"
+    );
+    expect(scripts["package:mac:dmg"]).not.toContain("signed");
+    expect(scripts["package:mac:dmg"]).not.toContain("notar");
+  });
 });
