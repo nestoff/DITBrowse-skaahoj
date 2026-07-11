@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests",
     "test:release-policy": "node --test scripts/notarization-policy.test.mjs",
     "test:e2e": "playwright test",
+    "capture:help-stills": "cross-env DITBROWSE_CAPTURE_HELP=1 playwright test tests/e2e/help-stills.spec.ts --workers=1",
     "test:electron": "npm run build && playwright test -c playwright.electron.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest",
