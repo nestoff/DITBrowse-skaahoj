@@ -30,6 +30,10 @@ const api = {
     ipcRenderer.invoke("companion-module:status") as Promise<CompanionModuleInstallStatus>,
   installCompanionModule: () =>
     ipcRenderer.invoke("companion-module:install") as Promise<CompanionModuleInstallResult>,
+  chooseAndInstallCompanionModule: () =>
+    ipcRenderer.invoke("companion-module:choose-and-install") as Promise<
+      CompanionModuleInstallResult | null
+    >,
   onControlApiInfo: (callback: (info: ControlApiInfo) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, info: ControlApiInfo): void => {
       callback(info);

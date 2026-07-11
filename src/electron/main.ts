@@ -1,10 +1,11 @@
-import { BrowserWindow, Menu, app, ipcMain } from "electron";
+import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
 import { resetCameraSessionData, resetListSessionData } from "./session.js";
 import { createCompanionModuleInstaller } from "./companionModuleInstaller.js";
 import { companionModuleConfigPath } from "./companionModuleConfig.js";
+import { chooseAndInstallCompanionModule } from "./companionModuleSetup.js";
 import {
   loadControlApiConfig,
   normalizeControlApiPort,
@@ -309,6 +310,18 @@ const createWindow = async (): Promise<void> => {
       nodeIntegration: false,
       sandbox: false,
       webviewTag: true
+    }
+  });
+  ipcMain.handle("companion-module:choose-and-install", async () => {
+    try {
+      return await chooseAndInstallCompanionModule({
+        browserWindow: mainWindow,
+        installer: companionInstaller,
+        showOpenDialog: dialog.showOpenDialog
+      });
+    } catch (error) {
+      console.error("Companion module folder setup failed", error);
+      throw new Error(error instanceof Error ? error.message : "Companion setup failed");
     }
   });
   appWindow = mainWindow;

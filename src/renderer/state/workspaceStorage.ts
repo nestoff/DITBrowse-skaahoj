@@ -29,6 +29,9 @@ declare global {
       setControlApiPort?: (port: number | null) => Promise<ControlApiInfo>;
       getCompanionModuleInstallStatus?: () => Promise<CompanionModuleInstallStatus>;
       installCompanionModule?: () => Promise<CompanionModuleInstallResult>;
+      chooseAndInstallCompanionModule?: () => Promise<
+        CompanionModuleInstallResult | null
+      >;
       onControlApiInfo?: (callback: (info: ControlApiInfo) => void) => () => void;
       onControlApiCommand?: (callback: (command: ControlApiCommand) => void) => () => void;
       sendControlApiResponse?: (requestId: string, response: ControlApiResponse) => void;
