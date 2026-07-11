@@ -43,6 +43,30 @@ export function HelpGuide(): ReactElement {
                   ))}
                 </div>
               )}
+              {section.controlGroups && (
+                <div
+                  className="help-control-reference"
+                  aria-label="Main Page Controls reference"
+                >
+                  {section.controlGroups.map((group) => (
+                    <section key={group.title} className="help-control-group">
+                      <h3>{group.title}</h3>
+                      <dl>
+                        {group.controls.map((control) => (
+                          <div key={control.label} className="help-control-row">
+                            <dt>{control.label}</dt>
+                            <dd>
+                              <p>{control.outcome}</p>
+                              <span>{control.scope}</span>
+                              {control.availability && <small>{control.availability}</small>}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+                  ))}
+                </div>
+              )}
               {section.images?.map((image) => (
                 <figure key={image.src} className="help-figure">
                   <img src={image.src} alt={image.alt} />

@@ -30,6 +30,39 @@ describe("HelpGuide", () => {
     expect(screen.getByRole("heading", { name: "Camera Setup" })).toBeVisible();
   });
 
+  it("explains every main workspace control exactly once", () => {
+    render(<HelpGuide />);
+    const reference = screen.getByLabelText("Main Page Controls reference");
+    const labels = [
+      "Camera tab",
+      "Close tab",
+      "Add tile",
+      "Help",
+      "Camera List",
+      "Back",
+      "Forward",
+      "Camera Session",
+      "Address",
+      "Open address",
+      "Open address in new tile",
+      "Save current URL to camera list",
+      "Use list address",
+      "Focus selected page / Show all pages",
+      "Cols",
+      "Selected camera zoom",
+      "Selected zoom percentage / reset",
+      "All",
+      "All relative zoom",
+      "All relative percentage / reset",
+      "Resolution",
+      "Apply to All"
+    ];
+
+    for (const label of labels) {
+      expect(within(reference).getAllByText(label, { exact: true })).toHaveLength(1);
+    }
+  });
+
   it("renders six accessible annotated stills with matching numbered captions", () => {
     const { container } = render(<HelpGuide />);
 

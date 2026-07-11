@@ -24,14 +24,29 @@ export interface HelpImage {
   callouts: HelpCallout[];
 }
 
+export type HelpControlScope = "Selected camera" | "All cameras" | "Workspace";
+
+export interface HelpControl {
+  label: string;
+  outcome: string;
+  scope: HelpControlScope;
+  availability?: string;
+}
+
+export interface HelpControlGroup {
+  title: string;
+  controls: HelpControl[];
+}
+
 export interface HelpSection {
-  id: "quick-start" | "camera-setup" | "passwords" | "troubleshooting";
+  id: "quick-start" | "main-controls" | "camera-setup" | "passwords" | "troubleshooting";
   title: string;
   introduction: string;
   steps?: string[];
   notes?: string[];
   troubleshooting?: HelpTroubleshootingItem[];
   images?: HelpImage[];
+  controlGroups?: HelpControlGroup[];
 }
 
 export const helpSections: HelpSection[] = [
@@ -56,6 +71,51 @@ export const helpSections: HelpSection[] = [
           { number: 1, text: "Open Camera List to configure the job, cameras, and passwords." },
           { number: 2, text: "The centered CAM number is the camera's normal integer identity." },
           { number: 3, text: "Camera Session contains reload and sign-out controls." }
+        ]
+      }
+    ]
+  },
+  {
+    id: "main-controls",
+    title: "Main Page Controls",
+    introduction:
+      "These controls run left to right across the tab row and camera toolbar.",
+    controlGroups: [
+      {
+        title: "Tabs and workspace",
+        controls: [
+          { label: "Camera tab", outcome: "Selects that camera without reloading it; drag the tab to change tab and grid order.", scope: "Workspace" },
+          { label: "Close tab", outcome: "Removes the camera from the open grid without deleting its camera-list row.", scope: "Workspace" },
+          { label: "Add tile", outcome: "Opens a new blank camera browser tile.", scope: "Workspace" },
+          { label: "Help", outcome: "Opens this bundled offline guide.", scope: "Workspace" },
+          { label: "Camera List", outcome: "Opens camera-list editing and Workspace Settings.", scope: "Workspace" }
+        ]
+      },
+      {
+        title: "Navigation and address",
+        controls: [
+          { label: "Back", outcome: "Returns the selected camera to its previous page.", scope: "Selected camera" },
+          { label: "Forward", outcome: "Moves the selected camera to its next page.", scope: "Selected camera" },
+          { label: "Camera Session", outcome: "Opens reload and sign-out actions.", scope: "Workspace" },
+          { label: "Address", outcome: "Shows or edits the selected camera's live URL.", scope: "Selected camera" },
+          { label: "Open address", outcome: "Loads the typed address in the selected camera.", scope: "Selected camera" },
+          { label: "Open address in new tile", outcome: "Creates a blank tile and loads the typed address there.", scope: "Workspace" },
+          { label: "Save current URL to camera list", outcome: "Stores the selected camera's live address in its camera-list row.", scope: "Selected camera", availability: "Enabled only when the live address differs from the saved row." },
+          { label: "Use list address", outcome: "Restores shared-prefix plus camera-number addressing.", scope: "Selected camera", availability: "Shown only while the camera uses a full-address override." }
+        ]
+      },
+      {
+        title: "Layout, zoom, and resolution",
+        controls: [
+          { label: "Focus selected page / Show all pages", outcome: "Switches between one enlarged camera and the complete grid without reloading.", scope: "Workspace", availability: "Disabled when no camera is selected or Companion expansion mode is off." },
+          { label: "Cols", outcome: "Sets the camera grid column count.", scope: "All cameras" },
+          { label: "Selected camera zoom", outcome: "Changes the selected camera's zoom with the slider.", scope: "Selected camera" },
+          { label: "Selected zoom percentage / reset", outcome: "Sets a precise selected-camera zoom; double-click % to reset to 100%.", scope: "Selected camera" },
+          { label: "All", outcome: "Opens relative zoom controls for every camera.", scope: "All cameras" },
+          { label: "All relative zoom", outcome: "Adjusts every camera relative to its own saved zoom.", scope: "All cameras" },
+          { label: "All relative percentage / reset", outcome: "Sets the precise global factor; double-click % to reset it to 100%.", scope: "All cameras" },
+          { label: "Resolution", outcome: "Changes the selected camera's viewport resolution.", scope: "Selected camera", availability: "Disabled when no camera viewport is selected." },
+          { label: "Apply to All", outcome: "Copies the selected resolution to every open camera.", scope: "All cameras", availability: "Disabled when no camera viewport is selected." }
         ]
       }
     ]
