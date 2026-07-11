@@ -108,6 +108,13 @@ try {
   ]) {
     utimesSync(outputPath, now, now);
   }
+  execFileSync("/usr/bin/codesign", [
+    "--force",
+    "--deep",
+    "--sign",
+    "-",
+    appPath
+  ]);
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });
 }

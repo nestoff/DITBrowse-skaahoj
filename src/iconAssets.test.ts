@@ -152,6 +152,14 @@ describe("Camera Wall icon assets", () => {
           resolve(contentsPath, "Info.plist")
         ], { encoding: "utf8" }).trim()
       ).toBe("AppIcon");
+      expect(() =>
+        execFileSync("/usr/bin/codesign", [
+          "--verify",
+          "--deep",
+          "--strict",
+          appPath
+        ])
+      ).not.toThrow();
     } finally {
       rmSync(temporaryRoot, { recursive: true, force: true });
     }
