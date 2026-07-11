@@ -2,15 +2,15 @@
 
 ## Automated
 
-Verified July 9, 2026:
+Verified July 11, 2026 for DITBrowse v1.0.0:
 
 ```bash
-npm run typecheck       # passed
-npm run test            # 272 passed
-npm run test:e2e        # 7 passed
-npm run test:electron   # 1 passed
-npm run package:mac     # release/DITBrowse-darwin-arm64/DITBrowse.app
-APPLE_NOTARIZE_KEYCHAIN_PROFILE=DITBrowse-notary npm run package:mac:signed
+npm run test                    # 47 files, 388 tests passed
+npm run typecheck               # passed
+npm run test:e2e                # 10 passed, 1 capture-only test skipped
+npm run test:electron           # 1 passed
+npm run build                   # passed
+npm run package:mac:notarized   # signed/notarized app, ZIP, and DMG
 ```
 
 The Electron test uses a local mock camera with HTTP authentication, cookies,
@@ -23,24 +23,34 @@ Electron screenshots were captured at 960x640, 1180x800, and 1440x900. The share
 address field, focus control, columns, zoom, aspect ratio, viewport, and all-camera
 controls remained inside the window at each size. Camera content remained centered.
 
-The final hardened-runtime app and installer were accepted and stapled by Apple:
+The final v1.0.0 hardened-runtime app and signed installer were accepted and stapled by Apple:
 
 - `release/DITBrowse-darwin-arm64/DITBrowse.app`
 - `release/DITBrowse-darwin-arm64/DITBrowse-mac-arm64.zip`
 - `release/DITBrowse-darwin-arm64/DITBrowse-mac-arm64.dmg`
 
-`codesign`, `spctl`, and `stapler validate` passed for the app and DMG. A normal
-signed-app launch remained healthy for more than 30 seconds with the main process,
-GPU process, network service, renderer, and camera guest processes running.
+`codesign`, `spctl`, and `stapler validate` passed for both the app and DMG with
+Developer ID team `8BWXULM784`. The DMG checksum passed `hdiutil verify`, mounted
+read-only with the Applications symlink, and contained DITBrowse 1.0.0, Companion
+module 1.0.0, the matching legacy ICNS, and a DarkAqua Icon Composer image stack.
+
+Release checksums:
+
+```text
+56c20848b183f4193053e2bfcf33d8e1ea4e7c8ff05554f8c02891bd0f80d52c  DITBrowse-mac-arm64.dmg
+6726127e4cd726367ebc174b05cdcd643caef7399910a164bd92db72999b5a79  DITBrowse-mac-arm64.zip
+```
 
 ## Companion Integration
 
-Verified July 10, 2026:
+Verified July 11, 2026 for Companion module v1.0.0:
 
 ```bash
-npm test                 # 38 files, 311 tests passed
+npm test                 # 5 files, 14 tests passed
+npm run lint             # passed
 npm run typecheck        # passed
 npm run build            # passed
+npm run companion-module-check  # valid
 
 cd companion-module-lightlab-ditbrowse
 yarn test                # 5 files, 14 tests passed
@@ -55,7 +65,7 @@ The Companion manifest passed the official `@companion-module/base` validator. T
 Bitfocus package builder produced:
 
 ```text
-companion-module-lightlab-ditbrowse/lightlab-ditbrowse-0.1.0.tgz
+companion-module-lightlab-ditbrowse/lightlab-ditbrowse-1.0.0.tgz
 ```
 
 The package contains the compiled Node 22 module, manifest, help, and package metadata.
