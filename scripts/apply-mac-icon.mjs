@@ -1,30 +1,113 @@
-import { copyFileSync, existsSync, mkdirSync, utimesSync } from "node:fs";
-import path from "node:path";
 import { execFileSync } from "node:child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  utimesSync
+} from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-const appPath = path.resolve("release/DITBrowse-darwin-arm64/DITBrowse.app");
+const appPathArgumentIndex = process.argv.indexOf("--app-path");
+const appPathArgument =
+  appPathArgumentIndex >= 0 ? process.argv[appPathArgumentIndex + 1] : undefined;
+if (appPathArgumentIndex >= 0 && !appPathArgument) {
+  throw new Error("--app-path requires an application path");
+}
+
+const appPath = appPathArgument
+  ? path.resolve(appPathArgument)
+  : path.resolve("release/DITBrowse-darwin-arm64/DITBrowse.app");
 const sourceIconPath = path.resolve("assets/icon/ditbrowse.icns");
+const assetCatalogPath = path.resolve("assets/icon/DITBrowse.xcassets");
 const resourcesPath = path.join(appPath, "Contents", "Resources");
 const destinationIconPath = path.join(resourcesPath, "DITBrowse.icns");
 const infoPlistPath = path.join(appPath, "Contents", "Info.plist");
+const temporaryRoot = mkdtempSync(path.join(tmpdir(), "ditbrowse-actool-"));
+const partialInfoPath = path.join(temporaryRoot, "asset-info.plist");
 
-if (!existsSync(appPath)) {
-  throw new Error(`Missing app bundle: ${appPath}`);
+for (const requiredPath of [appPath, sourceIconPath, assetCatalogPath, infoPlistPath]) {
+  if (!existsSync(requiredPath)) {
+    throw new Error(`Missing icon packaging input: ${requiredPath}`);
+  }
 }
 
-if (!existsSync(sourceIconPath)) {
-  throw new Error(`Missing source icon: ${sourceIconPath}`);
+function setPlistValue(key, value, type = "json") {
+  try {
+    execFileSync("/usr/bin/plutil", [
+      "-replace",
+      key,
+      `-${type}`,
+      type === "json" ? JSON.stringify(value) : String(value),
+      infoPlistPath
+    ]);
+  } catch {
+    execFileSync("/usr/bin/plutil", [
+      "-insert",
+      key,
+      `-${type}`,
+      type === "json" ? JSON.stringify(value) : String(value),
+      infoPlistPath
+    ]);
+  }
 }
 
-mkdirSync(resourcesPath, { recursive: true });
-copyFileSync(sourceIconPath, destinationIconPath);
-execFileSync("/usr/libexec/PlistBuddy", [
-  "-c",
-  "Set :CFBundleIconFile DITBrowse.icns",
-  infoPlistPath
-]);
+try {
+  mkdirSync(resourcesPath, { recursive: true });
+  copyFileSync(sourceIconPath, destinationIconPath);
+  execFileSync("/usr/bin/xcrun", [
+    "actool",
+    "--compile",
+    resourcesPath,
+    "--platform",
+    "macosx",
+    "--minimum-deployment-target",
+    "12.0",
+    "--app-icon",
+    "AppIcon",
+    "--standalone-icon-behavior",
+    "all",
+    "--output-partial-info-plist",
+    partialInfoPath,
+    "--warnings",
+    "--errors",
+    "--notices",
+    assetCatalogPath
+  ]);
 
-const now = new Date();
-utimesSync(destinationIconPath, now, now);
-utimesSync(infoPlistPath, now, now);
-utimesSync(appPath, now, now);
+  const partialInfo = JSON.parse(
+    execFileSync("/usr/bin/plutil", [
+      "-convert",
+      "json",
+      "-o",
+      "-",
+      partialInfoPath
+    ], { encoding: "utf8" })
+  );
+  if (partialInfo.CFBundleIconName !== "AppIcon") {
+    throw new Error("actool did not emit CFBundleIconName=AppIcon");
+  }
+  const compiledAssetsPath = path.join(resourcesPath, "Assets.car");
+  if (!existsSync(compiledAssetsPath)) {
+    throw new Error("actool did not emit Assets.car");
+  }
+
+  for (const [key, value] of Object.entries(partialInfo)) {
+    setPlistValue(key, value);
+  }
+  setPlistValue("CFBundleIconFile", "DITBrowse.icns", "string");
+
+  const now = new Date();
+  for (const outputPath of [
+    destinationIconPath,
+    compiledAssetsPath,
+    infoPlistPath,
+    appPath
+  ]) {
+    utimesSync(outputPath, now, now);
+  }
+} finally {
+  rmSync(temporaryRoot, { recursive: true, force: true });
+}

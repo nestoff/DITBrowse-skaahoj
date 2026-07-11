@@ -1,10 +1,12 @@
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync
+  statSync,
+  writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -111,6 +113,47 @@ describe("Camera Wall icon assets", () => {
       }
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
+    }
+  });
+
+  runOnMac("applies explicit icon appearances to a macOS app bundle", () => {
+    const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ditbrowse-app-icon-"));
+    const appPath = resolve(temporaryRoot, "DITBrowse.app");
+    const contentsPath = resolve(appPath, "Contents");
+    try {
+      mkdirSync(resolve(contentsPath, "Resources"), { recursive: true });
+      writeFileSync(
+        resolve(contentsPath, "Info.plist"),
+        `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.lightlab.ditbrowse.test</string>
+<key>CFBundleName</key><string>DITBrowse</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>LSMinimumSystemVersion</key><string>12.0</string>
+</dict></plist>\n`
+      );
+
+      execFileSync(process.execPath, [
+        resolve(process.cwd(), "scripts/apply-mac-icon.mjs"),
+        "--app-path",
+        appPath
+      ]);
+
+      expect(existsSync(resolve(contentsPath, "Resources/DITBrowse.icns"))).toBe(true);
+      expect(existsSync(resolve(contentsPath, "Resources/Assets.car"))).toBe(true);
+      expect(
+        execFileSync("/usr/bin/plutil", [
+          "-extract",
+          "CFBundleIconName",
+          "raw",
+          "-o",
+          "-",
+          resolve(contentsPath, "Info.plist")
+        ], { encoding: "utf8" }).trim()
+      ).toBe("AppIcon");
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true });
     }
   });
 });
