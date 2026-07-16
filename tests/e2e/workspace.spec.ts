@@ -1,4 +1,34 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+
+async function readWebviewScale(webview: Locator): Promise<{ fit: number; scale: number }> {
+  return webview.evaluate((element) => {
+    const frame = element.parentElement?.getBoundingClientRect();
+    const viewportWidth = Number.parseFloat((element as HTMLElement).style.width);
+    const viewportHeight = Number.parseFloat((element as HTMLElement).style.height);
+    const scaleMatch = (element as HTMLElement).style.transform.match(/scale\(([^)]+)\)/);
+
+    if (!frame || !scaleMatch) {
+      throw new Error("Unable to measure camera webview scale");
+    }
+
+    return {
+      fit: Math.min(frame.width / viewportWidth, frame.height / viewportHeight),
+      scale: Number(scaleMatch[1])
+    };
+  });
+}
+
+async function expectPersistentZoomMultiplier(
+  webview: Locator,
+  multiplier: number
+): Promise<void> {
+  await expect
+    .poll(async () => {
+      const { fit, scale } = await readWebviewScale(webview);
+      return scale / fit;
+    })
+    .toBeCloseTo(multiplier, 2);
+}
 
 test("workspace shows row-major tiles and lets columns change", async ({ page }) => {
   await page.goto("/");
@@ -264,13 +294,23 @@ test("focus mode singles out the selected page without unmounting webviews", asy
   await page.goto("/");
 
   const grid = page.locator(".tile-grid");
+  const firstWebview = page.locator('webview[data-tile-id="tile-41"]');
   await expect(page.locator("webview")).toHaveCount(12);
+
+  await page.getByLabel("Selected zoom percent").fill("105");
+  await page.getByLabel("Selected zoom percent").press("Enter");
+  await page.getByLabel("Global zoom controls").click();
+  await page.getByLabel("All tiles relative zoom percent").fill("120");
+  await page.getByLabel("All tiles relative zoom percent").press("Enter");
+  await expectPersistentZoomMultiplier(firstWebview, 1.26);
+
   const gridBox = await grid.boundingBox();
 
   await page.getByLabel("Focus selected page").click();
 
   await expect(grid).toHaveClass(/focus-mode/);
   await expect(page.locator("webview")).toHaveCount(12);
+  await expectPersistentZoomMultiplier(firstWebview, 1);
 
   const firstTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-41"])');
   const secondTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-42"])');
@@ -293,6 +333,7 @@ test("focus mode singles out the selected page without unmounting webviews", asy
   await expect(grid).not.toHaveClass(/focus-mode/);
   await expect(firstTile).toBeVisible();
   await expect(secondTile).toBeVisible();
+  await expectPersistentZoomMultiplier(firstWebview, 1.26);
 });
 
 test("clicking the page area of an inactive tile activates its tab", async ({ page }) => {
