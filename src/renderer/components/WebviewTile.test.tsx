@@ -377,6 +377,81 @@ describe("WebviewTile", () => {
     });
   });
 
+  it("ignores individual and all-tiles zoom while focused", () => {
+    render(
+      <WebviewTile
+        tile={{ ...tile, zoom: 1.05 }}
+        globalZoom={1.2}
+        selected={true}
+        focused
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    resizeTile(1024, 792);
+
+    expect(document.querySelector("webview")).toHaveStyle({
+      transform: "scale(1)"
+    });
+  });
+
+  it("keeps temporary trackpad zoom layered over the focused fit scale", () => {
+    render(
+      <WebviewTile
+        tile={{ ...tile, zoom: 1.05 }}
+        globalZoom={1.2}
+        selected={true}
+        focused
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    resizeTile(1024, 792);
+    const webview = document.querySelector("webview") as HTMLElement;
+    const event = new Event("ipc-message") as Event & {
+      channel: string;
+      args: [{ type: "pinch"; deltaY: number }];
+    };
+    event.channel = "ditbrowse:temporary-view-gesture";
+    event.args = [{ type: "pinch", deltaY: -100 }];
+    fireEvent(webview, event);
+
+    expect(webview).toHaveStyle({
+      transform: "scale(8)"
+    });
+  });
+
+  it("restores persistent zoom after leaving focus without remounting the webview", () => {
+    const props = {
+      tile: { ...tile, zoom: 1.05 },
+      globalZoom: 1.2,
+      selected: true,
+      onSelectTile: vi.fn(),
+      onUrlCommitted: vi.fn(),
+      onCredentialCaptured: vi.fn(),
+      savedCredential: null,
+      webviewPreloadPath: null
+    };
+    const view = render(<WebviewTile {...props} focused />);
+
+    resizeTile(1024, 792);
+    const mountedWebview = document.querySelector("webview");
+    expect(mountedWebview).toHaveStyle({ transform: "scale(1)" });
+
+    view.rerender(<WebviewTile {...props} focused={false} />);
+
+    expect(document.querySelector("webview")).toBe(mountedWebview);
+    expect(mountedWebview).toHaveStyle({ transform: "scale(1.26)" });
+  });
+
   it("selects the tile when the webview reports interaction from inside the page", () => {
     const onSelectTile = vi.fn();
     render(

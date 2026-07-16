@@ -260,12 +260,13 @@ function WebviewTileComponent({
     width: bounds.width,
     height: Math.max(1, bounds.height - TILE_LABEL_HEIGHT)
   };
+  const persistentZoom = focused ? 1 : tile.zoom * globalZoom;
   const fitScale = computeFitScale({
     tileWidth: frame.width,
     tileHeight: frame.height,
     viewportWidth: tile.viewport.width,
     viewportHeight: tile.viewport.height,
-    manualZoom: tile.zoom * globalZoom
+    manualZoom: persistentZoom
   });
 
   const applyTemporaryGesture = useCallback(
