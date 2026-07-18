@@ -1494,6 +1494,48 @@ textarea::selection {
   grid-column: 3;
 }
 
+.host-ping-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+  margin-left: auto;
+  color: var(--quiet);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  outline: 0;
+}
+
+.tile-label.has-camera-number .host-ping-indicator {
+  grid-column: 3;
+  justify-self: end;
+  margin-left: 0;
+}
+
+.host-ping-indicator.online {
+  color: #8ed7ae;
+}
+
+.host-ping-indicator.offline {
+  color: var(--danger);
+}
+
+.host-ping-indicator:focus-visible {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+
+.host-ping-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+}
+
 .tile-error {
   position: absolute;
   inset: 34px 8px 8px;

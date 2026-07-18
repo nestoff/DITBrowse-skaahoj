@@ -13,6 +13,28 @@ vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 const baseProps = {
   tiles: sampleWorkspace.tiles.slice(0, 4),
   cameraNumbersById: new Map([["camera-41", 9]]),
+  pingStatusesByHost: new Map([
+    [
+      "192.168.1.1",
+      {
+        state: "online" as const,
+        host: "192.168.1.1",
+        reachable: true,
+        latencyMs: 2.5,
+        checkedAt: 100
+      }
+    ],
+    [
+      "192.168.1.2",
+      {
+        state: "offline" as const,
+        host: "192.168.1.2",
+        reachable: false,
+        latencyMs: null,
+        checkedAt: 100
+      }
+    ]
+  ]),
   globalZoom: 1,
   columns: 2,
   selectedTileId: "tile-42",
@@ -52,5 +74,13 @@ describe("TileGrid", () => {
     expect(container.querySelector('[data-tile-id="tile-41"]')?.closest(".tile-slot")).not.toHaveClass(
       "focused"
     );
+  });
+
+  it("matches ping status by base host after tiles are reordered", () => {
+    const reorderedTiles = [baseProps.tiles[1], baseProps.tiles[0]];
+    const { getByLabelText } = render(<TileGrid {...baseProps} tiles={reorderedTiles} />);
+
+    expect(getByLabelText("Ping 192.168.1.2: offline")).toBeVisible();
+    expect(getByLabelText("Ping 192.168.1.1: 2.5 milliseconds")).toBeVisible();
   });
 });

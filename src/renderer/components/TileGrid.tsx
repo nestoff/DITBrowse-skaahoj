@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { memo, useMemo } from "react";
 import { buildGridSlots } from "../../shared/grid";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
+import { cameraHostFromUrl, type HostPingStatus } from "../../shared/hostPing";
 import type { TileState } from "../../shared/types";
 import { WebviewTile } from "./WebviewTile";
 
@@ -10,6 +11,7 @@ const WEBVIEW_LOAD_STAGGER_MS = 750;
 interface TileGridProps {
   tiles: TileState[];
   cameraNumbersById: Map<string, number>;
+  pingStatusesByHost: ReadonlyMap<string, HostPingStatus>;
   globalZoom: number;
   columns: number;
   selectedTileId: string | null;
@@ -25,6 +27,7 @@ interface TileGridProps {
 function TileGridComponent({
   tiles,
   cameraNumbersById,
+  pingStatusesByHost,
   globalZoom,
   columns,
   selectedTileId,
@@ -60,6 +63,9 @@ function TileGridComponent({
             tile={tile}
             cameraNumber={
               tile.cameraId ? cameraNumbersById.get(tile.cameraId) ?? null : null
+            }
+            pingStatus={
+              pingStatusesByHost.get(cameraHostFromUrl(tile.url) ?? "") ?? null
             }
             globalZoom={globalZoom}
             selected={tile.id === selectedTileId}

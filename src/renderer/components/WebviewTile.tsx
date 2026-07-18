@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
 import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
+import type { HostPingStatus } from "../../shared/hostPing";
 import type { TileState } from "../../shared/types";
 import { normalizeCameraUrl } from "../../shared/url";
 import {
@@ -12,6 +13,7 @@ import {
 } from "../../shared/temporaryView";
 import { reloadWebviewFromCameraRoot } from "../browserControls";
 import { Button } from "./ui/Button";
+import { HostPingIndicator } from "./HostPingIndicator";
 
 const TILE_LABEL_HEIGHT = 24;
 const BLANK_WEBVIEW_URL = `data:text/html;charset=utf-8,${encodeURIComponent(
@@ -165,6 +167,7 @@ function safeForwardActivationClick(
 interface WebviewTileProps {
   tile: TileState;
   cameraNumber?: number | null;
+  pingStatus?: HostPingStatus | null;
   globalZoom?: number;
   selected: boolean;
   focused?: boolean;
@@ -180,6 +183,7 @@ interface WebviewTileProps {
 function WebviewTileComponent({
   tile,
   cameraNumber = null,
+  pingStatus = null,
   globalZoom = 1,
   selected,
   focused = false,
@@ -535,7 +539,11 @@ function WebviewTileComponent({
         {hasCameraNumber && (
           <strong className="tile-camera-number">CAM {cameraNumber}</strong>
         )}
-        {hasCameraNumber && <span className="tile-label-balance" aria-hidden="true" />}
+        {pingStatus ? (
+          <HostPingIndicator status={pingStatus} />
+        ) : (
+          hasCameraNumber && <span className="tile-label-balance" aria-hidden="true" />
+        )}
       </div>
       <div className="webview-frame">
         <webview

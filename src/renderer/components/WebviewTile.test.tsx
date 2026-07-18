@@ -166,6 +166,31 @@ describe("WebviewTile", () => {
     expect(screen.getByText("CAM 1")).toBeVisible();
   });
 
+  it("shows ping latency beside the centered camera number", () => {
+    render(
+      <WebviewTile
+        tile={tile}
+        cameraNumber={1}
+        pingStatus={{
+          state: "online",
+          host: "192.168.1.42",
+          reachable: true,
+          latencyMs: 5.2,
+          checkedAt: 100
+        }}
+        selected={false}
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    expect(screen.getByText("CAM 1")).toBeVisible();
+    expect(screen.getByLabelText("Ping 192.168.1.42: 5.2 milliseconds")).toBeVisible();
+  });
+
   it("omits the camera number for an unlinked tile", () => {
     render(
       <WebviewTile

@@ -44,6 +44,7 @@ import {
 } from "./state/workspaceStorage";
 import { workspaceReducer } from "./state/workspaceReducer";
 import { useDebouncedWorkspaceSave } from "./state/useDebouncedWorkspaceSave";
+import { useHostPingStatuses } from "./state/useHostPingStatuses";
 import {
   OneShotManualAuthGate,
   enqueueHttpAuthPrompt,
@@ -351,6 +352,9 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     }
     return numbers;
   }, [activeList]);
+  const pingStatusesByHost = useHostPingStatuses(
+    workspace.tiles.map((tile) => tile.url)
+  );
   const webviewPreloadPath = window.ditbrowse?.webviewPreloadPath ?? null;
 
   const sessionResetDependencies = useMemo<SessionResetDependencies>(
@@ -991,6 +995,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         <TileGrid
           tiles={workspace.tiles}
           cameraNumbersById={cameraNumbersById}
+          pingStatusesByHost={pingStatusesByHost}
           globalZoom={workspace.globalZoom}
           columns={workspace.gridColumns}
           selectedTileId={workspace.selectedTileId}
