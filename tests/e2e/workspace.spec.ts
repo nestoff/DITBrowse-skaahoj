@@ -113,6 +113,72 @@ test("camera tiles show live base-host ping status in grid and focus modes", asy
   await expect(page.locator("webview")).toHaveCount(12);
 });
 
+test("workspace settings persist the global ping interval", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
+
+  const interval = page.getByLabel("Ping interval in seconds");
+  await expect(interval).toHaveValue("5");
+  await interval.fill("12");
+  await page.getByRole("button", { name: "Save Interval" }).click();
+  await expect(
+    page.getByLabel("Camera workspace settings").getByText("12s", { exact: true })
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Discard", exact: true }).click();
+  await page.waitForTimeout(350);
+  await page.reload();
+  await page.getByRole("button", { name: "Camera List", exact: true }).click();
+  await expect(page.getByLabel("Ping interval in seconds")).toHaveValue("12");
+});
+
+test("an offline camera offers a reload for only its own webview", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.ditbrowse = {
+      version: "e2e",
+      pingHost: async (host) => ({
+        host,
+        reachable: host.endsWith(".1"),
+        latencyMs: host.endsWith(".1") ? 3.2 : null,
+        checkedAt: host.endsWith(".1") ? Date.now() : Date.now() - 10_001
+      })
+    };
+  });
+  await page.goto("/");
+
+  const firstTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-41"])');
+  const offlineTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-42"])');
+  const offlineWebview = offlineTile.locator("webview");
+  await expect(firstTile.getByText("3.2 ms")).toBeVisible();
+  await expect(
+    firstTile.getByRole("button", { name: /Reload camera at/ })
+  ).toHaveCount(0);
+
+  const reload = offlineTile.getByRole("button", {
+    name: "Reload camera at 192.168.1.2"
+  });
+  await expect(reload).toBeVisible();
+  await offlineWebview.evaluate((element) => {
+    const webview = element as HTMLElement & {
+      getURL: () => string;
+      loadURL: (url: string) => Promise<void>;
+      reload: () => void;
+    };
+    webview.getURL = () => "http://192.168.1.02/index.html";
+    webview.loadURL = async (url) => {
+      webview.setAttribute("data-e2e-reloaded", url);
+    };
+    webview.reload = () => webview.setAttribute("data-e2e-fallback-reload", "true");
+  });
+
+  await reload.click();
+  await expect(offlineWebview).toHaveAttribute(
+    "data-e2e-reloaded",
+    "http://192.168.1.02"
+  );
+  await expect(offlineWebview).not.toHaveAttribute("data-e2e-fallback-reload", "true");
+});
+
 test("Help opens as a full-page local tab and returns to the selected camera", async ({
   page
 }) => {
