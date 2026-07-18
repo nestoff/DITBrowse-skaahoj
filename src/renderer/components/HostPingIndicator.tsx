@@ -152,10 +152,6 @@ export function HostPingIndicator({
           size="icon"
           icon={<RotateCw size={11} strokeWidth={2.2} />}
           aria-label={`Reload camera at ${status.host}`}
-          tooltip={{
-            title: "Reload offline camera",
-            description: "Reloads only this camera webpage from its base address."
-          }}
           onClick={onReload}
         />
       )}

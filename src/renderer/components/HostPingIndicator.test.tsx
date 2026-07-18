@@ -111,10 +111,9 @@ describe("HostPingIndicator", () => {
     fireEvent.click(reload);
     expect(onReload).toHaveBeenCalledOnce();
 
-    fireEvent.focus(reload);
-    expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Reloads only this camera webpage from its base address."
-    );
+    fireEvent.pointerEnter(reload);
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
   it("removes the reload action when the camera recovers", () => {
