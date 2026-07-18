@@ -1508,7 +1508,7 @@ textarea::selection {
   grid-column: 3;
 }
 
-.host-ping-indicator {
+.host-ping-controls {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -1516,6 +1516,15 @@ textarea::selection {
   gap: 4px;
   min-width: 0;
   margin-left: auto;
+}
+
+.host-ping-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
   color: var(--quiet);
   font-size: 9px;
   font-variant-numeric: tabular-nums;
@@ -1525,7 +1534,7 @@ textarea::selection {
   outline: 0;
 }
 
-.tile-label.has-camera-number .host-ping-indicator {
+.tile-label.has-camera-number .host-ping-controls {
   grid-column: 3;
   justify-self: end;
   margin-left: 0;
@@ -1548,6 +1557,20 @@ textarea::selection {
   flex: 0 0 7px;
   width: 7px;
   height: 7px;
+}
+
+.host-ping-reload.button-icon {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  border-radius: 4px;
+  padding: 0;
+  color: var(--danger);
+}
+
+.host-ping-reload.button-icon:hover:not(:disabled) {
+  background: rgba(232, 140, 134, 0.12);
+  color: #ffc2be;
 }
 
 .tile-error {

@@ -4,6 +4,7 @@ import { RotateCw } from "lucide-react";
 import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
 import type { HostPingStatus } from "../../shared/hostPing";
+import { DEFAULT_HOST_PING_INTERVAL_SECONDS } from "../../shared/hostPing";
 import type { TileState } from "../../shared/types";
 import { normalizeCameraUrl } from "../../shared/url";
 import {
@@ -168,6 +169,7 @@ interface WebviewTileProps {
   tile: TileState;
   cameraNumber?: number | null;
   pingStatus?: HostPingStatus | null;
+  pingIntervalSeconds?: number;
   globalZoom?: number;
   selected: boolean;
   focused?: boolean;
@@ -184,6 +186,7 @@ function WebviewTileComponent({
   tile,
   cameraNumber = null,
   pingStatus = null,
+  pingIntervalSeconds = DEFAULT_HOST_PING_INTERVAL_SECONDS,
   globalZoom = 1,
   selected,
   focused = false,
@@ -525,6 +528,15 @@ function WebviewTileComponent({
     },
     [onSelectTile, tile.id, tile.viewport]
   );
+  const reloadTile = useCallback((): void => {
+    const webview = webviewRef.current;
+    if (!webview) {
+      return;
+    }
+
+    setFailed(false);
+    reloadWebviewFromCameraRoot(webview, tile.url);
+  }, [tile.url]);
 
   return (
     <div
@@ -540,7 +552,11 @@ function WebviewTileComponent({
           <strong className="tile-camera-number">CAM {cameraNumber}</strong>
         )}
         {pingStatus ? (
-          <HostPingIndicator status={pingStatus} />
+          <HostPingIndicator
+            status={pingStatus}
+            pingIntervalSeconds={pingIntervalSeconds}
+            onReload={reloadTile}
+          />
         ) : (
           hasCameraNumber && <span className="tile-label-balance" aria-hidden="true" />
         )}
@@ -586,12 +602,7 @@ function WebviewTileComponent({
               title: "Retry camera",
               description: "Loads this camera again from its base address."
             }}
-            onClick={() => {
-              const webview = webviewRef.current;
-              if (webview) {
-                reloadWebviewFromCameraRoot(webview, tile.url);
-              }
-            }}
+            onClick={reloadTile}
           >
             Retry
           </Button>

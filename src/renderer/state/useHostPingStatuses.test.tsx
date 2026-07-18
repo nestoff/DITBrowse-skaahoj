@@ -78,6 +78,24 @@ describe("useHostPingStatuses", () => {
     expect(pingHost).toHaveBeenCalledTimes(2);
   });
 
+  it("uses the configured interval for later checks", async () => {
+    vi.useFakeTimers();
+    const pingHost = vi.fn(async (host: string) => onlineResult(host));
+    window.ditbrowse.pingHost = pingHost;
+
+    renderHook(() =>
+      useHostPingStatuses(["http://10.20.100.101/rmt.html"], 12_000)
+    );
+    await act(async () => Promise.resolve());
+    expect(pingHost).toHaveBeenCalledTimes(1);
+
+    await act(async () => vi.advanceTimersByTimeAsync(11_999));
+    expect(pingHost).toHaveBeenCalledTimes(1);
+
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(pingHost).toHaveBeenCalledTimes(2);
+  });
+
   it("maps rejected checks to offline", async () => {
     window.ditbrowse.pingHost = vi.fn(async () => Promise.reject(new Error("IPC failed")));
 
@@ -89,9 +107,46 @@ describe("useHostPingStatuses", () => {
       expect(result.current.get("10.20.100.105")).toMatchObject({
         state: "offline",
         reachable: false,
-        latencyMs: null
+        latencyMs: null,
+        offlineSince: expect.any(Number)
       })
     );
+  });
+
+  it("preserves the start of a continuous offline period and resets after recovery", async () => {
+    vi.useFakeTimers();
+    const results: HostPingResult[] = [
+      { host: "10.20.100.105", reachable: false, latencyMs: null, checkedAt: 100 },
+      { host: "10.20.100.105", reachable: false, latencyMs: null, checkedAt: 5_100 },
+      { host: "10.20.100.105", reachable: true, latencyMs: 4, checkedAt: 10_100 },
+      { host: "10.20.100.105", reachable: false, latencyMs: null, checkedAt: 15_100 }
+    ];
+    window.ditbrowse.pingHost = vi.fn(async () => results.shift()!);
+
+    const { result } = renderHook(() =>
+      useHostPingStatuses(["http://10.20.100.105/rmt.html"])
+    );
+    await act(async () => Promise.resolve());
+    expect(result.current.get("10.20.100.105")).toMatchObject({
+      state: "offline",
+      offlineSince: 100
+    });
+
+    await act(async () => vi.advanceTimersByTimeAsync(HOST_PING_INTERVAL_MS));
+    expect(result.current.get("10.20.100.105")).toMatchObject({
+      state: "offline",
+      offlineSince: 100,
+      checkedAt: 5_100
+    });
+
+    await act(async () => vi.advanceTimersByTimeAsync(HOST_PING_INTERVAL_MS));
+    expect(result.current.get("10.20.100.105")).toMatchObject({ state: "online" });
+
+    await act(async () => vi.advanceTimersByTimeAsync(HOST_PING_INTERVAL_MS));
+    expect(result.current.get("10.20.100.105")).toMatchObject({
+      state: "offline",
+      offlineSince: 15_100
+    });
   });
 
   it("ignores a stale result after the camera host changes", async () => {

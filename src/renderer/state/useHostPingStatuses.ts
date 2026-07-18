@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   cameraHostFromUrl,
+  normalizeHostPingIntervalSeconds,
   type HostPingResult,
   type HostPingStatus
 } from "../../shared/hostPing";
@@ -23,11 +24,14 @@ function offlineResult(host: string): HostPingResult {
 }
 
 export function useHostPingStatuses(
-  urls: readonly string[]
+  urls: readonly string[],
+  intervalMs = HOST_PING_INTERVAL_MS
 ): ReadonlyMap<string, HostPingStatus> {
   const hostKey = uniqueHosts(urls).join("\n");
   const hosts = useMemo(() => (hostKey ? hostKey.split("\n") : []), [hostKey]);
   const pingHost = window.ditbrowse?.pingHost;
+  const pollingIntervalMs =
+    normalizeHostPingIntervalSeconds(intervalMs / 1_000) * 1_000;
   const [statuses, setStatuses] = useState<Map<string, HostPingStatus>>(new Map());
 
   useEffect(() => {
@@ -68,26 +72,39 @@ export function useHostPingStatuses(
         return;
       }
 
-      setStatuses(
-        new Map(
-          results.map((result) => [
-            result.host,
-            result.reachable
-              ? ({ state: "online", ...result } as const)
-              : ({ state: "offline", ...result } as const)
-          ])
-        )
-      );
+      setStatuses((current) => {
+        const next = new Map<string, HostPingStatus>();
+        for (const result of results) {
+          if (result.reachable) {
+            next.set(result.host, { state: "online", ...result });
+            continue;
+          }
+
+          const previous = current.get(result.host);
+          next.set(result.host, {
+            state: "offline",
+            ...result,
+            offlineSince:
+              previous?.state === "offline"
+                ? previous.offlineSince
+                : result.checkedAt
+          });
+        }
+        return next;
+      });
     };
 
     void checkHosts();
-    const interval = window.setInterval(() => void checkHosts(), HOST_PING_INTERVAL_MS);
+    const interval = window.setInterval(
+      () => void checkHosts(),
+      pollingIntervalMs
+    );
 
     return () => {
       disposed = true;
       window.clearInterval(interval);
     };
-  }, [hostKey, hosts, pingHost]);
+  }, [hostKey, hosts, pingHost, pollingIntervalMs]);
 
   return statuses;
 }

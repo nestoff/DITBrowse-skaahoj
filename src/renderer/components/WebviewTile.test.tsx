@@ -191,6 +191,44 @@ describe("WebviewTile", () => {
     expect(screen.getByLabelText("Ping 192.168.1.42: 5.2 milliseconds")).toBeVisible();
   });
 
+  it("reloads only this camera from its base address after prolonged ping failure", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(20_000);
+    render(
+      <WebviewTile
+        tile={tile}
+        cameraNumber={1}
+        pingStatus={{
+          state: "offline",
+          host: "192.168.1.42",
+          reachable: false,
+          latencyMs: null,
+          checkedAt: 20_000,
+          offlineSince: 1_000
+        }}
+        selected
+        onSelectTile={vi.fn()}
+        onUrlCommitted={vi.fn()}
+        onCredentialCaptured={vi.fn()}
+        savedCredential={null}
+        webviewPreloadPath={null}
+      />
+    );
+
+    const webview = document.querySelector("webview") as Electron.WebviewTag;
+    webview.getURL = vi.fn(() => "http://192.168.1.42/rmt.html");
+    webview.loadURL = vi.fn(async () => undefined);
+    webview.reload = vi.fn();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reload camera at 192.168.1.42" })
+    );
+
+    expect(webview.loadURL).toHaveBeenCalledOnce();
+    expect(webview.loadURL).toHaveBeenCalledWith("http://192.168.1.42");
+    expect(webview.reload).not.toHaveBeenCalled();
+  });
+
   it("omits the camera number for an unlinked tile", () => {
     render(
       <WebviewTile

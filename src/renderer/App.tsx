@@ -353,7 +353,8 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     return numbers;
   }, [activeList]);
   const pingStatusesByHost = useHostPingStatuses(
-    workspace.tiles.map((tile) => tile.url)
+    workspace.tiles.map((tile) => tile.url),
+    workspace.pingIntervalSeconds * 1_000
   );
   const webviewPreloadPath = window.ditbrowse?.webviewPreloadPath ?? null;
 
@@ -1000,6 +1001,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
           tiles={workspace.tiles}
           cameraNumbersById={cameraNumbersById}
           pingStatusesByHost={pingStatusesByHost}
+          pingIntervalSeconds={workspace.pingIntervalSeconds}
           globalZoom={workspace.globalZoom}
           columns={workspace.gridColumns}
           selectedTileId={workspace.selectedTileId}

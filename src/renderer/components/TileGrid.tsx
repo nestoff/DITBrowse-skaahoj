@@ -12,6 +12,7 @@ interface TileGridProps {
   tiles: TileState[];
   cameraNumbersById: Map<string, number>;
   pingStatusesByHost: ReadonlyMap<string, HostPingStatus>;
+  pingIntervalSeconds: number;
   globalZoom: number;
   columns: number;
   selectedTileId: string | null;
@@ -28,6 +29,7 @@ function TileGridComponent({
   tiles,
   cameraNumbersById,
   pingStatusesByHost,
+  pingIntervalSeconds,
   globalZoom,
   columns,
   selectedTileId,
@@ -67,6 +69,7 @@ function TileGridComponent({
             pingStatus={
               pingStatusesByHost.get(cameraHostFromUrl(tile.url) ?? "") ?? null
             }
+            pingIntervalSeconds={pingIntervalSeconds}
             globalZoom={globalZoom}
             selected={tile.id === selectedTileId}
             focused={focusMode && tile.id === selectedTileId}

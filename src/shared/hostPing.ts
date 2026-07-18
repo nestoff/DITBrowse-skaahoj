@@ -25,7 +25,7 @@ export interface HostPingResult {
 export type HostPingStatus =
   | { state: "checking"; host: string }
   | ({ state: "online" } & HostPingResult)
-  | ({ state: "offline" } & HostPingResult);
+  | ({ state: "offline"; offlineSince: number } & HostPingResult);
 
 export function cameraHostFromUrl(input: string): string | null {
   try {

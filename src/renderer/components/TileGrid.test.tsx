@@ -31,11 +31,13 @@ const baseProps = {
         host: "192.168.1.2",
         reachable: false,
         latencyMs: null,
-        checkedAt: 100
+        checkedAt: 100,
+        offlineSince: 100
       }
     ]
   ]),
   globalZoom: 1,
+  pingIntervalSeconds: 5,
   columns: 2,
   selectedTileId: "tile-42",
   onSelectTile: vi.fn(),
