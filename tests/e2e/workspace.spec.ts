@@ -85,6 +85,34 @@ test("workspace shows row-major tiles and lets columns change", async ({ page })
   await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue("http://192.168.1.02");
 });
 
+test("camera tiles show live base-host ping status in grid and focus modes", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.ditbrowse = {
+      version: "e2e",
+      pingHost: async (host) => ({
+        host,
+        reachable: true,
+        latencyMs: 4.2,
+        checkedAt: Date.now()
+      })
+    };
+  });
+  await page.goto("/");
+
+  const firstTile = page.locator('.tile-slot:has(webview[data-tile-id="tile-41"])');
+  await expect(firstTile.getByText("4.2 ms")).toBeVisible();
+  await expect(firstTile.locator(".host-ping-indicator")).toHaveClass(/online/);
+  await expect(firstTile.locator(".tile-label")).toHaveCSS("height", "24px");
+  await expect(page.locator("webview")).toHaveCount(12);
+  await expect(page.getByLabel("Tab A")).toHaveClass(/active/);
+
+  await page.getByLabel("Focus selected page").click();
+
+  await expect(firstTile).toBeVisible();
+  await expect(firstTile.getByText("4.2 ms")).toBeVisible();
+  await expect(page.locator("webview")).toHaveCount(12);
+});
+
 test("Help opens as a full-page local tab and returns to the selected camera", async ({
   page
 }) => {
