@@ -6,6 +6,7 @@ import type {
   ControlApiStatus
 } from "../shared/controlApi.js";
 import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth.js";
+import type { HostPingResult } from "../shared/hostPing.js";
 import type { TemporaryViewGesture } from "../shared/temporaryView.js";
 import type { WorkspaceState } from "../shared/types.js";
 import type {
@@ -19,6 +20,8 @@ const api = {
   loadWorkspace: () => ipcRenderer.invoke("workspace:load") as Promise<WorkspaceState>,
   saveWorkspace: (workspace: WorkspaceState) =>
     ipcRenderer.invoke("workspace:save", workspace) as Promise<void>,
+  pingHost: (host: string) =>
+    ipcRenderer.invoke("host:ping", host) as Promise<HostPingResult>,
   resetCameraSessionData: (partition: string, origin: string) =>
     ipcRenderer.invoke("session:resetCamera", partition, origin) as Promise<void>,
   resetListSessionData: (partition: string) =>

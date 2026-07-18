@@ -8,6 +8,7 @@ import type {
   ControlApiStatus
 } from "../../shared/controlApi";
 import type { HttpAuthRequest, HttpAuthResponse } from "../../shared/httpAuth";
+import type { HostPingResult } from "../../shared/hostPing";
 import type {
   CompanionModuleInstallResult,
   CompanionModuleInstallStatus
@@ -20,6 +21,7 @@ declare global {
       webviewPreloadPath?: string;
       loadWorkspace?: () => Promise<WorkspaceState>;
       saveWorkspace?: (workspace: WorkspaceState) => Promise<void>;
+      pingHost?: (host: string) => Promise<HostPingResult>;
       resetCameraSessionData?: (partition: string, origin: string) => Promise<void>;
       resetListSessionData?: (partition: string) => Promise<void>;
       onHostTemporaryViewGesture?: (

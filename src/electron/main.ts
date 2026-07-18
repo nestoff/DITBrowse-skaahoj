@@ -27,6 +27,7 @@ import { createJsonStorage } from "./storage.js";
 import { loadWindowState, saveWindowState, toBrowserWindowOptions } from "./windowState.js";
 import { lockWebContentsZoom } from "./zoomGuard.js";
 import { installMainWindowShortcuts } from "./shortcuts.js";
+import { pingHost } from "./hostPing.js";
 import type {
   ControlApiCommand,
   ControlApiInfo,
@@ -274,6 +275,7 @@ const createWindow = async (): Promise<void> => {
   ipcMain.handle("workspace:save", (_event, workspace: WorkspaceState) =>
     storage.saveWorkspace(workspace)
   );
+  ipcMain.handle("host:ping", (_event, host: string) => pingHost(host));
   ipcMain.handle(
     "session:resetCamera",
     async (_event, partition: string, origin: string): Promise<void> => {
