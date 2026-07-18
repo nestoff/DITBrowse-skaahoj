@@ -35,6 +35,9 @@ test("camera reset clears authentication and reloads the base redirect", async (
     await expect(
       window.getByRole("textbox", { name: "Address", exact: true })
     ).toHaveValue(`${camera.url}/rmt.html`);
+    const pingStatus = window.locator(".host-ping-indicator").first();
+    await expect(pingStatus).toHaveClass(/online/);
+    await expect(pingStatus).toHaveAttribute("aria-label", /^Ping 127\.0\.0\.1: /);
     const webview = window.locator('webview[data-tile-id="tile-41"]');
     await expect
       .poll(() =>
