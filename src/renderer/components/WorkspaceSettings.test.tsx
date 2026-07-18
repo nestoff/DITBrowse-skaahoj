@@ -25,6 +25,8 @@ function createProps(
     onDeletePasswordRecord: vi.fn(),
     onResetSelectedScale: vi.fn(),
     onResetGridOrder: vi.fn(),
+    pingIntervalSeconds: 5,
+    onSetPingIntervalSeconds: vi.fn(),
     controlApiInfo: {
       host: "127.0.0.1",
       port: 54321,
@@ -110,6 +112,44 @@ describe("WorkspaceSettings", () => {
     expect(screen.getByRole("button", { name: "Reset Scale" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Reset Order" })).toBeVisible();
   });
+
+  it("saves a global whole-second ping interval", () => {
+    const onSetPingIntervalSeconds = vi.fn();
+    render(
+      <WorkspaceSettings
+        {...createProps({ onSetPingIntervalSeconds })}
+      />
+    );
+
+    const interval = screen.getByLabelText("Ping interval in seconds");
+    fireEvent.change(interval, { target: { value: "12" } });
+    expect(onSetPingIntervalSeconds).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Interval" }));
+    expect(onSetPingIntervalSeconds).toHaveBeenCalledWith(12);
+  });
+
+  it.each(["0", "2.5", "301"])(
+    "rejects invalid ping interval %s",
+    (value) => {
+      const onSetPingIntervalSeconds = vi.fn();
+      render(
+        <WorkspaceSettings
+          {...createProps({ onSetPingIntervalSeconds })}
+        />
+      );
+
+      fireEvent.change(screen.getByLabelText("Ping interval in seconds"), {
+        target: { value }
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save Interval" }));
+
+      expect(onSetPingIntervalSeconds).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Ping interval must be a whole number between 1 and 300 seconds."
+      );
+    }
+  );
 
   it("sets and clears the local control API port", async () => {
     const onSetControlApiPort = vi.fn(async () => undefined);

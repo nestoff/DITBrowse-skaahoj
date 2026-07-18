@@ -1325,6 +1325,20 @@ textarea::selection {
   justify-content: start;
 }
 
+.ping-interval-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) auto;
+  align-items: end;
+  gap: 8px;
+  justify-content: start;
+}
+
+.ping-interval-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 11px;
+}
+
 .control-api-shortcuts {
   display: flex;
   flex-wrap: wrap;

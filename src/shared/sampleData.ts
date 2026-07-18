@@ -69,5 +69,6 @@ export const sampleWorkspace: WorkspaceState = {
   gridColumns: 4,
   defaultViewport: DEFAULT_VIEWPORT,
   defaultZoom: 1,
-  globalZoom: 1
+  globalZoom: 1,
+  pingIntervalSeconds: 5
 };

@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { cameraHostFromUrl } from "./hostPing";
+import {
+  cameraHostFromUrl,
+  normalizeHostPingIntervalSeconds
+} from "./hostPing";
+
+describe("normalizeHostPingIntervalSeconds", () => {
+  it("defaults legacy values and clamps saved whole-second intervals", () => {
+    expect(normalizeHostPingIntervalSeconds(undefined)).toBe(5);
+    expect(normalizeHostPingIntervalSeconds(Number.NaN)).toBe(5);
+    expect(normalizeHostPingIntervalSeconds(0)).toBe(1);
+    expect(normalizeHostPingIntervalSeconds(12.4)).toBe(12);
+    expect(normalizeHostPingIntervalSeconds(301)).toBe(300);
+  });
+});
 
 describe("cameraHostFromUrl", () => {
   it("extracts only the base host from a full camera page", () => {

@@ -25,6 +25,8 @@ function createWorkspaceSettings(
     onDeletePasswordRecord: vi.fn(),
     onResetSelectedScale: vi.fn(),
     onResetGridOrder: vi.fn(),
+    pingIntervalSeconds: 5,
+    onSetPingIntervalSeconds: vi.fn(),
     controlApiInfo: {
       host: "127.0.0.1",
       port: 54321,

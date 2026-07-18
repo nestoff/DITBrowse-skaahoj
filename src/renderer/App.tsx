@@ -591,6 +591,10 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     dispatch({ type: "resetGridToListOrder" });
   }, []);
 
+  const setPingIntervalSeconds = useCallback((seconds: number): void => {
+    dispatch({ type: "setPingIntervalSeconds", seconds });
+  }, []);
+
   const saveCapturedCredential = useCallback(
     (tileId: string, credential: CapturedCredential): void => {
       dispatch({
@@ -1027,6 +1031,8 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
             onDeletePasswordRecord: deletePasswordRecord,
             onResetSelectedScale: resetSelectedScale,
             onResetGridOrder: resetGridOrder,
+            pingIntervalSeconds: workspace.pingIntervalSeconds,
+            onSetPingIntervalSeconds: setPingIntervalSeconds,
             controlApiInfo,
             onSetControlApiPort: setControlApiPort,
             companionModuleStatus,

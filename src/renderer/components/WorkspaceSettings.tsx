@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import { Download, ListRestart, Maximize2, RotateCcw, Trash2 } from "lucide-react";
 import type { ControlApiInfo } from "../../shared/controlApi";
 import type { CompanionModuleInstallStatus } from "../../shared/companionModule";
+import {
+  MAX_HOST_PING_INTERVAL_SECONDS,
+  MIN_HOST_PING_INTERVAL_SECONDS
+} from "../../shared/hostPing";
 import type {
   CameraList,
   CredentialPreset,
@@ -33,6 +37,8 @@ export interface WorkspaceSettingsProps {
   onDeletePasswordRecord: (passwordRecordId: string) => void;
   onResetSelectedScale: () => void;
   onResetGridOrder: () => void;
+  pingIntervalSeconds: number;
+  onSetPingIntervalSeconds: (seconds: number) => void;
   controlApiInfo: ControlApiInfo | null;
   onSetControlApiPort: (port: number | null) => Promise<void>;
   companionModuleStatus: CompanionModuleInstallStatus | null;
@@ -82,6 +88,8 @@ export function WorkspaceSettings({
   onDeletePasswordRecord,
   onResetSelectedScale,
   onResetGridOrder,
+  pingIntervalSeconds,
+  onSetPingIntervalSeconds,
   controlApiInfo,
   onSetControlApiPort,
   companionModuleStatus,
@@ -93,6 +101,10 @@ export function WorkspaceSettings({
 }: WorkspaceSettingsProps): ReactElement {
   const [portDraft, setPortDraft] = useState("");
   const [portError, setPortError] = useState("");
+  const [pingIntervalDraft, setPingIntervalDraft] = useState(
+    String(pingIntervalSeconds)
+  );
+  const [pingIntervalError, setPingIntervalError] = useState("");
   const [presetUsername, setPresetUsername] = useState("");
   const [presetPassword, setPresetPassword] = useState("");
   const [presetCameraType, setPresetCameraType] = useState("");
@@ -102,6 +114,11 @@ export function WorkspaceSettings({
     setPortDraft(controlApiInfo?.configuredPort ? String(controlApiInfo.configuredPort) : "");
     setPortError(controlApiInfo?.error ?? "");
   }, [controlApiInfo]);
+
+  useEffect(() => {
+    setPingIntervalDraft(String(pingIntervalSeconds));
+    setPingIntervalError("");
+  }, [pingIntervalSeconds]);
 
   const savePort = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -130,6 +147,24 @@ export function WorkspaceSettings({
     setPresetUsername("");
     setPresetPassword("");
     setPresetCameraType("");
+  };
+
+  const savePingInterval = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const seconds = Number(pingIntervalDraft.trim());
+    if (
+      !Number.isInteger(seconds) ||
+      seconds < MIN_HOST_PING_INTERVAL_SECONDS ||
+      seconds > MAX_HOST_PING_INTERVAL_SECONDS
+    ) {
+      setPingIntervalError(
+        `Ping interval must be a whole number between ${MIN_HOST_PING_INTERVAL_SECONDS} and ${MAX_HOST_PING_INTERVAL_SECONDS} seconds.`
+      );
+      return;
+    }
+
+    setPingIntervalError("");
+    onSetPingIntervalSeconds(seconds);
   };
 
   return (
@@ -192,6 +227,44 @@ export function WorkspaceSettings({
             Reset Order
           </Button>
         </div>
+      </div>
+
+      <div className="workspace-settings-section ping-settings-section">
+        <div className="tools-section-header">
+          <span>Network monitoring</span>
+          <strong>{pingIntervalSeconds}s</strong>
+        </div>
+        <form className="ping-interval-form" noValidate onSubmit={savePingInterval}>
+          <label className="job-inline-field">
+            <span>Ping interval</span>
+            <input
+              aria-label="Ping interval in seconds"
+              type="number"
+              inputMode="numeric"
+              min={MIN_HOST_PING_INTERVAL_SECONDS}
+              max={MAX_HOST_PING_INTERVAL_SECONDS}
+              step={1}
+              value={pingIntervalDraft}
+              onChange={(event) => setPingIntervalDraft(event.target.value)}
+            />
+          </label>
+          <Button
+            type="submit"
+            variant="subtle"
+            size="compact"
+            tooltip={{
+              title: "Save ping interval",
+              description: "Changes how often one small packet is sent to each unique camera IP."
+            }}
+          >
+            Save Interval
+          </Button>
+        </form>
+        {pingIntervalError && (
+          <p className="ping-interval-error" role="alert">
+            {pingIntervalError}
+          </p>
+        )}
       </div>
 
       <div className="workspace-settings-section credential-preset-section">

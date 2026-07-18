@@ -41,6 +41,18 @@ describe("workspaceReducer", () => {
     expect(state.selectedTileId).toBe("tile-42");
   });
 
+  it("defaults legacy workspaces to a five-second ping interval", () => {
+    const { pingIntervalSeconds: _pingIntervalSeconds, ...legacyWorkspace } =
+      sampleWorkspace;
+
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "hydrateWorkspace",
+      workspace: legacyWorkspace as typeof sampleWorkspace
+    });
+
+    expect(state.pingIntervalSeconds).toBe(5);
+  });
+
   it("repairs stale prefix-based URLs when hydrating a saved workspace", () => {
     const { usesListPrefix: _usesListPrefix, ...legacyCamera } = {
       ...sampleWorkspace.cameraLists[0].cameras[0],
@@ -164,6 +176,20 @@ describe("workspaceReducer", () => {
       columns: 5
     });
     expect(state.gridColumns).toBe(5);
+  });
+
+  it("updates and normalizes the saved ping interval", () => {
+    const state = workspaceReducer(sampleWorkspace, {
+      type: "setPingIntervalSeconds",
+      seconds: 12
+    });
+    const clamped = workspaceReducer(state, {
+      type: "setPingIntervalSeconds",
+      seconds: 600
+    });
+
+    expect(state.pingIntervalSeconds).toBe(12);
+    expect(clamped.pingIntervalSeconds).toBe(300);
   });
 
   it("navigates an unlinked selected tile without changing the camera list", () => {

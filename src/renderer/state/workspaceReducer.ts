@@ -6,6 +6,7 @@ import {
   normalizeCameraNumberSuffix
 } from "../../shared/cameraIndex";
 import { formatCameraLabel } from "../../shared/cameraLabel";
+import { normalizeHostPingIntervalSeconds } from "../../shared/hostPing";
 import { normalizeCredentialUrl } from "../../shared/credentials";
 import {
   forgetCameraCredential,
@@ -51,6 +52,7 @@ export type WorkspaceAction =
   | { type: "hydrateWorkspace"; workspace: WorkspaceState }
   | { type: "selectTile"; tileId: string }
   | { type: "setGridColumns"; columns: number }
+  | { type: "setPingIntervalSeconds"; seconds: number }
   | { type: "navigateSelectedTile"; url: string }
   | { type: "commitTileNavigationUrl"; tileId: string; url: string }
   | { type: "returnSelectedCameraToPrefix" }
@@ -333,6 +335,9 @@ function normalizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
   return {
     ...workspace,
     globalZoom: normalizeZoom(workspace.globalZoom ?? 1),
+    pingIntervalSeconds: normalizeHostPingIntervalSeconds(
+      workspace.pingIntervalSeconds
+    ),
     credentialPresets: (workspace.credentialPresets ?? []).map((preset) => ({
       ...preset,
       cameraType: preset.cameraType ?? ""
@@ -484,6 +489,11 @@ export function workspaceReducer(
       return { ...state, selectedTileId: action.tileId };
     case "setGridColumns":
       return { ...state, gridColumns: Math.max(1, action.columns) };
+    case "setPingIntervalSeconds":
+      return {
+        ...state,
+        pingIntervalSeconds: normalizeHostPingIntervalSeconds(action.seconds)
+      };
     case "navigateSelectedTile": {
       const url = normalizeCameraUrl(action.url);
       const selectedTile = state.tiles.find((tile) => tile.id === state.selectedTileId);

@@ -72,4 +72,5 @@ export interface WorkspaceState {
   defaultViewport: ViewportSize;
   defaultZoom: number;
   globalZoom: number;
+  pingIntervalSeconds: number;
 }
