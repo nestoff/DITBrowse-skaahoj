@@ -1,4 +1,5 @@
 import type { BrowserWindowConstructorOptions } from "electron";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -14,16 +15,47 @@ const fallbackState: SavedWindowState = {
   height: 900
 };
 
+function fallbackWindowState(): SavedWindowState {
+  return { ...fallbackState };
+}
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function parseWindowState(value: unknown): SavedWindowState | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Partial<SavedWindowState>;
+  if (
+    !finiteNumber(candidate.width) ||
+    candidate.width <= 0 ||
+    !finiteNumber(candidate.height) ||
+    candidate.height <= 0
+  ) {
+    return null;
+  }
+
+  const state: SavedWindowState = {
+    width: candidate.width,
+    height: candidate.height
+  };
+  if (finiteNumber(candidate.x) && finiteNumber(candidate.y)) {
+    state.x = candidate.x;
+    state.y = candidate.y;
+  }
+  return state;
+}
+
 export async function loadWindowState(userDataPath: string): Promise<SavedWindowState> {
   const statePath = path.join(userDataPath, "window-state.json");
   try {
-    return JSON.parse(await fs.readFile(statePath, "utf8")) as SavedWindowState;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      return fallbackState;
-    }
-    throw error;
+    const parsed = JSON.parse(await fs.readFile(statePath, "utf8")) as unknown;
+    return parseWindowState(parsed) ?? fallbackWindowState();
+  } catch {
+    return fallbackWindowState();
   }
 }
 
@@ -32,8 +64,15 @@ export async function saveWindowState(
   bounds: SavedWindowState
 ): Promise<void> {
   const statePath = path.join(userDataPath, "window-state.json");
+  const temporaryPath = `${statePath}.tmp-${process.pid}-${randomUUID()}`;
   await fs.mkdir(path.dirname(statePath), { recursive: true });
-  await fs.writeFile(statePath, JSON.stringify(bounds, null, 2), "utf8");
+  try {
+    await fs.writeFile(temporaryPath, `${JSON.stringify(bounds, null, 2)}\n`, "utf8");
+    await fs.rename(temporaryPath, statePath);
+  } catch (error) {
+    await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 export function toBrowserWindowOptions(
