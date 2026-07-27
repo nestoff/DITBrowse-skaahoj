@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+  ControlApiBindHost,
   ControlApiCommand,
   ControlApiInfo,
   ControlApiResponse,
@@ -29,6 +30,8 @@ const api = {
   getControlApiInfo: () => ipcRenderer.invoke("control-api:info") as Promise<ControlApiInfo>,
   setControlApiPort: (port: number | null) =>
     ipcRenderer.invoke("control-api:setPort", port) as Promise<ControlApiInfo>,
+  setControlApiBindHost: (bindHost: ControlApiBindHost) =>
+    ipcRenderer.invoke("control-api:setBindHost", bindHost) as Promise<ControlApiInfo>,
   getCompanionModuleInstallStatus: () =>
     ipcRenderer.invoke("companion-module:status") as Promise<CompanionModuleInstallStatus>,
   installCompanionModule: () =>

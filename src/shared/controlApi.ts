@@ -1,15 +1,23 @@
 import type { TileState, WorkspaceState } from "./types.js";
 
+export type ControlApiBindHost = "127.0.0.1" | "0.0.0.0";
+
 export interface ControlApiInfo {
   host: string;
   port: number;
   baseUrl: string;
   configuredPort: number | null;
+  /** Address the control server listens on. */
+  bindHost: ControlApiBindHost;
+  /** True when the API accepts connections from the LAN (Blue Pill / Skaarhoj). */
+  lanAccess: boolean;
   error?: string;
 }
 
 export interface ControlApiConfig {
   port: number | null;
+  /** Loopback-only by default. Set to 0.0.0.0 for Blue Pill / Skaarhoj LAN control. */
+  bindHost?: ControlApiBindHost;
 }
 
 export type ControlApiCommand =

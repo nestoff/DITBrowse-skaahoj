@@ -31,9 +31,12 @@ function createWorkspaceSettings(
       host: "127.0.0.1",
       port: 54321,
       baseUrl: "http://127.0.0.1:54321",
-      configuredPort: 54321
+      configuredPort: 54321,
+      bindHost: "127.0.0.1",
+      lanAccess: false
     },
     onSetControlApiPort: vi.fn(async () => undefined),
+    onSetControlApiBindHost: vi.fn(async () => undefined),
     companionModuleStatus: {
       state: "current",
       pathSource: "companion",

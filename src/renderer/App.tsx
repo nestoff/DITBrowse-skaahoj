@@ -495,6 +495,16 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     }
   }, []);
 
+  const setControlApiBindHost = useCallback(
+    async (bindHost: "127.0.0.1" | "0.0.0.0"): Promise<void> => {
+      const nextInfo = await window.ditbrowse?.setControlApiBindHost?.(bindHost);
+      if (nextInfo) {
+        setControlApiInfo(nextInfo);
+      }
+    },
+    []
+  );
+
   const moveTileToIndex = useCallback((tileId: string, toIndex: number): void => {
     dispatch({ type: "moveTileToIndex", tileId, toIndex });
   }, []);
@@ -1037,6 +1047,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
             onSetPingIntervalSeconds: setPingIntervalSeconds,
             controlApiInfo,
             onSetControlApiPort: setControlApiPort,
+            onSetControlApiBindHost: setControlApiBindHost,
             companionModuleStatus,
             companionModuleBusy,
             companionModuleError,

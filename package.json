@@ -1,8 +1,8 @@
 {
   "name": "ditbrowse",
-  "version": "1.0.2",
+  "version": "1.1.0-skaarhoj",
   "private": true,
-  "description": "macOS tiled browser for local camera web GUIs",
+  "description": "Fork of DIT Browse with SKAARHOJ Blue Pill camera-select routing triggers",
   "main": "dist-electron/electron/main.js",
   "type": "module",
   "scripts": {

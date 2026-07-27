@@ -7,7 +7,10 @@ import { createCompanionModuleInstaller } from "./companionModuleInstaller.js";
 import { companionModuleConfigPath } from "./companionModuleConfig.js";
 import { chooseAndInstallCompanionModule } from "./companionModuleSetup.js";
 import {
+  buildControlApiInfo,
+  DEFAULT_CONTROL_API_BIND_HOST,
   loadControlApiConfig,
+  normalizeControlApiBindHost,
   normalizeControlApiPort,
   removeControlApiRuntimeInfo,
   saveControlApiConfig,
@@ -29,6 +32,7 @@ import { lockWebContentsZoom } from "./zoomGuard.js";
 import { installMainWindowShortcuts } from "./shortcuts.js";
 import { pingHost } from "./hostPing.js";
 import type {
+  ControlApiBindHost,
   ControlApiCommand,
   ControlApiInfo,
   ControlApiResponse,
@@ -334,15 +338,18 @@ const createWindow = async (): Promise<void> => {
 
   const startOrRestartControlApi = async (
     configuredPort: number | null,
+    configuredBindHost: ControlApiBindHost,
     options: { persist: boolean; fallbackToAuto: boolean }
   ): Promise<ControlApiInfo> => {
     const normalizedPort = normalizeControlApiPort(configuredPort);
+    const normalizedBindHost = normalizeControlApiBindHost(configuredBindHost);
     let nextServer: ControlApiServer;
     let startupError: string | undefined;
 
     try {
       nextServer = await startControlApiServer({
         port: normalizedPort,
+        host: normalizedBindHost,
         appVersion: app.getVersion(),
         dispatch: (command) => sendControlApiCommand(mainWindow.webContents, command)
       });
@@ -357,6 +364,7 @@ const createWindow = async (): Promise<void> => {
           : `Port ${normalizedPort} was unavailable`;
       nextServer = await startControlApiServer({
         port: null,
+        host: normalizedBindHost,
         appVersion: app.getVersion(),
         dispatch: (command) => sendControlApiCommand(mainWindow.webContents, command)
       });
@@ -367,16 +375,18 @@ const createWindow = async (): Promise<void> => {
       nextServer.publishStatus(latestControlApiStatus, controlApiStatusRevision);
     }
     controlApiServer = nextServer;
-    controlApiInfo = {
-      host: nextServer.host,
+    controlApiInfo = buildControlApiInfo({
+      bindHost: normalizedBindHost,
       port: nextServer.port,
-      baseUrl: nextServer.baseUrl,
-      configuredPort: startupError ? normalizedPort : normalizedPort,
+      configuredPort: normalizedPort,
       ...(startupError ? { error: startupError } : {})
-    };
+    });
 
     if (options.persist) {
-      await saveControlApiConfig(userDataPath, { port: normalizedPort });
+      await saveControlApiConfig(userDataPath, {
+        port: normalizedPort,
+        bindHost: normalizedBindHost
+      });
     }
     await writeControlApiRuntimeInfo(userDataPath, controlApiInfo);
     mainWindow.webContents.send("control-api:ready", controlApiInfo);
@@ -386,13 +396,26 @@ const createWindow = async (): Promise<void> => {
   };
 
   ipcMain.handle("control-api:setPort", async (_event, port: number | null) => {
-    return startOrRestartControlApi(port, { persist: true, fallbackToAuto: false });
+    const bindHost = controlApiInfo?.bindHost ?? savedControlApiConfig.bindHost ?? DEFAULT_CONTROL_API_BIND_HOST;
+    return startOrRestartControlApi(port, bindHost, { persist: true, fallbackToAuto: false });
   });
 
-  await startOrRestartControlApi(savedControlApiConfig.port, {
-    persist: false,
-    fallbackToAuto: true
-  });
+  ipcMain.handle(
+    "control-api:setBindHost",
+    async (_event, bindHost: ControlApiBindHost) => {
+      const port = controlApiInfo?.configuredPort ?? savedControlApiConfig.port ?? null;
+      return startOrRestartControlApi(port, bindHost, { persist: true, fallbackToAuto: false });
+    }
+  );
+
+  await startOrRestartControlApi(
+    savedControlApiConfig.port,
+    savedControlApiConfig.bindHost ?? DEFAULT_CONTROL_API_BIND_HOST,
+    {
+      persist: false,
+      fallbackToAuto: true
+    }
+  );
 
   mainWindow.on("close", () => {
     void saveWindowState(userDataPath, mainWindow.getBounds());

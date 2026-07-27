@@ -111,13 +111,28 @@ describe("App control API commands", () => {
         host: "127.0.0.1",
         port: 54321,
         baseUrl: "http://127.0.0.1:54321",
-        configuredPort: 54321
+        configuredPort: 54321,
+        bindHost: "127.0.0.1" as const,
+        lanAccess: false
       })),
       setControlApiPort: vi.fn(async (port) => ({
         host: "127.0.0.1",
         port: port ?? 54322,
         baseUrl: `http://127.0.0.1:${port ?? 54322}`,
-        configuredPort: port
+        configuredPort: port,
+        bindHost: "127.0.0.1" as const,
+        lanAccess: false
+      })),
+      setControlApiBindHost: vi.fn(async (bindHost) => ({
+        host: bindHost === "0.0.0.0" ? "192.168.1.10" : "127.0.0.1",
+        port: 54321,
+        baseUrl:
+          bindHost === "0.0.0.0"
+            ? "http://192.168.1.10:54321"
+            : "http://127.0.0.1:54321",
+        configuredPort: 54321,
+        bindHost,
+        lanAccess: bindHost === "0.0.0.0"
       })),
       onControlApiInfo: vi.fn(() => vi.fn()),
       getCompanionModuleInstallStatus: vi.fn(async () => ({

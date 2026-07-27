@@ -1,10 +1,16 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import type { ControlApiConfig, ControlApiInfo } from "../shared/controlApi.js";
+import type {
+  ControlApiBindHost,
+  ControlApiConfig,
+  ControlApiInfo
+} from "../shared/controlApi.js";
 
 const configFileName = "ditbrowse-control-api-config.json";
 const runtimeFileName = "ditbrowse-control-api.json";
 export const DEFAULT_CONTROL_API_PORT = 52780;
+export const DEFAULT_CONTROL_API_BIND_HOST: ControlApiBindHost = "127.0.0.1";
 
 export function controlApiConfigPath(userDataPath: string): string {
   return path.join(userDataPath, configFileName);
@@ -27,15 +33,69 @@ export function normalizeControlApiPort(port: unknown): number | null {
   return parsed;
 }
 
+export function normalizeControlApiBindHost(bindHost: unknown): ControlApiBindHost {
+  if (bindHost === undefined || bindHost === null || bindHost === "") {
+    return DEFAULT_CONTROL_API_BIND_HOST;
+  }
+
+  if (bindHost === "127.0.0.1" || bindHost === "0.0.0.0") {
+    return bindHost;
+  }
+
+  throw new Error('Control API bind host must be "127.0.0.1" or "0.0.0.0"');
+}
+
+/** Prefer a non-internal IPv4 address when advertising LAN access. */
+export function resolveAdvertisedControlApiHost(bindHost: ControlApiBindHost): string {
+  if (bindHost === "127.0.0.1") {
+    return "127.0.0.1";
+  }
+
+  const interfaces = os.networkInterfaces();
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries ?? []) {
+      if (entry.family === "IPv4" && !entry.internal) {
+        return entry.address;
+      }
+    }
+  }
+
+  return "0.0.0.0";
+}
+
+export function buildControlApiInfo(options: {
+  bindHost: ControlApiBindHost;
+  port: number;
+  configuredPort: number | null;
+  error?: string;
+}): ControlApiInfo {
+  const host = resolveAdvertisedControlApiHost(options.bindHost);
+  return {
+    host,
+    port: options.port,
+    baseUrl: `http://${host}:${options.port}`,
+    configuredPort: options.configuredPort,
+    bindHost: options.bindHost,
+    lanAccess: options.bindHost === "0.0.0.0",
+    ...(options.error ? { error: options.error } : {})
+  };
+}
+
 export async function loadControlApiConfig(userDataPath: string): Promise<ControlApiConfig> {
   try {
     const raw = await fs.readFile(controlApiConfigPath(userDataPath), "utf8");
     const parsed = JSON.parse(raw) as Partial<ControlApiConfig>;
-    return { port: normalizeControlApiPort(parsed.port) };
+    return {
+      port: normalizeControlApiPort(parsed.port),
+      bindHost: normalizeControlApiBindHost(parsed.bindHost)
+    };
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
-      return { port: DEFAULT_CONTROL_API_PORT };
+      return {
+        port: DEFAULT_CONTROL_API_PORT,
+        bindHost: DEFAULT_CONTROL_API_BIND_HOST
+      };
     }
 
     throw error;
@@ -49,7 +109,14 @@ export async function saveControlApiConfig(
   await fs.mkdir(userDataPath, { recursive: true });
   await fs.writeFile(
     controlApiConfigPath(userDataPath),
-    JSON.stringify({ port: normalizeControlApiPort(config.port) }, null, 2),
+    JSON.stringify(
+      {
+        port: normalizeControlApiPort(config.port),
+        bindHost: normalizeControlApiBindHost(config.bindHost)
+      },
+      null,
+      2
+    ),
     "utf8"
   );
 }

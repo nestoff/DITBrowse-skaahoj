@@ -1,7 +1,7 @@
 import type { FormEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { Download, ListRestart, Maximize2, RotateCcw, Trash2 } from "lucide-react";
-import type { ControlApiInfo } from "../../shared/controlApi";
+import type { ControlApiBindHost, ControlApiInfo } from "../../shared/controlApi";
 import type { CompanionModuleInstallStatus } from "../../shared/companionModule";
 import {
   MAX_HOST_PING_INTERVAL_SECONDS,
@@ -41,6 +41,7 @@ export interface WorkspaceSettingsProps {
   onSetPingIntervalSeconds: (seconds: number) => void;
   controlApiInfo: ControlApiInfo | null;
   onSetControlApiPort: (port: number | null) => Promise<void>;
+  onSetControlApiBindHost: (bindHost: ControlApiBindHost) => Promise<void>;
   companionModuleStatus: CompanionModuleInstallStatus | null;
   companionModuleBusy: boolean;
   companionModuleError: string;
@@ -92,6 +93,7 @@ export function WorkspaceSettings({
   onSetPingIntervalSeconds,
   controlApiInfo,
   onSetControlApiPort,
+  onSetControlApiBindHost,
   companionModuleStatus,
   companionModuleBusy,
   companionModuleError,
@@ -370,7 +372,36 @@ export function WorkspaceSettings({
               : "ws://127.0.0.1:52780/api/ws"}
           </code>
         </div>
-        <p>Companion connects on this computer and uses integer camera numbers.</p>
+        <p>
+          Companion connects on this computer. Enable LAN access so a Blue Pill /
+          Skaarhoj Reactor core can select cameras over the network.
+        </p>
+        <label className="job-inline-field control-api-lan-toggle">
+          <span>Allow LAN access (Blue Pill / Skaarhoj)</span>
+          <input
+            aria-label="Allow LAN access"
+            type="checkbox"
+            checked={Boolean(controlApiInfo?.lanAccess)}
+            onChange={(event) => {
+              const bindHost: ControlApiBindHost = event.target.checked
+                ? "0.0.0.0"
+                : "127.0.0.1";
+              void onSetControlApiBindHost(bindHost).catch((error) => {
+                setPortError(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not change LAN access."
+                );
+              });
+            }}
+          />
+        </label>
+        {controlApiInfo?.lanAccess && (
+          <p className="control-api-lan-hint">
+            Listening on all interfaces. Point core-ditbrowse at{" "}
+            <code>{controlApiInfo.host}:{controlApiInfo.port}</code>.
+          </p>
+        )}
         <form className="control-api-form" onSubmit={(event) => void savePort(event)}>
           <label className="job-inline-field">
             <span>API port</span>

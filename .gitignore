@@ -9,3 +9,5 @@ test-results/
 release/
 release-candidate/
 resources/companion-module/
+core-ditbrowse/core-ditbrowse
+core-ditbrowse/core-ditbrowse-linux-*

@@ -2,6 +2,7 @@ import type { WorkspaceState } from "../../shared/types";
 import { sampleWorkspace } from "../../shared/sampleData";
 import type { TemporaryViewGesture } from "../../shared/temporaryView";
 import type {
+  ControlApiBindHost,
   ControlApiCommand,
   ControlApiInfo,
   ControlApiResponse,
@@ -29,6 +30,7 @@ declare global {
       ) => () => void;
       getControlApiInfo?: () => Promise<ControlApiInfo>;
       setControlApiPort?: (port: number | null) => Promise<ControlApiInfo>;
+      setControlApiBindHost?: (bindHost: ControlApiBindHost) => Promise<ControlApiInfo>;
       getCompanionModuleInstallStatus?: () => Promise<CompanionModuleInstallStatus>;
       installCompanionModule?: () => Promise<CompanionModuleInstallResult>;
       chooseAndInstallCompanionModule?: () => Promise<

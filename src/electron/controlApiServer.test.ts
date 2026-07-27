@@ -74,6 +74,18 @@ describe("controlApiServer", () => {
     expect(server.baseUrl).toBe(`http://127.0.0.1:${server.port}`);
   });
 
+  it("can bind to all interfaces for Blue Pill LAN access", async () => {
+    const server = await startControlApiServer({
+      dispatch: vi.fn(async (): Promise<ControlApiResponse> => ({ ok: true })),
+      port: null,
+      host: "0.0.0.0"
+    });
+    servers.push(server);
+
+    expect(server.host).toBe("0.0.0.0");
+    expect(server.baseUrl).toBe(`http://0.0.0.0:${server.port}`);
+  });
+
   it("can bind to a caller-selected free port", async () => {
     const reserved = await startTestServer();
     const port = reserved.server.port;

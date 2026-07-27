@@ -23,11 +23,13 @@ import {
   type ControlProtocolStatusEvent
 } from "../shared/controlProtocol.js";
 
-const HOST = "127.0.0.1";
+const DEFAULT_HOST = "127.0.0.1";
 
 interface ControlApiServerOptions {
   dispatch: (command: ControlApiCommand) => Promise<ControlApiResponse>;
   port?: number | null;
+  /** Listen address. Use 0.0.0.0 to allow Blue Pill / Skaarhoj on the LAN. */
+  host?: string;
   appVersion?: string;
 }
 
@@ -189,8 +191,10 @@ function commandFromRoute(
 export async function startControlApiServer({
   dispatch,
   port = null,
+  host = DEFAULT_HOST,
   appVersion = "0.1.0"
 }: ControlApiServerOptions): Promise<ControlApiServer> {
+  const listenHost = host.trim() || DEFAULT_HOST;
   const server = http.createServer(async (request, response) => {
     if (request.method === "OPTIONS") {
       writeJson(response, 204, {});
@@ -198,7 +202,7 @@ export async function startControlApiServer({
     }
 
     try {
-      const url = new URL(request.url ?? "/", `http://${HOST}`);
+      const url = new URL(request.url ?? "/", `http://${listenHost}`);
       const body = request.method === "POST" ? await readJsonBody(request) : null;
       const command = commandFromRoute(request.method, url.pathname, url.searchParams, body);
       if ("ok" in command) {
@@ -239,7 +243,7 @@ export async function startControlApiServer({
   server.on("upgrade", (request, socket, head) => {
     let pathname: string;
     try {
-      pathname = new URL(request.url ?? "/", `http://${HOST}`).pathname;
+      pathname = new URL(request.url ?? "/", `http://${listenHost}`).pathname;
     } catch {
       socket.destroy();
       return;
@@ -374,7 +378,7 @@ export async function startControlApiServer({
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(port ?? 0, HOST, () => {
+    server.listen(port ?? 0, listenHost, () => {
       server.off("error", reject);
       resolve();
     });
@@ -386,9 +390,9 @@ export async function startControlApiServer({
   }
 
   const api: ControlApiServer = {
-    host: HOST,
+    host: listenHost,
     port: address.port,
-    baseUrl: `http://${HOST}:${address.port}`,
+    baseUrl: `http://${listenHost}:${address.port}`,
     get clientCount() {
       return [...clients.keys()].filter((socket) => socket.readyState === WebSocket.OPEN).length;
     },
