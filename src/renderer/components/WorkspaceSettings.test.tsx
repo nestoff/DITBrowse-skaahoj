@@ -34,6 +34,19 @@ function createProps(
       configuredPort: 54321
     },
     onSetControlApiPort: vi.fn(async () => undefined),
+    swp08Info: {
+      enabled: false,
+      host: "127.0.0.1",
+      port: 8910,
+      matrix: 0,
+      levels: 1,
+      sources: 64,
+      destinations: 1,
+      focusDestination: 1,
+      listening: false,
+      clientCount: 0
+    },
+    onSetSwp08Config: vi.fn(async () => undefined),
     companionModuleStatus: {
       state: "missing",
       pathSource: "companion",
@@ -166,7 +179,7 @@ describe("WorkspaceSettings", () => {
     fireEvent.change(screen.getByLabelText("API port"), {
       target: { value: "54001" }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save Port" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Save Port" })[0]!);
 
     await waitFor(() => expect(onSetControlApiPort).toHaveBeenCalledWith(54001));
 
@@ -174,6 +187,43 @@ describe("WorkspaceSettings", () => {
 
     await waitFor(() => expect(onSetControlApiPort).toHaveBeenCalledWith(null));
   });
+
+  it("enables the Probel SW-P-08 server", async () => {
+    const onSetSwp08Config = vi.fn(async () => undefined);
+    render(
+      <WorkspaceSettings
+        {...createProps({
+          onSetSwp08Config,
+          swp08Info: {
+            enabled: false,
+            host: "192.168.1.10",
+            port: 8910,
+            matrix: 0,
+            levels: 1,
+            sources: 64,
+            destinations: 1,
+            focusDestination: 1,
+            listening: false,
+            clientCount: 0
+          }
+        })}
+      />
+    );
+
+    expect(screen.getByLabelText("Blue Pill SW-P-08 setup guide")).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /MatrixID/i })).toHaveTextContent("0");
+    expect(screen.getByRole("row", { name: /Port/i })).toHaveTextContent("8910");
+
+    fireEvent.click(screen.getByLabelText("Enable SW-P-08 server"));
+    await waitFor(() => expect(onSetSwp08Config).toHaveBeenCalledWith({ enabled: true }));
+
+    fireEvent.change(screen.getByLabelText("SW-P-08 port"), {
+      target: { value: "2008" }
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "Save Port" })[1]!);
+    await waitFor(() => expect(onSetSwp08Config).toHaveBeenCalledWith({ port: 2008 }));
+  });
+
 
   it.each([
     ["missing", "Install Companion Module", false],

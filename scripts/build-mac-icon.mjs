@@ -28,6 +28,23 @@ const iconsetPath = path.join(outputRoot, "ditbrowse.iconset");
 const icnsPath = path.join(outputRoot, "ditbrowse.icns");
 const composerIconPath = path.join(outputRoot, "DITBrowse.icon");
 
+const canUseMacTools =
+  process.platform === "darwin" &&
+  existsSync("/usr/bin/sips") &&
+  existsSync("/usr/bin/iconutil");
+
+if (!canUseMacTools) {
+  if (existsSync(icnsPath) && existsSync(png1024Path)) {
+    console.warn(
+      "macOS sips/iconutil unavailable — keeping checked-in Camera Wall icon assets."
+    );
+    process.exit(0);
+  }
+  throw new Error(
+    "Building icon assets requires macOS sips/iconutil, or checked-in ditbrowse.icns + ditbrowse-icon-1024.png"
+  );
+}
+
 mkdirSync(outputRoot, { recursive: true });
 rmSync(iconsetPath, { recursive: true, force: true });
 mkdirSync(iconsetPath, { recursive: true });

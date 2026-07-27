@@ -13,6 +13,7 @@ import type {
   CompanionModuleInstallResult,
   CompanionModuleInstallStatus
 } from "../shared/companionModule.js";
+import type { Swp08Config, Swp08Info } from "../shared/swp08Config.js";
 
 const api = {
   version: "0.1.0",
@@ -29,6 +30,9 @@ const api = {
   getControlApiInfo: () => ipcRenderer.invoke("control-api:info") as Promise<ControlApiInfo>,
   setControlApiPort: (port: number | null) =>
     ipcRenderer.invoke("control-api:setPort", port) as Promise<ControlApiInfo>,
+  getSwp08Info: () => ipcRenderer.invoke("swp08:info") as Promise<Swp08Info | null>,
+  setSwp08Config: (patch: Partial<Swp08Config>) =>
+    ipcRenderer.invoke("swp08:setConfig", patch) as Promise<Swp08Info>,
   getCompanionModuleInstallStatus: () =>
     ipcRenderer.invoke("companion-module:status") as Promise<CompanionModuleInstallStatus>,
   installCompanionModule: () =>
@@ -43,6 +47,13 @@ const api = {
     };
     ipcRenderer.on("control-api:ready", listener);
     return () => ipcRenderer.removeListener("control-api:ready", listener);
+  },
+  onSwp08Info: (callback: (info: Swp08Info) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, info: Swp08Info): void => {
+      callback(info);
+    };
+    ipcRenderer.on("swp08:ready", listener);
+    return () => ipcRenderer.removeListener("swp08:ready", listener);
   },
   onControlApiCommand: (callback: (command: ControlApiCommand) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, command: ControlApiCommand): void => {

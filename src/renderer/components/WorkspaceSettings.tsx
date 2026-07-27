@@ -13,9 +13,11 @@ import type {
   Job,
   PasswordRecord
 } from "../../shared/types";
+import type { Swp08Config, Swp08Info } from "../../shared/swp08Config";
 import { JobListSelector } from "./JobListSelector";
 import { Button } from "./ui/Button";
 import { CompanionModuleSetupDialog } from "./CompanionModuleSetupDialog";
+import { Swp08SetupGuide } from "./Swp08SetupGuide";
 
 export interface WorkspaceSettingsProps {
   jobs: Job[];
@@ -41,6 +43,8 @@ export interface WorkspaceSettingsProps {
   onSetPingIntervalSeconds: (seconds: number) => void;
   controlApiInfo: ControlApiInfo | null;
   onSetControlApiPort: (port: number | null) => Promise<void>;
+  swp08Info: Swp08Info | null;
+  onSetSwp08Config: (patch: Partial<Swp08Config>) => Promise<void>;
   companionModuleStatus: CompanionModuleInstallStatus | null;
   companionModuleBusy: boolean;
   companionModuleError: string;
@@ -92,6 +96,8 @@ export function WorkspaceSettings({
   onSetPingIntervalSeconds,
   controlApiInfo,
   onSetControlApiPort,
+  swp08Info,
+  onSetSwp08Config,
   companionModuleStatus,
   companionModuleBusy,
   companionModuleError,
@@ -101,6 +107,8 @@ export function WorkspaceSettings({
 }: WorkspaceSettingsProps): ReactElement {
   const [portDraft, setPortDraft] = useState("");
   const [portError, setPortError] = useState("");
+  const [swp08PortDraft, setSwp08PortDraft] = useState("8910");
+  const [swp08Error, setSwp08Error] = useState("");
   const [pingIntervalDraft, setPingIntervalDraft] = useState(
     String(pingIntervalSeconds)
   );
@@ -114,6 +122,11 @@ export function WorkspaceSettings({
     setPortDraft(controlApiInfo?.configuredPort ? String(controlApiInfo.configuredPort) : "");
     setPortError(controlApiInfo?.error ?? "");
   }, [controlApiInfo]);
+
+  useEffect(() => {
+    setSwp08PortDraft(String(swp08Info?.port ?? 8910));
+    setSwp08Error(swp08Info?.error ?? "");
+  }, [swp08Info]);
 
   useEffect(() => {
     setPingIntervalDraft(String(pingIntervalSeconds));
@@ -370,7 +383,12 @@ export function WorkspaceSettings({
               : "ws://127.0.0.1:52780/api/ws"}
           </code>
         </div>
-        <p>Companion connects on this computer and uses integer camera numbers.</p>
+        <p>
+          Companion connects on this computer and uses integer camera numbers. For SKAARHOJ
+          Blue Pill camera select / routing triggers, enable{" "}
+          <strong>Probel SW-P-08</strong> below and use the built-in SW-P-08 device core on
+          the panel.
+        </p>
         <form className="control-api-form" onSubmit={(event) => void savePort(event)}>
           <label className="job-inline-field">
             <span>API port</span>
@@ -402,6 +420,77 @@ export function WorkspaceSettings({
           </div>
         </form>
         {portError && <p className="control-api-error">{portError}</p>}
+      </div>
+
+      <div className="workspace-settings-section control-api-section">
+        <div className="tools-section-header">
+          <span>Probel SW-P-08 (Blue Pill)</span>
+          <strong>
+            {swp08Info?.listening
+              ? `${swp08Info.host}:${swp08Info.port}`
+              : swp08Info?.enabled
+                ? "Starting…"
+                : "Off"}
+          </strong>
+        </div>
+        <p>
+          DIT Browse acts as a small SW-P-08 router. Use SKAARHOJ&apos;s stock{" "}
+          <strong>Probel SW-P-08 → Configurable Model</strong> — no custom core package.
+          Routing source <code>N</code> → destination{" "}
+          <code>{swp08Info?.focusDestination ?? 1}</code> focuses camera <code>N</code>.
+        </p>
+        <label className="job-inline-field control-api-lan-toggle">
+          <span>Enable SW-P-08 server</span>
+          <input
+            aria-label="Enable SW-P-08 server"
+            type="checkbox"
+            checked={Boolean(swp08Info?.enabled)}
+            onChange={(event) => {
+              void onSetSwp08Config({ enabled: event.target.checked }).catch((error) => {
+                setSwp08Error(
+                  error instanceof Error ? error.message : "Could not change SW-P-08."
+                );
+              });
+            }}
+          />
+        </label>
+        <form
+          className="control-api-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const parsed = Number(swp08PortDraft.trim());
+            if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+              setSwp08Error("SW-P-08 port must be an integer between 1 and 65535");
+              return;
+            }
+            void onSetSwp08Config({ port: parsed }).catch((error) => {
+              setSwp08Error(
+                error instanceof Error ? error.message : "Could not set SW-P-08 port."
+              );
+            });
+          }}
+        >
+          <label className="job-inline-field">
+            <span>SW-P-08 port</span>
+            <input
+              aria-label="SW-P-08 port"
+              inputMode="numeric"
+              value={swp08PortDraft}
+              onChange={(event) => setSwp08PortDraft(event.target.value)}
+            />
+          </label>
+          <div className="control-api-actions">
+            <Button type="submit" variant="subtle" size="compact">
+              Save Port
+            </Button>
+          </div>
+        </form>
+        {swp08Error && <p className="control-api-error">{swp08Error}</p>}
+
+        <Swp08SetupGuide info={swp08Info} />
+      </div>
+
+      <div className="workspace-settings-section control-api-section">
         <div
           className={`companion-module-status companion-module-${companionModuleStatus?.state ?? "checking"}`}
           aria-label="Companion module status"

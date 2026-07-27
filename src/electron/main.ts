@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AuthInfo, AuthenticationResponseDetails, WebContents } from "electron";
@@ -24,6 +25,15 @@ import { installProcessStreamGuards } from "./processStreamGuards.js";
 import { getMainPreloadPath } from "./preloadPaths.js";
 import { installSonyCameraWebviewPatch } from "./sonyCameraPatch.js";
 import { createJsonStorage } from "./storage.js";
+import {
+  DEFAULT_SWP08_CONFIG,
+  loadSwp08Config,
+  normalizeSwp08Config,
+  saveSwp08Config,
+  type Swp08Config,
+  type Swp08Info
+} from "./swp08Config.js";
+import { startSwp08Server, type Swp08Server } from "./swp08Server.js";
 import { loadWindowState, saveWindowState, toBrowserWindowOptions } from "./windowState.js";
 import { lockWebContentsZoom } from "./zoomGuard.js";
 import { installMainWindowShortcuts } from "./shortcuts.js";
@@ -56,7 +66,46 @@ let controlApiServer: ControlApiServer | null = null;
 let controlApiInfo: ControlApiInfo | null = null;
 let latestControlApiStatus: ControlApiStatus | null = null;
 let controlApiStatusRevision = 0;
+let swp08Server: Swp08Server | null = null;
+let swp08Info: Swp08Info | null = null;
+let savedSwp08Config: Swp08Config = { ...DEFAULT_SWP08_CONFIG };
 let appWindow: BrowserWindow | null = null;
+
+/** Prefer a non-internal IPv4 for Blue Pill Configurable Model IP field. */
+function resolveAdvertisedLanHost(): string {
+  const interfaces = os.networkInterfaces();
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries ?? []) {
+      if (entry.family === "IPv4" && !entry.internal) {
+        return entry.address;
+      }
+    }
+  }
+  return "0.0.0.0";
+}
+
+function buildSwp08Info(options: {
+  config: Swp08Config;
+  listening: boolean;
+  host: string;
+  port: number;
+  clientCount: number;
+  error?: string;
+}): Swp08Info {
+  return {
+    enabled: options.config.enabled,
+    host: options.host,
+    port: options.port,
+    matrix: options.config.matrix,
+    levels: options.config.levels,
+    sources: options.config.sources,
+    destinations: options.config.destinations,
+    focusDestination: options.config.focusDestination,
+    listening: options.listening,
+    clientCount: options.clientCount,
+    ...(options.error ? { error: options.error } : {})
+  };
+}
 
 function isControlApiStatus(value: unknown): value is ControlApiStatus {
   if (!value || typeof value !== "object") {
@@ -88,6 +137,7 @@ function publishControlApiStatus(status: ControlApiStatus): void {
   latestControlApiStatus = status;
   controlApiStatusRevision += 1;
   controlApiServer?.publishStatus(status, controlApiStatusRevision);
+  swp08Server?.syncFromStatus(status);
 }
 
 function sendControlApiCommand(
@@ -248,6 +298,7 @@ const createWindow = async (): Promise<void> => {
   const storage = createJsonStorage(userDataPath);
   const savedWindowState = await loadWindowState(userDataPath);
   const savedControlApiConfig = await loadControlApiConfig(userDataPath);
+  savedSwp08Config = await loadSwp08Config(userDataPath);
   const companionInstaller = createCompanionModuleInstaller({
     configPath: path.join(
       app.getPath("home"),
@@ -291,6 +342,7 @@ const createWindow = async (): Promise<void> => {
     }
   );
   ipcMain.handle("control-api:info", () => controlApiInfo);
+  ipcMain.handle("swp08:info", () => swp08Info);
   ipcMain.handle("companion-module:status", () => companionInstaller.getStatus());
   ipcMain.handle("companion-module:install", async () => {
     try {
@@ -331,6 +383,85 @@ const createWindow = async (): Promise<void> => {
     mainWindow.webContents.send("ditbrowse:host-temporary-view-gesture", gesture);
   });
   installMainWindowShortcuts(mainWindow, Menu);
+
+  const startOrRestartSwp08 = async (
+    nextConfig: Swp08Config,
+    options: { persist: boolean }
+  ): Promise<Swp08Info> => {
+    const normalized = normalizeSwp08Config(nextConfig);
+    const previous = swp08Server;
+    swp08Server = null;
+    const advertisedHost = resolveAdvertisedLanHost();
+
+    if (!normalized.enabled) {
+      await previous?.close();
+      savedSwp08Config = normalized;
+      if (options.persist) {
+        await saveSwp08Config(userDataPath, normalized);
+      }
+      swp08Info = buildSwp08Info({
+        config: normalized,
+        listening: false,
+        host: advertisedHost,
+        port: normalized.port,
+        clientCount: 0
+      });
+      mainWindow.webContents.send("swp08:ready", swp08Info);
+      return swp08Info;
+    }
+
+    try {
+      const nextServer = await startSwp08Server({
+        config: normalized,
+        advertisedHost,
+        dispatch: (command) => sendControlApiCommand(mainWindow.webContents, command)
+      });
+      if (latestControlApiStatus) {
+        nextServer.syncFromStatus(latestControlApiStatus);
+      }
+      await previous?.close();
+      swp08Server = nextServer;
+      savedSwp08Config = normalized;
+      if (options.persist) {
+        await saveSwp08Config(userDataPath, normalized);
+      }
+      swp08Info = buildSwp08Info({
+        config: normalized,
+        listening: true,
+        host: nextServer.host,
+        port: nextServer.port,
+        clientCount: nextServer.clientCount
+      });
+      mainWindow.webContents.send("swp08:ready", swp08Info);
+      return swp08Info;
+    } catch (error) {
+      await previous?.close();
+      savedSwp08Config = normalized;
+      if (options.persist) {
+        await saveSwp08Config(userDataPath, normalized);
+      }
+      swp08Info = buildSwp08Info({
+        config: normalized,
+        listening: false,
+        host: advertisedHost,
+        port: normalized.port,
+        clientCount: 0,
+        error: error instanceof Error ? error.message : "Could not start SW-P-08 server"
+      });
+      mainWindow.webContents.send("swp08:ready", swp08Info);
+      return swp08Info;
+    }
+  };
+
+  ipcMain.handle("swp08:setConfig", async (_event, patch: Partial<Swp08Config>) => {
+    return startOrRestartSwp08(
+      {
+        ...savedSwp08Config,
+        ...patch
+      },
+      { persist: true }
+    );
+  });
 
   const startOrRestartControlApi = async (
     configuredPort: number | null,
@@ -394,6 +525,8 @@ const createWindow = async (): Promise<void> => {
     fallbackToAuto: true
   });
 
+  await startOrRestartSwp08(savedSwp08Config, { persist: false });
+
   mainWindow.on("close", () => {
     void saveWindowState(userDataPath, mainWindow.getBounds());
   });
@@ -445,6 +578,8 @@ app.on("before-quit", () => {
   const userDataPath = app.getPath("userData");
   void controlApiServer?.close();
   controlApiServer = null;
+  void swp08Server?.close();
+  swp08Server = null;
   void removeControlApiRuntimeInfo(userDataPath);
 });
 

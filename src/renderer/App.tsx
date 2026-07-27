@@ -14,6 +14,7 @@ import { normalizeCredentialUrl } from "../shared/credentials";
 import type { CapturedCredential, CredentialFill } from "../shared/credentials";
 import type { HttpAuthRequest, HttpAuthResponse } from "../shared/httpAuth";
 import type { CompanionModuleInstallStatus } from "../shared/companionModule";
+import type { Swp08Config, Swp08Info } from "../shared/swp08Config";
 import type { CameraList, TileState, WorkspaceState } from "../shared/types";
 import { resolveCameraAddress } from "../shared/url";
 import {
@@ -175,6 +176,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
   const [expansionEnabled, setExpansionEnabled] = useState(true);
   const [httpAuthQueue, setHttpAuthQueue] = useState<HttpAuthPromptState[]>([]);
   const [controlApiInfo, setControlApiInfo] = useState<ControlApiInfo | null>(null);
+  const [swp08Info, setSwp08Info] = useState<Swp08Info | null>(null);
   const [companionModuleStatus, setCompanionModuleStatus] =
     useState<CompanionModuleInstallStatus | null>(null);
   const [companionModuleBusy, setCompanionModuleBusy] = useState(false);
@@ -311,6 +313,23 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     });
     const unsubscribe = window.ditbrowse?.onControlApiInfo?.((info) => {
       setControlApiInfo(info);
+    });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    window.ditbrowse?.getSwp08Info?.().then((info) => {
+      if (active && info) {
+        setSwp08Info(info);
+      }
+    });
+    const unsubscribe = window.ditbrowse?.onSwp08Info?.((info) => {
+      setSwp08Info(info);
     });
 
     return () => {
@@ -492,6 +511,13 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
     const nextInfo = await window.ditbrowse?.setControlApiPort?.(port);
     if (nextInfo) {
       setControlApiInfo(nextInfo);
+    }
+  }, []);
+
+  const setSwp08Config = useCallback(async (patch: Partial<Swp08Config>): Promise<void> => {
+    const nextInfo = await window.ditbrowse?.setSwp08Config?.(patch);
+    if (nextInfo) {
+      setSwp08Info(nextInfo);
     }
   }, []);
 
@@ -1037,6 +1063,8 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
             onSetPingIntervalSeconds: setPingIntervalSeconds,
             controlApiInfo,
             onSetControlApiPort: setControlApiPort,
+            swp08Info,
+            onSetSwp08Config: setSwp08Config,
             companionModuleStatus,
             companionModuleBusy,
             companionModuleError,

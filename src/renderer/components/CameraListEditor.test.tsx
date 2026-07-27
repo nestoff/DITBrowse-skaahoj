@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { sampleWorkspace } from "../../shared/sampleData";
 import type { CameraList } from "../../shared/types";
@@ -34,6 +34,19 @@ function createWorkspaceSettings(
       configuredPort: 54321
     },
     onSetControlApiPort: vi.fn(async () => undefined),
+    swp08Info: {
+      enabled: false,
+      host: "127.0.0.1",
+      port: 8910,
+      matrix: 0,
+      levels: 1,
+      sources: 64,
+      destinations: 1,
+      focusDestination: 1,
+      listening: false,
+      clientCount: 0
+    },
+    onSetSwp08Config: vi.fn(async () => undefined),
     companionModuleStatus: {
       state: "current",
       pathSource: "companion",
@@ -72,7 +85,10 @@ describe("CameraListEditor", () => {
   it("shows camera metadata fields without manual username and password columns", () => {
     renderEditor();
 
-    const columnHeaders = screen.getAllByRole("columnheader").map((header) => header.textContent);
+    const cameraTableSection = screen.getByLabelText("Editable camera table");
+    const columnHeaders = within(cameraTableSection)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
     expect(columnHeaders).toEqual([
       "Move",
       "Delete",
@@ -86,19 +102,33 @@ describe("CameraListEditor", () => {
       "Viewport",
       "Zoom"
     ]);
-    expect(screen.getByRole("columnheader", { name: /Follow Prefix/ })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Type" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Lens" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Display Note" })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Username" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Password" })).not.toBeInTheDocument();
+    expect(
+      within(cameraTableSection).getByRole("columnheader", { name: /Follow Prefix/ })
+    ).toBeInTheDocument();
+    expect(
+      within(cameraTableSection).getByRole("columnheader", { name: "Type" })
+    ).toBeInTheDocument();
+    expect(
+      within(cameraTableSection).getByRole("columnheader", { name: "Lens" })
+    ).toBeInTheDocument();
+    expect(
+      within(cameraTableSection).getByRole("columnheader", { name: "Display Note" })
+    ).toBeInTheDocument();
+    expect(
+      within(cameraTableSection).queryByRole("columnheader", { name: "Username" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(cameraTableSection).queryByRole("columnheader", { name: "Password" })
+    ).not.toBeInTheDocument();
   });
 
   it("keeps row controls above the camera table", () => {
     renderEditor();
 
     const addCameraButton = screen.getByRole("button", { name: "Add Camera Row" });
-    const cameraTable = screen.getByRole("table");
+    const cameraTable = within(screen.getByLabelText("Editable camera table")).getByRole(
+      "table"
+    );
 
     expect(addCameraButton.closest(".editor-list-toolbar")).toBeInTheDocument();
     expect(
@@ -109,7 +139,7 @@ describe("CameraListEditor", () => {
   it("places workspace settings after the editable camera table", () => {
     renderEditor();
 
-    const table = screen.getByRole("table");
+    const table = within(screen.getByLabelText("Editable camera table")).getByRole("table");
     const settings = screen.getByLabelText("Camera workspace settings");
 
     expect(
