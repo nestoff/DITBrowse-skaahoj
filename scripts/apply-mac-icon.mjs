@@ -20,6 +20,54 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { createHash } from "node:crypto";
+
+function refreshAsarIntegrity() {
+  const asarPath = path.join(resourcesPath, "app.asar");
+  if (!existsSync(asarPath) || !existsSync(infoPlistPath)) {
+    return;
+  }
+  const hash = createHash("sha256").update(readFileSync(asarPath)).digest("hex");
+  let plist = readFileSync(infoPlistPath, "utf8");
+  if (plist.includes("<key>ElectronAsarIntegrity</key>")) {
+    plist = plist.replace(
+      /(<key>ElectronAsarIntegrity<\/key>\s*<dict>\s*<key>Resources\/app\.asar<\/key>\s*<dict>\s*<key>algorithm<\/key>\s*<string>SHA256<\/string>\s*<key>hash<\/key>\s*<string>)[^<]+(<\/string>)/,
+      `$1${hash}$2`
+    );
+  }
+  writeFileSync(infoPlistPath, plist);
+  console.log(`Refreshed ElectronAsarIntegrity hash=${hash}`);
+}
+
+function adHocSignIfPossible() {
+  // Prefer macOS codesign; on Linux use rcodesign when available.
+  if (process.platform === "darwin" && hasBinary("/usr/bin/codesign")) {
+    execFileSync("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", appPath]);
+    console.log(`Ad-hoc signed with codesign: ${appPath}`);
+    return;
+  }
+  const rcodesign = ["rcodesign", "/usr/local/cargo/bin/rcodesign"].find((candidate) => {
+    if (candidate.startsWith("/") || candidate.includes("/")) {
+      return existsSync(candidate);
+    }
+    try {
+      execFileSync("which", [candidate], { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (!rcodesign) {
+    console.warn("No codesign/rcodesign available — skipping ad-hoc sign");
+    return;
+  }
+  const binary = rcodesign.includes("/") ? rcodesign : "rcodesign";
+  // No certificate arguments => ad-hoc signature (same idea as codesign -s -).
+  execFileSync(binary, ["sign", appPath], { stdio: "inherit" });
+  console.log(`Ad-hoc signed with rcodesign: ${appPath}`);
+}
+
+
 const appPathArgumentIndex = process.argv.indexOf("--app-path");
 const appPathArgument =
   appPathArgumentIndex >= 0 ? process.argv[appPathArgumentIndex + 1] : undefined;
@@ -90,6 +138,8 @@ function applyLegacyIcns() {
     utimesSync(outputPath, now, now);
   }
 
+  refreshAsarIntegrity();
+  adHocSignIfPossible();
   console.log(`Applied legacy DITBrowse.icns to ${appPath}`);
 }
 
@@ -175,6 +225,7 @@ function applyWithActool() {
     ]) {
       utimesSync(outputPath, now, now);
     }
+    refreshAsarIntegrity();
     execFileSync("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", appPath]);
     console.log(`Applied actool Camera Wall icon to ${appPath}`);
   } finally {
