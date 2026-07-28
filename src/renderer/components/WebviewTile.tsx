@@ -5,6 +5,7 @@ import { computeFitScale } from "../../shared/scale";
 import type { CapturedCredential, CredentialFill } from "../../shared/credentials";
 import type { HostPingStatus } from "../../shared/hostPing";
 import { DEFAULT_HOST_PING_INTERVAL_SECONDS } from "../../shared/hostPing";
+import { CAMERA_WEBVIEW_USER_AGENT } from "../../shared/cameraWebviewUserAgent";
 import type { TileState } from "../../shared/types";
 import { normalizeCameraUrl } from "../../shared/url";
 import {
@@ -568,6 +569,7 @@ function WebviewTileComponent({
           className="camera-webview"
           src={webviewUrl}
           partition={tile.partition}
+          useragent={CAMERA_WEBVIEW_USER_AGENT}
           preload={webviewPreloadPath ?? undefined}
           webpreferences="nodeIntegrationInSubFrames=yes"
           style={{

@@ -146,6 +146,8 @@ describe("WebviewTile", () => {
     expect(webview).toHaveAttribute("src", "http://192.168.1.42");
     expect(webview).toHaveAttribute("partition", "persist:ditbrowse-job-list");
     expect(webview).toHaveAttribute("preload", "/tmp/webviewPreload.js");
+    expect(webview).toHaveAttribute("useragent", expect.stringContaining("Chrome/"));
+    expect(webview?.getAttribute("useragent") ?? "").not.toMatch(/Electron/i);
     expect(webview).toHaveAttribute("webpreferences", "nodeIntegrationInSubFrames=yes");
   });
 

@@ -1,4 +1,5 @@
 import type { App, WebContents } from "electron";
+import { CAMERA_WEBVIEW_USER_AGENT } from "../shared/cameraWebviewUserAgent.js";
 
 const sonyRmtMainPath = "/Common/javascript/Config/rmt_main.js";
 const sonyRmtMainPattern = "*://*/Common/javascript/Config/rmt_main.js*";
@@ -23,6 +24,20 @@ const patchedWebContents = new WeakSet<WebContents>();
 export function isSonyRmtMainScriptUrl(url: string): boolean {
   try {
     return new URL(url).pathname.endsWith(sonyRmtMainPath);
+  } catch {
+    return false;
+  }
+}
+
+export function shouldUseLegacySonyPatch(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    return (
+      path.endsWith("/rmt.html") ||
+      path.includes("/common/javascript/") ||
+      path.endsWith("/rm_main.js") ||
+      path.endsWith("/rmt_main.js")
+    );
   } catch {
     return false;
   }
@@ -105,6 +120,11 @@ function installOnWebContents(contents: WebContents): void {
       return;
     }
 
+    // Always spoof Chrome UA — some Sony Web Apps reject Electron's default UA.
+    contents.setUserAgent(CAMERA_WEBVIEW_USER_AGENT);
+
+    // Keep the legacy rmt_main resize patch enabled for all camera webviews.
+    // Gating it broke PTZ / liveviewer interaction on some bodies in the field.
     contents.debugger.attach("1.3");
     void sendDebuggerCommand(contents, "Fetch.enable", {
       patterns: [

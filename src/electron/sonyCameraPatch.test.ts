@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isSonyRmtMainScriptUrl, patchSonyRmtMainScript } from "./sonyCameraPatch";
+import {
+  isSonyRmtMainScriptUrl,
+  patchSonyRmtMainScript,
+  shouldUseLegacySonyPatch
+} from "./sonyCameraPatch";
 
 describe("Sony camera webview patch", () => {
   it("identifies Sony rmt_main scripts", () => {
@@ -16,6 +20,15 @@ describe("Sony camera webview patch", () => {
         "http://10.20.100.105/Common/javascript/Framework/ConverterManager.js"
       )
     ).toBe(false);
+  });
+
+  it("identifies which URLs belong to the legacy Sony remote UI", () => {
+    expect(shouldUseLegacySonyPatch("http://10.20.100.105/rmt.html")).toBe(true);
+    expect(
+      shouldUseLegacySonyPatch("http://10.20.100.105/Common/javascript/Config/rmt_main.js")
+    ).toBe(true);
+    expect(shouldUseLegacySonyPatch("http://192.168.60.46/index.html?lang=en")).toBe(false);
+    expect(shouldUseLegacySonyPatch("http://192.168.60.46/stm6/internal.js")).toBe(false);
   });
 
   it("removes the Sony resize reload handler without changing startup", () => {
