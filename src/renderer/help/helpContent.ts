@@ -220,6 +220,7 @@ export const helpSections: HelpSection[] = [
       "When a camera requests credentials, use the matching Use … login & Sign In button to fill both fields and submit once.",
       "Leave Save for this camera checked to reuse that login for this camera in the active job and list.",
       "Use Camera Session > Reload selected or Reload all for a normal non-destructive refresh.",
+      "Use Camera Session > Clear page cache & site data to wipe cached pages, cookies, storage, and in-tab session data for the camera site, then reload. Saved DIT Browse logins are kept.",
       "Use Camera Session > Sign out, forget login & reload selected when the saved login is wrong or the camera must request credentials again.",
       "Use Sign out, forget active-list logins & reload all… only when every saved login in the current list should be cleared."
     ],
@@ -248,18 +249,26 @@ export const helpSections: HelpSection[] = [
       },
       {
         src: cameraSessionImage,
-        alt: "Camera Session menu with safe reload actions and red destructive sign-out actions",
-        caption: "Reload normally unless a saved login must be forgotten.",
+        alt: "Camera Session menu with reload, cache clear, and destructive sign-out actions",
+        caption: "Reload normally; clear cache when the site is stuck on old data; sign out only to forget saved logins.",
         callouts: [
           { number: 1, text: "Reload selected" },
           { number: 2, text: "Reload all" },
           {
             number: 3,
+            text: "Clear page cache & site data, reload selected"
+          },
+          {
+            number: 4,
+            text: "Clear page cache & site data, reload all"
+          },
+          {
+            number: 5,
             text: "Sign out, forget login & reload selected",
             destructive: true
           },
           {
-            number: 4,
+            number: 6,
             text: "Sign out, forget active-list logins & reload all…",
             destructive: true
           }

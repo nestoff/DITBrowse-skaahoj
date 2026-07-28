@@ -12,6 +12,8 @@ export interface SessionResetResult {
   failed: string[];
 }
 
+export type SessionResetMode = "signOut" | "siteData";
+
 export interface SessionResetDependencies {
   clearRuntime(tileId: string): Promise<boolean>;
   resetCameraData(partition: string, origin: string): Promise<void>;
@@ -26,14 +28,21 @@ export interface SessionResetDependencies {
 interface SelectedResetInput {
   tile: TileState;
   operationKey: string;
-  onSessionCleared(): void;
+  /** signOut forgets saved logins; siteData clears cache/storage only. */
+  mode?: SessionResetMode;
+  onSessionCleared?(): void;
 }
 
 interface ListResetInput {
   tiles: TileState[];
   partition: string;
   operationKey: string;
-  onSessionCleared(): void;
+  mode?: SessionResetMode;
+  onSessionCleared?(): void;
+}
+
+function isSignOutMode(mode: SessionResetMode | undefined): boolean {
+  return (mode ?? "signOut") === "signOut";
 }
 
 interface ResetTarget {
@@ -45,30 +54,41 @@ export async function resetSelectedCamera(
   input: SelectedResetInput,
   dependencies: SessionResetDependencies
 ): Promise<SessionResetResult> {
+  const signOut = isSignOutMode(input.mode);
   const target = cameraBaseAddressFromUrl(input.tile.url);
   if (!target) {
     return {
       tone: "partial",
-      message: "This tile does not have a camera web address to clear.",
+      message: signOut
+        ? "This tile does not have a camera web address to clear."
+        : "This tile does not have a camera web address to clear cache for.",
       reloaded: 0,
       skipped: 1,
       failed: [input.tile.title]
     };
   }
 
-  dependencies.markManualAuth([input.tile.id]);
+  if (signOut) {
+    dependencies.markManualAuth([input.tile.id]);
+  }
   try {
     if (!(await dependencies.clearRuntime(input.tile.id))) {
       throw new Error(`Could not clear in-page data for ${input.tile.title}`);
     }
 
     await dependencies.resetCameraData(input.tile.partition, target.origin);
-    input.onSessionCleared();
+    if (signOut) {
+      input.onSessionCleared?.();
+    }
     if (!dependencies.isCurrent(input.operationKey)) {
-      dependencies.clearManualAuth([input.tile.id]);
+      if (signOut) {
+        dependencies.clearManualAuth([input.tile.id]);
+      }
       return {
         tone: "partial",
-        message: "Camera data was cleared, but the workspace changed before reload.",
+        message: signOut
+          ? "Camera data was cleared, but the workspace changed before reload."
+          : "Page cache and site data were cleared, but the workspace changed before reload.",
         reloaded: 0,
         skipped: 1,
         failed: [input.tile.title]
@@ -76,10 +96,14 @@ export async function resetSelectedCamera(
     }
 
     if (!(await dependencies.loadBase(input.tile.id, target.baseUrl))) {
-      dependencies.clearManualAuth([input.tile.id]);
+      if (signOut) {
+        dependencies.clearManualAuth([input.tile.id]);
+      }
       return {
         tone: "partial",
-        message: `Camera data was cleared, but ${input.tile.title} did not reload.`,
+        message: signOut
+          ? `Camera data was cleared, but ${input.tile.title} did not reload.`
+          : `Page cache and site data were cleared, but ${input.tile.title} did not reload.`,
         reloaded: 0,
         skipped: 0,
         failed: [input.tile.title]
@@ -88,13 +112,17 @@ export async function resetSelectedCamera(
 
     return {
       tone: "success",
-      message: `Cleared camera data and reloaded ${target.baseUrl}`,
+      message: signOut
+        ? `Cleared camera data and reloaded ${target.baseUrl}`
+        : `Cleared page cache and site data, then reloaded ${target.baseUrl}`,
       reloaded: 1,
       skipped: 0,
       failed: []
     };
   } catch (error) {
-    dependencies.clearManualAuth([input.tile.id]);
+    if (signOut) {
+      dependencies.clearManualAuth([input.tile.id]);
+    }
     throw error;
   }
 }
@@ -103,6 +131,7 @@ export async function resetCameraList(
   input: ListResetInput,
   dependencies: SessionResetDependencies
 ): Promise<SessionResetResult> {
+  const signOut = isSignOutMode(input.mode);
   const mapped = input.tiles.map((tile) => ({
     tile,
     address: cameraBaseAddressFromUrl(tile.url)
@@ -112,7 +141,9 @@ export async function resetCameraList(
   );
   const invalid = mapped.filter((item) => item.address === null);
   const markedIds = targets.map((target) => target.tile.id);
-  dependencies.markManualAuth(markedIds);
+  if (signOut) {
+    dependencies.markManualAuth(markedIds);
+  }
 
   try {
     const runtimeTargets = await Promise.all(
@@ -122,7 +153,9 @@ export async function resetCameraList(
       }))
     );
     await dependencies.resetListData(input.partition);
-    input.onSessionCleared();
+    if (signOut) {
+      input.onSessionCleared?.();
+    }
 
     let reloaded = 0;
     let skipped = invalid.length;
@@ -134,14 +167,18 @@ export async function resetCameraList(
 
       skipped += 1;
       failed.push(target.tile.title);
-      dependencies.clearManualAuth([target.tile.id]);
+      if (signOut) {
+        dependencies.clearManualAuth([target.tile.id]);
+      }
       return false;
     });
 
     if (!dependencies.isCurrent(input.operationKey)) {
       skipped += readyTargets.length;
       failed.push(...readyTargets.map((target) => target.tile.title));
-      dependencies.clearManualAuth(readyTargets.map((target) => target.tile.id));
+      if (signOut) {
+        dependencies.clearManualAuth(readyTargets.map((target) => target.tile.id));
+      }
     } else {
       const reloadResults = await Promise.all(
         readyTargets.map(async (target, index) => {
@@ -174,27 +211,34 @@ export async function resetCameraList(
           failedLoadIds.push(result.target.tile.id);
         }
       }
-      if (staleIds.length > 0) {
-        dependencies.clearManualAuth(staleIds);
-      }
-      if (failedLoadIds.length > 0) {
-        dependencies.clearManualAuth(failedLoadIds);
+      if (signOut) {
+        if (staleIds.length > 0) {
+          dependencies.clearManualAuth(staleIds);
+        }
+        if (failedLoadIds.length > 0) {
+          dependencies.clearManualAuth(failedLoadIds);
+        }
       }
     }
 
     const tone = skipped === 0 && failed.length === 0 ? "success" : "partial";
+    const clearedLabel = signOut ? "list data" : "page cache and site data";
     return {
       tone,
       message:
         tone === "success"
-          ? `Cleared list data and reloaded ${reloaded} cameras.`
-          : `Cleared list data; reloaded ${reloaded}, skipped ${skipped}, failed ${failed.length}.`,
+          ? signOut
+            ? `Cleared list data and reloaded ${reloaded} cameras.`
+            : `Cleared page cache and site data, then reloaded ${reloaded} cameras.`
+          : `Cleared ${clearedLabel}; reloaded ${reloaded}, skipped ${skipped}, failed ${failed.length}.`,
       reloaded,
       skipped,
       failed
     };
   } catch (error) {
-    dependencies.clearManualAuth(markedIds);
+    if (signOut) {
+      dependencies.clearManualAuth(markedIds);
+    }
     throw error;
   }
 }

@@ -11,6 +11,8 @@ function renderMenu(
     busy: false,
     onReloadSelected: vi.fn(),
     onReloadAll: vi.fn(),
+    onClearSiteDataSelected: vi.fn(),
+    onClearSiteDataAll: vi.fn(),
     onSignOutSelected: vi.fn(),
     onRequestSignOutAll: vi.fn(),
     ...overrides
@@ -28,15 +30,22 @@ describe("CameraSessionMenu", () => {
     expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
       "Reload selected",
       "Reload all",
+      "Clear page cache & site data, reload selected",
+      "Clear page cache & site data, reload all",
       "Sign out, forget login & reload selected",
       "Sign out, forget active-list logins & reload all…"
     ]);
-    expect(screen.getByRole("separator")).toBeVisible();
+    expect(screen.getAllByRole("separator")).toHaveLength(2);
   });
 
   it.each([
     ["Reload selected", "onReloadSelected"],
     ["Reload all", "onReloadAll"],
+    [
+      "Clear page cache & site data, reload selected",
+      "onClearSiteDataSelected"
+    ],
+    ["Clear page cache & site data, reload all", "onClearSiteDataAll"],
     ["Sign out, forget login & reload selected", "onSignOutSelected"],
     [
       "Sign out, forget active-list logins & reload all…",
@@ -68,7 +77,7 @@ describe("CameraSessionMenu", () => {
     expect(screen.getByRole("menuitem", { name: "Reload selected" })).toBeDisabled();
     expect(
       screen.getByRole("menuitem", {
-        name: "Sign out, forget login & reload selected"
+        name: "Clear page cache & site data, reload selected"
       })
     ).toBeDisabled();
     expect(screen.getByRole("menuitem", { name: "Reload all" })).toBeEnabled();

@@ -1,4 +1,5 @@
-import { SWP08_DEFAULT_PORT } from "./swp08.js";
+/** Default TCP port for the in-app Probel SW-P-08 server (renderer-safe; no Node APIs). */
+export const SWP08_DEFAULT_PORT = 8910;
 
 export interface Swp08Config {
   /** When true, listen for Probel SW-P-08 clients (SKAARHOJ Blue Pill, etc.). */

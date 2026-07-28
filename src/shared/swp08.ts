@@ -13,7 +13,7 @@ export const SWP08_ETX = 0x03;
 export const SWP08_ACK = 0x06;
 export const SWP08_NAK = 0x15;
 
-export const SWP08_DEFAULT_PORT = 8910;
+export { SWP08_DEFAULT_PORT } from "./swp08Config.js";
 
 /** Command bytes we implement as a router. */
 export const Swp08Command = {

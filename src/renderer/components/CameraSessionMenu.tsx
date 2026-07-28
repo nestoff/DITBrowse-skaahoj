@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import { KeyRound, LogOut, RefreshCcw, RotateCw } from "lucide-react";
+import { Eraser, KeyRound, LogOut, RefreshCcw, RotateCw } from "lucide-react";
 import { Button } from "./ui/Button";
 
 export interface CameraSessionMenuProps {
@@ -9,6 +9,8 @@ export interface CameraSessionMenuProps {
   busy: boolean;
   onReloadSelected: () => void;
   onReloadAll: () => void;
+  onClearSiteDataSelected: () => void;
+  onClearSiteDataAll: () => void;
   onSignOutSelected: () => void;
   onRequestSignOutAll: () => void;
 }
@@ -19,6 +21,8 @@ export function CameraSessionMenu({
   busy,
   onReloadSelected,
   onReloadAll,
+  onClearSiteDataSelected,
+  onClearSiteDataAll,
   onSignOutSelected,
   onRequestSignOutAll
 }: CameraSessionMenuProps): ReactElement {
@@ -101,6 +105,27 @@ export function CameraSessionMenu({
             onClick={() => run(onReloadAll)}
           >
             Reload all
+          </Button>
+          <div className="camera-session-separator" role="separator" />
+          <Button
+            role="menuitem"
+            variant="ghost"
+            size="compact"
+            icon={<Eraser size={14} strokeWidth={2.2} />}
+            disabled={busy || !canReloadSelected}
+            onClick={() => run(onClearSiteDataSelected)}
+          >
+            Clear page cache &amp; site data, reload selected
+          </Button>
+          <Button
+            role="menuitem"
+            variant="ghost"
+            size="compact"
+            icon={<Eraser size={14} strokeWidth={2.2} />}
+            disabled={busy || !canReloadAll}
+            onClick={() => run(onClearSiteDataAll)}
+          >
+            Clear page cache &amp; site data, reload all
           </Button>
           <div className="camera-session-separator" role="separator" />
           <Button

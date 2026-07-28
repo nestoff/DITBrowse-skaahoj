@@ -422,7 +422,7 @@ export function WorkspaceSettings({
         {portError && <p className="control-api-error">{portError}</p>}
       </div>
 
-      <div className="workspace-settings-section control-api-section">
+      <div className="workspace-settings-section control-api-section swp08-section">
         <div className="tools-section-header">
           <span>Probel SW-P-08 (Blue Pill)</span>
           <strong>
@@ -433,58 +433,59 @@ export function WorkspaceSettings({
                 : "Off"}
           </strong>
         </div>
-        <p>
-          DIT Browse acts as a small SW-P-08 router. Use SKAARHOJ&apos;s stock{" "}
-          <strong>Probel SW-P-08 → Configurable Model</strong> — no custom core package.
-          Routing source <code>N</code> → destination{" "}
+        <p className="swp08-section-lead">
+          Emulates a small SW-P-08 router for SKAARHOJ&apos;s stock{" "}
+          <strong>Configurable Model</strong>. Source <code>N</code> → dest{" "}
           <code>{swp08Info?.focusDestination ?? 1}</code> focuses camera <code>N</code>.
         </p>
-        <label className="job-inline-field control-api-lan-toggle">
-          <span>Enable SW-P-08 server</span>
-          <input
-            aria-label="Enable SW-P-08 server"
-            type="checkbox"
-            checked={Boolean(swp08Info?.enabled)}
-            onChange={(event) => {
-              void onSetSwp08Config({ enabled: event.target.checked }).catch((error) => {
+
+        <div className="swp08-controls">
+          <label className="swp08-enable">
+            <span>Enable server</span>
+            <input
+              aria-label="Enable SW-P-08 server"
+              type="checkbox"
+              checked={Boolean(swp08Info?.enabled)}
+              onChange={(event) => {
+                void onSetSwp08Config({ enabled: event.target.checked }).catch((error) => {
+                  setSwp08Error(
+                    error instanceof Error ? error.message : "Could not change SW-P-08."
+                  );
+                });
+              }}
+            />
+          </label>
+
+          <form
+            className="swp08-port-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const parsed = Number(swp08PortDraft.trim());
+              if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+                setSwp08Error("SW-P-08 port must be an integer between 1 and 65535");
+                return;
+              }
+              void onSetSwp08Config({ port: parsed }).catch((error) => {
                 setSwp08Error(
-                  error instanceof Error ? error.message : "Could not change SW-P-08."
+                  error instanceof Error ? error.message : "Could not set SW-P-08 port."
                 );
               });
             }}
-          />
-        </label>
-        <form
-          className="control-api-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const parsed = Number(swp08PortDraft.trim());
-            if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-              setSwp08Error("SW-P-08 port must be an integer between 1 and 65535");
-              return;
-            }
-            void onSetSwp08Config({ port: parsed }).catch((error) => {
-              setSwp08Error(
-                error instanceof Error ? error.message : "Could not set SW-P-08 port."
-              );
-            });
-          }}
-        >
-          <label className="job-inline-field">
-            <span>SW-P-08 port</span>
-            <input
-              aria-label="SW-P-08 port"
-              inputMode="numeric"
-              value={swp08PortDraft}
-              onChange={(event) => setSwp08PortDraft(event.target.value)}
-            />
-          </label>
-          <div className="control-api-actions">
+          >
+            <label className="job-inline-field">
+              <span>Port</span>
+              <input
+                aria-label="SW-P-08 port"
+                inputMode="numeric"
+                value={swp08PortDraft}
+                onChange={(event) => setSwp08PortDraft(event.target.value)}
+              />
+            </label>
             <Button type="submit" variant="subtle" size="compact">
               Save Port
             </Button>
-          </div>
-        </form>
+          </form>
+        </div>
         {swp08Error && <p className="control-api-error">{swp08Error}</p>}
 
         <Swp08SetupGuide info={swp08Info} />

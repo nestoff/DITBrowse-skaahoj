@@ -712,6 +712,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         {
           tile,
           operationKey,
+          mode: "signOut",
           onSessionCleared: () => {
             const action = {
               type: "forgetCameraCredential",
@@ -732,6 +733,97 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         tone: "error",
         message:
           error instanceof Error ? error.message : "Camera data could not be cleared."
+      });
+    } finally {
+      resetBusyRef.current = false;
+      setResetBusy(false);
+      setResetProgressMessage("");
+    }
+  }, [cancelQueuedAuthForTiles, sessionResetDependencies]);
+
+  const clearSelectedSiteData = useCallback(async (): Promise<void> => {
+    if (resetBusyRef.current) {
+      return;
+    }
+
+    const currentWorkspace = workspaceRef.current;
+    const tile = currentWorkspace.tiles.find(
+      (candidate) => candidate.id === currentWorkspace.selectedTileId
+    );
+    const jobId = currentWorkspace.activeJobId;
+    const cameraListId = currentWorkspace.activeCameraListId;
+    if (!tile || !jobId || !cameraListId) {
+      return;
+    }
+
+    const operationKey = `${jobId}:${cameraListId}`;
+    cancelQueuedAuthForTiles([tile.id]);
+    resetBusyRef.current = true;
+    setResetBusy(true);
+    setResetProgressMessage(`Clearing page cache and site data for ${tile.title}...`);
+    setResetNotice(null);
+
+    try {
+      const result = await resetSelectedCamera(
+        { tile, operationKey, mode: "siteData" },
+        sessionResetDependencies
+      );
+      setResetNotice(result);
+    } catch (error) {
+      setResetNotice({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Page cache and site data could not be cleared."
+      });
+    } finally {
+      resetBusyRef.current = false;
+      setResetBusy(false);
+      setResetProgressMessage("");
+    }
+  }, [cancelQueuedAuthForTiles, sessionResetDependencies]);
+
+  const clearAllSiteData = useCallback(async (): Promise<void> => {
+    if (resetBusyRef.current) {
+      return;
+    }
+
+    const currentWorkspace = workspaceRef.current;
+    const jobId = currentWorkspace.activeJobId;
+    const cameraListId = currentWorkspace.activeCameraListId;
+    if (!jobId || !cameraListId) {
+      setResetNotice({
+        tone: "error",
+        message: "Select a camera list before clearing page cache and site data."
+      });
+      return;
+    }
+
+    const tiles = [...currentWorkspace.tiles];
+    const operationKey = `${jobId}:${cameraListId}`;
+    const partition = `persist:ditbrowse-${jobId}-${cameraListId}`;
+    cancelQueuedAuthForTiles(tiles.map((tile) => tile.id));
+    resetBusyRef.current = true;
+    setResetBusy(true);
+    setResetProgressMessage(
+      `Clearing page cache and site data for ${tiles.length} cameras...`
+    );
+    setResetNotice(null);
+
+    try {
+      const result = await resetCameraList(
+        { tiles, partition, operationKey, mode: "siteData" },
+        sessionResetDependencies
+      );
+      setResetNotice(result);
+    } catch (error) {
+      setResetNotice({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Page cache and site data could not be cleared."
       });
     } finally {
       resetBusyRef.current = false;
@@ -770,6 +862,7 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
           tiles,
           partition,
           operationKey,
+          mode: "signOut",
           onSessionCleared: () => {
             const action = {
               type: "forgetCameraListCredentials",
@@ -998,6 +1091,8 @@ function WorkspaceApp({ initialWorkspace }: WorkspaceAppProps): ReactElement {
         onReload={() => runSelectedTileCommand(selectedTileIdRef.current, "reload")}
         onReloadAll={() => runAllTileCommand("reload")}
         sessionBusy={resetBusy}
+        onClearSiteDataSelected={() => void clearSelectedSiteData()}
+        onClearSiteDataAll={() => void clearAllSiteData()}
         onSignOutSelected={() => void resetSelectedCameraData()}
         onRequestSignOutAll={() => setConfirmListReset(true)}
         onColumnsChange={setColumns}

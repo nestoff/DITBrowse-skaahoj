@@ -239,7 +239,15 @@ const canUseActool =
   hasBinary("/usr/bin/plutil");
 
 if (canUseActool) {
-  applyWithActool();
+  try {
+    applyWithActool();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `macOS actool failed (${message}) — applying checked-in ditbrowse.icns (Camera Wall) as CFBundleIconFile.`
+    );
+    applyLegacyIcns();
+  }
 } else {
   console.warn(
     "macOS actool unavailable — applying checked-in ditbrowse.icns (Camera Wall) as CFBundleIconFile."

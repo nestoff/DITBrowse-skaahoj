@@ -30,6 +30,8 @@ interface BrowserChromeProps {
   onReload: () => void;
   onReloadAll: () => void;
   sessionBusy: boolean;
+  onClearSiteDataSelected: () => void;
+  onClearSiteDataAll: () => void;
   onSignOutSelected: () => void;
   onRequestSignOutAll: () => void;
   onColumnsChange: (columns: number) => void;
@@ -62,6 +64,8 @@ export function BrowserChrome({
   onReload,
   onReloadAll,
   sessionBusy,
+  onClearSiteDataSelected,
+  onClearSiteDataAll,
   onSignOutSelected,
   onRequestSignOutAll,
   onColumnsChange,
@@ -150,6 +154,8 @@ export function BrowserChrome({
           onReloadAll={onReloadAll}
           hasTiles={workspace.tiles.length > 0}
           sessionBusy={sessionBusy}
+          onClearSiteDataSelected={onClearSiteDataSelected}
+          onClearSiteDataAll={onClearSiteDataAll}
           onSignOutSelected={onSignOutSelected}
           onRequestSignOutAll={onRequestSignOutAll}
           onColumnsChange={onColumnsChange}

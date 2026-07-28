@@ -31,6 +31,8 @@ interface BrowserToolbarProps {
   onReloadAll: () => void;
   hasTiles: boolean;
   sessionBusy: boolean;
+  onClearSiteDataSelected: () => void;
+  onClearSiteDataAll: () => void;
   onSignOutSelected: () => void;
   onRequestSignOutAll: () => void;
   onColumnsChange: (columns: number) => void;
@@ -59,6 +61,8 @@ export function BrowserToolbar({
   onReloadAll,
   hasTiles,
   sessionBusy,
+  onClearSiteDataSelected,
+  onClearSiteDataAll,
   onSignOutSelected,
   onRequestSignOutAll,
   onColumnsChange,
@@ -97,6 +101,8 @@ export function BrowserToolbar({
           busy={sessionBusy}
           onReloadSelected={onReload}
           onReloadAll={onReloadAll}
+          onClearSiteDataSelected={onClearSiteDataSelected}
+          onClearSiteDataAll={onClearSiteDataAll}
           onSignOutSelected={onSignOutSelected}
           onRequestSignOutAll={onRequestSignOutAll}
         />

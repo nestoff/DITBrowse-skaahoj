@@ -47,12 +47,11 @@ describe("Swp08SetupGuide", () => {
     );
 
     expect(screen.getByLabelText("Blue Pill SW-P-08 setup guide")).toBeInTheDocument();
-    expect(screen.getByText("Configurable Model fields (match Blue Pill exactly)")).toBeInTheDocument();
+    expect(screen.getByText("Configurable Model fields")).toBeInTheDocument();
+    expect(screen.getByText("Listening")).toBeInTheDocument();
     expect(screen.getByRole("row", { name: /Port/i })).toHaveTextContent("8910");
     expect(screen.getByRole("row", { name: /MatrixID/i })).toHaveTextContent("0");
     expect(screen.getByRole("row", { name: /IP/i })).toHaveTextContent("192.168.60.100");
-    expect(
-      screen.getByText((_, node) => node?.textContent === "Do not leave 0 — use the SW-P-08 port above (default 8910).")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Not 0 — use 8910 by default")).toBeInTheDocument();
   });
 });

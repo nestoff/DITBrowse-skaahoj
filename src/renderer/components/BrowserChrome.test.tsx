@@ -29,6 +29,8 @@ const baseProps = {
   onReload: vi.fn(),
   onReloadAll: vi.fn(),
   sessionBusy: false,
+  onClearSiteDataSelected: vi.fn(),
+  onClearSiteDataAll: vi.fn(),
   onSignOutSelected: vi.fn(),
   onRequestSignOutAll: vi.fn(),
   onColumnsChange: vi.fn(),

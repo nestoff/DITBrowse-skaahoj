@@ -336,3 +336,57 @@ describe("resetCameraList", () => {
     expect(result).toMatchObject({ tone: "partial", reloaded: 0, failed: ["tile-a"] });
   });
 });
+
+describe("siteData mode", () => {
+  it("clears storage without forgetting saved logins or requiring manual auth", async () => {
+    const calls: string[] = [];
+    const onSessionCleared = vi.fn();
+
+    const result = await resetSelectedCamera(
+      {
+        tile: selectedTile,
+        operationKey: "job:list",
+        mode: "siteData",
+        onSessionCleared
+      },
+      createDependencies({
+        clearRuntime: async () => {
+          calls.push("runtime");
+          return true;
+        },
+        resetCameraData: async () => {
+          calls.push("electron");
+        },
+        loadBase: async () => {
+          calls.push("load");
+          return true;
+        },
+        markManualAuth: (ids) => calls.push(`mark:${ids.join(",")}`),
+        clearManualAuth: (ids) => calls.push(`unmark:${ids.join(",")}`)
+      })
+    );
+
+    expect(calls).toEqual(["runtime", "electron", "load"]);
+    expect(onSessionCleared).not.toHaveBeenCalled();
+    expect(result.message).toContain("page cache and site data");
+  });
+
+  it("clears list storage without forgetting credentials", async () => {
+    const onSessionCleared = vi.fn();
+    const markManualAuth = vi.fn();
+
+    await resetCameraList(
+      {
+        tiles: [tile("tile-a", "http://10.20.100.101/rmt.html")],
+        partition: "persist:list",
+        operationKey: "job:list",
+        mode: "siteData",
+        onSessionCleared
+      },
+      createDependencies({ markManualAuth })
+    );
+
+    expect(markManualAuth).not.toHaveBeenCalled();
+    expect(onSessionCleared).not.toHaveBeenCalled();
+  });
+});
